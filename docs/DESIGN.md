@@ -1,0 +1,59 @@
+# axel — Diseño
+
+> Este doc es el diseño a gran escala. Las profundizaciones por tema viven en `docs/design/*.md` y se referencian desde acá. La posición actual del trabajo está en [STATUS.md](STATUS.md); el plan, en [IMPLEMENTATION.md](IMPLEMENTATION.md).
+
+## Objetivo
+
+Maquinaria reusable para desarrollar proyectos con dos agentes en loop — un **generador** (Claude Code) y un **reviewer** (Codex) — iterando sobre cada pieza hasta acuerdo, con la documentación como memoria persistente y checkpoints de OK humano. Sirve para software o cualquier contenido generable por agentes. axel se desarrolla a sí mismo con su propio método.
+
+## Principios
+
+1. **El estado vive en el repo, no en el chat.** Toda sesión (nueva, local o remota) se reconstruye leyendo AGENTS.md → STATUS.md → DESIGN/IMPLEMENTATION. El contexto de chat se descarta entre features sin perder nada.
+2. **La sesión de Claude Code es el proceso y el panel de control.** El loop corre adentro de la sesión, no en un orquestador externo: el humano la abre —incluso remota— y puede preguntar o desviar en cualquier momento, porque la sesión tiene el contexto vivo.
+3. **Generador y reviewer separados, cada uno con su contexto.** Claude genera y commitea; Codex revisa con capacidad de ejecutar para verificar por su cuenta. Cada uno mantiene su contexto durante un feature (sesión de chat / resume de Codex) y lo renueva al cambiar de feature.
+4. **El OK humano es la frontera de contexto.** RECAP → OK → sesiones frescas para el siguiente feature. El humano no dirige el detalle: valida dónde estamos, cómo venimos y qué sigue.
+5. **Los docs se actualizan en cada commit.** Si no quedó registrado, no pasó. El delta de docs es lo que el reviewer usa para saber qué verificar.
+
+## Componentes
+
+| Pieza | Qué es |
+|---|---|
+| `AGENTS.md` + symlink `CLAUDE.md` | Contexto raíz que ambos agentes cargan automáticamente: proceso, reglas, mapa de docs. Una sola fuente. |
+| `docs/DESIGN.md` + `docs/design/*` | Diseño a gran escala y profundizaciones por tema. |
+| `docs/IMPLEMENTATION.md` + `docs/implementation/*` | Plan priorizado con estado por feature; bajada fina y review log de cada uno. |
+| `docs/STATUS.md` | La posición actual en ~10 líneas; se actualiza en cada commit. |
+| `.claude/skills/` | Las fases del método como comandos: `/design`, `/plan`, `/feature`, `/status`, `/recap`. |
+| `scripts/review.sh` | Wrapper del reviewer: config de modelo, ciclo de vida de sesiones (new/resume), rango de commits, contrato de veredicto. Detalle: [design/review-contract.md](design/review-contract.md). |
+| `.claude/state/` | Estado local no versionado: session id de Codex, SHA del último APPROVED, contador de ronda. |
+| `.claude/settings.json` | Permisos preaprobados para que el loop no se frene en confirmaciones mientras el humano no está. |
+
+## El flujo
+
+```
+/design ─► DESIGN.md ─review─► RECAP ─► OK ─► /plan ─► IMPLEMENTATION.md ─review─► RECAP ─► OK
+                                                              │
+                 ┌────────────────────────────────────────────┘
+                 ▼
+        /feature (sesión limpia)
+        bajada fina ─review─► implementar ─commit─► review ─► … ─► APPROVED
+                 │
+                 ▼
+              RECAP ─► OK humano ─► siguiente /feature (sesión limpia)
+```
+
+Dentro de un feature: cambio → commit → review → corregir o argumentar → commit → review… hasta `VERDICT: APPROVED`. Tope de 5 rondas sin convergencia → RECAP temprano para que desempate el humano.
+
+## Decisiones
+
+| Fecha | Decisión | Elección | Por qué |
+|---|---|---|---|
+| 2026-07-27 | Alcance del repo | axel ES la maquinaria | Se desarrolla a sí misma; llevarla a otros proyectos es un feature (instalador). |
+| 2026-07-27 | Orquestación | Loop adentro de Claude Code; Codex como subproceso | La sesión es lo que el humano consulta remoto; un orquestador externo la dejaría ciega. |
+| 2026-07-27 | Git | `main` lineal, un commit por paso, sin amend | La historia ES el registro del loop; el reviewer ve deltas por rango de commits. |
+| 2026-07-27 | Rol del reviewer | Puede ejecutar (workspace-write), no modifica | Verificación independiente: no confía en la evidencia del generador. |
+| 2026-07-27 | Config de modelos | Variables al tope de `review.sh` (+ env `AXEL_REVIEW_*`) | Cambiar de modelo o esfuerzo = tocar una línea versionada, sin depender de config global. |
+| 2026-07-27 | RECAP | El turno termina y la sesión queda esperando; push si está disponible | El OK puede llegar desde una sesión remota en cualquier momento. |
+
+## Profundizaciones
+
+- [design/review-contract.md](design/review-contract.md) — contrato generador↔reviewer: transporte, prompt, sesiones, veredictos, deadlock.

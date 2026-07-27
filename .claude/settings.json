@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(scripts/review.sh:*)",
+      "Bash(./scripts/review.sh:*)",
+      "Bash(bash scripts/review.sh:*)",
+      "Bash(codex exec:*)",
+      "Bash(bash -n:*)",
+      "Bash(shellcheck:*)"
+    ]
+  }
+}
