@@ -10,7 +10,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 
 1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27).
 2. **Valor desbloqueado antes que pulido**: primero lo que habilita uso nuevo (llevar axel a otros proyectos) sobre lo que mejora lo que ya funciona.
-3. **Robustez cuando muerde**: los ítems de hardening suben de prioridad apenas un hueco empieza a doler en el uso real; hoy nada está roto y los gaps conocidos tienen mitigación (fallback `--last`, timeout de awake).
+3. **Núcleo antes que confort**: desbloqueado el valor nuevo, primero consolidar el código safety-critical de uso diario — prioridad por riesgo × centralidad × radio de daño (`review.sh` y `awake.sh` ejecutan `reset --hard`, `clean -fdx` y señales de procesos en cada ciclo) — y recién después la calidad de vida.
 
 ## Features
 
@@ -18,7 +18,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 |---|---|---|---|
 | 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex (r4) + OK humano, 2026-07-27 | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
 | 01 | Instalador: llevar axel a otro proyecto | **Siguiente** — orden 1º (criterio 1: restricción humana; caso de uso real esperando) | — |
-| 02 | Hardening del loop de review | Backlog — orden 2º (criterio 3: se usa a diario, pero nada muerde aún) | — |
+| 02 | Hardening del loop de review | Backlog — orden 2º (criterio 3: núcleo safety-critical de uso diario) | — |
 | 03 | Notificaciones y continuidad entre sesiones | Backlog — orden 3º (calidad de vida; el push ya funciona vía harness) | — |
 
 Orden en acuerdo: ciclo de `/plan` en curso — el APPROVED del reviewer sella el acuerdo entre agentes (la posición de 01 es restricción humana y no se discute; 02 vs 03 y el contenido de cada uno, sí).
@@ -31,7 +31,9 @@ Requisito clave (pedido humano 2026-07-27): **modo adopción** para proyectos ex
 
 ### 02 — Hardening del loop
 
-Captura robusta del session id (hoy: primer UUID de los eventos JSONL, con fallback `resume --last`), reintentos ante fallas transitorias de Codex, métricas de rondas por feature, y `shellcheck` instalado y corriendo sobre los scripts (el reviewer lo buscó en las 4 rondas del ciclo 00 sin encontrarlo).
+Pieza central (pedido del reviewer en el ciclo de plan): **suite de regresión reproducible** para el estado del loop y sus caminos de seguridad — las seis clases de falla que el ciclo 00 encontró a mano y quedaron sin prueba automatizada: parser de veredicto + gate de RC, consistencia del estado (`last-verdict`, base, racha), bloqueo de deadlock, `wt_valid` contra directorios impostores, tri-estado y `kill_confirmed` de awake.sh, y movimiento de base a `REVIEW_HEAD`. Ejecutable sin invocar a Codex (doble del binario vía PATH).
+
+Además: captura robusta del session id (hoy: primer UUID de los eventos JSONL, con fallback `resume --last`), reintentos ante fallas transitorias de Codex, métricas de rondas por feature, y `shellcheck` instalado y corriendo sobre los scripts (el reviewer lo buscó en las 4 rondas del ciclo 00 sin encontrarlo).
 
 ### 03 — Notificaciones y continuidad
 
