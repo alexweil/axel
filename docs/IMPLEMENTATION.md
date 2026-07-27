@@ -21,7 +21,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 | 02 | Hardening del loop de review | Backlog — orden 2º (criterio 3: núcleo safety-critical de uso diario) | — |
 | 03 | Notificaciones y continuidad entre sesiones | Backlog — orden 3º (calidad de vida; el push ya funciona vía harness) | — |
 
-**Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: pendiente.
+**Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: recibido el 2026-07-27 (registrado en `860c80b`).
 
 ### 01 — Instalador
 
