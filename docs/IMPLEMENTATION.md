@@ -17,7 +17,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 | # | Feature | Estado | Doc |
 |---|---|---|---|
 | 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex (r4) + OK humano, 2026-07-27 | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
-| 01 | Instalador: llevar axel a otro proyecto | **En curso** — orden 1º (criterio 1: restricción humana; caso de uso real esperando) | [implementation/01-installer.md](implementation/01-installer.md) |
+| 01 | Instalador: llevar axel a otro proyecto | **Cerrado** — APPROVED de Codex (r11) + OK humano pendiente, 2026-07-27 | [implementation/01-installer.md](implementation/01-installer.md) |
 | 02 | Hardening del loop de review | Backlog — orden 2º (criterio 3: núcleo safety-critical de uso diario) | — |
 | 03 | Notificaciones y continuidad entre sesiones | Backlog — orden 3º (calidad de vida; el push ya funciona vía harness) | — |
 

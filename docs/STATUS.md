@@ -1,8 +1,9 @@
 # STATUS
 
-- **Fase**: feature 01 (instalador) — bajada APPROVED (r4); implementación paso A hecho, en review
-- **Feature en curso**: **01 instalador** — [implementation/01-installer.md](implementation/01-installer.md). Paso A APPROVED (r8, base `6671cab`). Paso B hecho: aceptación agentic (sesiones reales de `/status` y `/adopt` sobre fixtures, evidencia en el doc), DESIGN/README al día, matriz y criterio 4 con `ask` y policy fuente (no-bloqueante de r8)
-- **Ronda de review**: ronda 11 del ciclo 01 por lanzarse (`round`) — tercer pedido de APPROVED de cierre
-- **Último veredicto**: CHANGES_REQUESTED · ronda 10 · 1 punto (la evidencia de aceptación parafraseaba los fixtures: blobs no reproducibles) — corregido: comandos byte-exactos verificados por `git hash-object`, diff previo→install y handoff íntegro agregados
-- **Esperando**: veredicto de cierre de Codex (ronda 11)
+- **Fase**: feature 01 (instalador) **cerrado con APPROVED de Codex** (ronda 11, base `fb23165`) — **esperando OK humano** del RECAP
+- **Feature en curso**: ninguno. Siguiente: **02 hardening del loop** (suite de regresión central; orden acordado en el plan)
+- **Ronda de review**: — (ciclo 01 completo: 11 rondas — bajada r1–r4, implementación r5–r8, cierre r9–r11; tres APPROVED intermedios: bajada, paso A, cierre)
+- **Último veredicto**: APPROVED · ronda 11 · `fb23165` (cierre del feature: cinco criterios satisfechos)
+- **Esperando**: OK humano. Con el OK, el feature 02 arranca en **sesión limpia** (sesión nueva + `/feature`)
+- **Nota para la ronda 1 del ciclo 02**: el commit de bookkeeping de este cierre (posterior a la base `fb23165`) se verifica primero — regla del contrato
 - **Actualizado**: 2026-07-27
