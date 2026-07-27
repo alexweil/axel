@@ -1,10 +1,9 @@
 # STATUS
 
-- **Fase**: plan — acordando prioridades del backlog con el reviewer
-- **Feature en curso**: ninguno — [00-bootstrap](implementation/00-bootstrap.md) **cerrado con OK humano** (2026-07-27; APPROVED de Codex en ronda 4, base `a8fc740`)
-- **Ronda de review**: ciclo de plan completo — APPROVED en ronda 5 (base `5b1bc02`); 5 rondas: 2 de sustancia (criterio, suite de regresión) y 3 de bookkeeping del generador
+- **Fase**: plan **cerrado con OK humano** (2026-07-27) — listo para arrancar el feature 01
+- **Feature en curso**: ninguno. Siguiente: **01 instalador** (orden acordado: 01 → 02 hardening → 03 notificaciones; requisito central del 01: modo adopción para proyectos existentes con proceso manual)
+- **Ronda de review**: — (ciclo de plan completo: APPROVED en ronda 5, base `5b1bc02`; ciclo 00 cerrado antes con OK humano)
 - **Último veredicto**: APPROVED · ronda 5 del ciclo de plan · 5b1bc02
-- **Esperando**: **OK humano** al RECAP del plan
-- **Al recibir OK**: sesión limpia de ambos agentes y `/feature` para el 01 (instalador con modo adopción); la ronda 1 de ese ciclo barre este commit de cierre
-- **Nota de método**: `/plan` corre en la misma sesión del generador por instrucción directa del humano (su mensaje tiene prioridad sobre la regla de sesión limpia); el reviewer sí estrena sesión
+- **Esperando**: nada — la próxima sesión (limpia, de ambos agentes) debe correr `/feature` para la bajada fina del 01
+- **Nota para la ronda 1 del ciclo 01**: los commits de bookkeeping posteriores a la base (`3ab6794` y el de este OK) se verifican primero, regla del contrato
 - **Actualizado**: 2026-07-27
