@@ -10,7 +10,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 
 | # | Feature | Estado | Doc |
 |---|---|---|---|
-| 00 | Bootstrap de la maquinaria | En review — loop de review en curso (detalle fino en [STATUS.md](STATUS.md)) | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
+| 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex en ronda 4 (2026-07-27), OK humano del RECAP de cierre pendiente | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
 | 01 | Instalador: llevar axel a otro proyecto | Backlog (propuesto) | — |
 | 02 | Hardening del loop de review | Backlog (propuesto) | — |
 | 03 | Notificaciones y continuidad entre sesiones | Backlog (propuesto) | — |

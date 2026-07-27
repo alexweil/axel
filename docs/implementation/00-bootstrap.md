@@ -43,3 +43,8 @@ Montar el esqueleto completo de axel para que el método pueda correr de punta a
   1. `rev-parse --git-dir` clasificaba como worktree a cualquier subdirectorio del repo — un dir impostor haría caer `reset --hard`/`clean -fdx` sobre el repo canónico (el reviewer lo reprodujo) → corregido: `wt_valid()` con triple verificación antes de toda operación destructiva (toplevel == WT_DIR, git-dir bajo `.git/worktrees/` del repo, registrado en `worktree list`); si falla, se recrea sin tocar nada. Reproducido el caso impostor localmente: rechazado por el primer check.
   2. El tri-estado de awake.sh contradecía su garantía en `start` (pisaba el pidfile en estado indeterminado) y `stop` (borraba rastro con señal denegada) → corregido: `kill_confirmed()` — solo se pierde el rastro tras muerte confirmada por `check()`; indeterminado aborta con exit 2 sin tocar nada.
   3. El camino terminal existía solo en el contrato → operativizado: `/feature` tiene el paso 6 explícito y `/recap` lista siempre los commits posteriores a la última base aprobada como no-revisados, con la rama terminal y la mini-review opcional.
+- **Ronda 4: APPROVED (cierre)** — el reviewer confirmó las tres correcciones (wt_valid con las tres invariantes, kill_confirmed conservador, cierre terminal coherente entre contrato y skills) y dio por cumplidos los criterios de cierre. Base aprobada: `a8fc740`. Convergencia del loop: 6 → 5 → 3 → 0 puntos en 4 rondas.
+
+## Cierre
+
+Feature cerrado el 2026-07-27 con APPROVED de Codex en la ronda 4. Este commit de cierre es bookkeeping (solo docs): por contrato no mueve la base y lo verifica la ronda 1 del ciclo siguiente (`/plan`).
