@@ -18,7 +18,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 |---|---|---|---|
 | 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex (r4) + OK humano, 2026-07-27 | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
 | 01 | Instalador: llevar axel a otro proyecto | **Cerrado** — APPROVED de Codex (r11) + OK humano, 2026-07-27 | [implementation/01-installer.md](implementation/01-installer.md) |
-| 02 | Instalación remota: one-liner desde GitHub | **Siguiente** — orden 2º (criterio 1: pedido humano 2026-07-27, "priorizalo para lo que se viene") | — |
+| 02 | Instalación remota: one-liner desde GitHub | **En curso** — bajada fina en review (orden 2º, criterio 1: pedido humano 2026-07-27, "priorizalo para lo que se viene") | [implementation/02-remote-install.md](implementation/02-remote-install.md) |
 | 03 | Hardening del loop de review | Backlog — orden 3º (criterio 3: núcleo safety-critical de uso diario) | — |
 | 04 | Notificaciones y continuidad entre sesiones | Backlog — orden 4º (calidad de vida; el push ya funciona vía harness) | — |
 

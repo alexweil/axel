@@ -1,10 +1,9 @@
 # STATUS
 
-- **Fase**: feature 01 (instalador) **cerrado con OK humano** (2026-07-27) — listo para arrancar el feature 02
-- **Feature en curso**: ninguno. Siguiente: **02 instalación remota (one-liner)** — insertado por pedido humano al dar el OK ("priorizalo para lo que se viene", criterio 1); hardening pasa a 03, notificaciones a 04
-- **Ronda de review**: — (ciclo 01 completo: 11 rondas, tres APPROVED — bajada r4, paso A r8, cierre r11; base `fb23165`)
-- **Último veredicto**: APPROVED · ronda 11 · `fb23165`
-- **Esperando**: nada — la próxima sesión (limpia, de ambos agentes) debe correr `/feature` para la bajada fina del 02
-- **Novedad post-OK**: axel publicado en **https://github.com/alexweil/axel** (público; pedido humano 2026-07-27) — prerequisito del 02 cumplido; desde ahora los commits se pushean a `origin/main`
-- **Nota para la ronda 1 del ciclo 02**: los commits de bookkeeping posteriores a la base (`3b1de0a` y el de este OK, que incluye la inserción del feature 02 en el plan por pedido humano) se verifican primero — regla del contrato
+- **Fase**: feature 02 (instalación remota: one-liner) — **bajada fina escrita**, entrando al loop de review
+- **Feature en curso**: [02 — instalación remota](implementation/02-remote-install.md) — modo `--from <url>` en `install.sh` (bootstrap mínimo que clona/actualiza `AXEL_HOME` y delega en el instalador del clon), README para agentes, tests remotos con fixture `file://`
+- **Ronda de review**: por arrancar (`review.sh new` con la bajada); base del ciclo: `fb23165`
+- **Último veredicto**: APPROVED · ronda 11 del ciclo 01 · `fb23165`
+- **Esperando**: review de Codex sobre la bajada (ronda 1, que además verifica los commits de bookkeeping del cierre del 01: `3b1de0a`, `464417e`, `7635fe0` — regla del contrato)
+- **Nota de entorno**: esta sesión corre en un contenedor remoto (Claude Code web) sobre la rama `claude/feature-request-0wrc45`, nacida en `7635fe0` = `origin/main`; la historia sigue lineal y se integra a `main` por fast-forward con el OK humano
 - **Actualizado**: 2026-07-27
