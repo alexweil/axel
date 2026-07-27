@@ -6,16 +6,22 @@
 
 Sesión limpia → `/feature` → bajada fina → review → implementación con loop de review → RECAP → OK humano. Reglas en [AGENTS.md](../AGENTS.md); contrato de review en [design/review-contract.md](design/review-contract.md).
 
+## Criterio de orden
+
+1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27).
+2. **Valor desbloqueado antes que pulido**: primero lo que habilita uso nuevo (llevar axel a otros proyectos) sobre lo que mejora lo que ya funciona.
+3. **Robustez cuando muerde**: los ítems de hardening suben de prioridad apenas un hueco empieza a doler en el uso real; hoy nada está roto y los gaps conocidos tienen mitigación (fallback `--last`, timeout de awake).
+
 ## Features
 
 | # | Feature | Estado | Doc |
 |---|---|---|---|
 | 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex (r4) + OK humano, 2026-07-27 | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
-| 01 | Instalador: llevar axel a otro proyecto | Backlog (propuesto) | — |
-| 02 | Hardening del loop de review | Backlog (propuesto) | — |
-| 03 | Notificaciones y continuidad entre sesiones | Backlog (propuesto) | — |
+| 01 | Instalador: llevar axel a otro proyecto | **Siguiente** — orden 1º (criterio 1: restricción humana; caso de uso real esperando) | — |
+| 02 | Hardening del loop de review | Backlog — orden 2º (criterio 3: se usa a diario, pero nada muerde aún) | — |
+| 03 | Notificaciones y continuidad entre sesiones | Backlog — orden 3º (calidad de vida; el push ya funciona vía harness) | — |
 
-El orden 01–03 es propuesta del generador y queda para acordar con el reviewer en el próximo `/plan` (regla del método: las prioridades las acuerdan los dos agentes), con una restricción del humano (2026-07-27): **el instalador (01) es prioritario** — tiene un caso de uso concreto esperando: otro proyecto suyo que ya sigue este mismo proceso de forma manual.
+Orden en acuerdo: ciclo de `/plan` en curso — el APPROVED del reviewer sella el acuerdo entre agentes (la posición de 01 es restricción humana y no se discute; 02 vs 03 y el contenido de cada uno, sí).
 
 ### 01 — Instalador
 
@@ -25,7 +31,7 @@ Requisito clave (pedido humano 2026-07-27): **modo adopción** para proyectos ex
 
 ### 02 — Hardening del loop
 
-Captura robusta del session id (hoy: primer UUID de los eventos JSONL), reintentos ante fallas transitorias de Codex, métricas de rondas por feature, y manejo de árboles sucios dejados por el reviewer.
+Captura robusta del session id (hoy: primer UUID de los eventos JSONL, con fallback `resume --last`), reintentos ante fallas transitorias de Codex, métricas de rondas por feature, y `shellcheck` instalado y corriendo sobre los scripts (el reviewer lo buscó en las 4 rondas del ciclo 00 sin encontrarlo).
 
 ### 03 — Notificaciones y continuidad
 
