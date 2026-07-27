@@ -99,6 +99,8 @@ El reporte por stdout en todos los casos: qué se instaló/actualizó/dejó inta
 - 2026-07-27 (ronda 3): marker con **serialización estable** (formato + SHA, sin fecha) reescrito solo ante cambio — idempotencia byte a byte del update no-op; invariante de trackeabilidad extendido al **estado existente** (marker/handoff deben estar trackeados; `.gitignore` a mutar no puede estar él mismo ignorado); verificación de settings ampliada a la **política efectiva** (deny gana sobre allow; `defaultMode = acceptEdits` es requisito — sin él el loop se frena en cada edición).
 - 2026-07-27 (ronda 2): **tres modos clasificados por marker** (`.claude/axel-install`, trackeado, con procedencia) — el update no re-inventaría ni reabre adopciones, y el inventario corre solo en corridas iniciales; artefactos de estado formalizados como **tercera clase** con propiedad demostrable (marcador de generación en `ADOPTION.md`; contenido parseable en el marker) y rechazo preflight ante artefactos ajenos; trackeabilidad verificada también para **rutas a crear** (`git check-ignore`); self-install por **git common dir** (cubre worktrees); settings **estructural y fail-closed** (python3; inválido/inverificable ⇒ faltante bloqueante); contrato de salida 0/1/2 (limpio / con pendientes / rechazo sin mutaciones); `/adopt` re-verifica lo mecánico antes de cerrar el handoff.
 
+- 2026-07-27 (implementación, paso A): el settings **semilla** vive en `templates/settings.json`, separado del `.claude/settings.json` propio de axel — la verificación de un settings preexistente exige la política del loop (la de la plantilla), no los permisos internos de axel (correr su instalador y sus tests, que los destinos no tienen); el settings de axel suma esos permisos para el propio loop. El requisito de `defaultMode` se lee de la plantilla (hoy `acceptEdits`), no está cableado en el script.
+
 ## Riesgos
 
 - **Divergencia método ↔ plantilla**: `templates/AGENTS.md` puede quedar viejo cuando el método evolucione en axel. Mitigación: nota cruzada en ambos archivos y el reviewer verifica coherencia cuando cambie AGENTS.md; consolidar una fuente única queda como mejora futura si duele.
@@ -107,6 +109,11 @@ El reporte por stdout en todos los casos: qué se instaló/actualizó/dejó inta
 - **Marker borrado a mano**: sin marker, un re-run se clasifica como corrida inicial — no pisa nada (las semillas existen, los docs se respetan) pero puede reabrir un handoff con candidatos ya evaluados. Mitigación: es reconstruible commiteando el marker de nuevo; el caso queda documentado en el reporte cuando la corrida inicial encuentra estructura ya instalada. (Un marker **corrupto** es el caso opuesto y no tiene ambigüedad: el preflight rechaza con exit 2 sin mutaciones.)
 - **Dependencia de python3 para settings**: donde falte, la regla fail-closed reporta "inverificable ⇒ bloqueante", que puede ser molesto pero nunca engañoso. Aceptado en v1.
 - **Plantillas pensadas para software**: axel sirve para cualquier contenido generable; las plantillas deben no asumir código (tests, builds) más allá de los ejemplos.
+
+## Verificación
+
+- Paso A (2026-07-27): `tests/install.sh` en verde — **115 asserts, 0 fallas** — cubriendo la matriz completa (T1–T11m: instalación desde cero, ciclo de vida con marker, adopción, settings de política efectiva, rechazos con cero mutaciones). `bash -n` limpio sobre `install.sh`, `tests/install.sh` y `review.sh`. `shellcheck` no está instalado en esta máquina (instalarlo y correrlo queda en el feature 02, como ya lo lista IMPLEMENTATION).
+- Bugs encontrados y corregidos por la propia suite durante el paso A: (1) `awk -v` de BSD no acepta strings multilínea — el render de `{{STATE_LINES}}` pasó a `sed` con archivo intermedio (idiom `r`+`d`, sin escapes que cuidar); (2) bash 3.2 de macOS aborta con `set -u` al expandir un array vacío — guard `${arr[@]+...}` en la siembra de semillas (en update no hay semillas que crear); (3) un fixture del test usaba `git rev-parse --git-dir` (ruta relativa al repo) desde otro cwd y escribía fuera del fixture — path absoluto explícito.
 
 ## Review log
 

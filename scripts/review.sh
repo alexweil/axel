@@ -28,6 +28,7 @@ run_codex() {
 }
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+PROJECT_NAME="$(basename "$REPO_ROOT")"
 STATE_DIR="$REPO_ROOT/.claude/state"
 SESSION_FILE="$STATE_DIR/codex-session-id"
 BASE_FILE="$STATE_DIR/last-approved-sha"
@@ -133,7 +134,7 @@ if [ "$STREAK" -ge 4 ]; then
 fi
 
 PROMPT="$(cat <<EOF
-Sos el reviewer del proyecto axel. Ronda de review: $ROUND.
+Sos el reviewer del proyecto $PROJECT_NAME, desarrollado con el método axel. Ronda de review: $ROUND.
 Tu workspace es un worktree snapshot clavado al commit bajo review ($REVIEW_HEAD_SHORT): $WT_DIR
 Ahí leés y ejecutás todo lo que necesites; se resetea automáticamente en cada ronda. El repo canónico ($REPO_ROOT) no es tu workspace: no lo modifiques. No corras scripts/review.sh (recursión) ni scripts/awake.sh stop.
 Contexto y contrato: leé AGENTS.md, docs/STATUS.md y docs/design/review-contract.md en tu worktree.
