@@ -32,7 +32,7 @@ Requisito clave (pedido humano 2026-07-27): **modo adopción** para proyectos ex
 
 ### 02 — Instalación remota (one-liner)
 
-Pedido humano (2026-07-27, al dar el OK del 01): instalar axel en un destino **sin clon local previo** — un solo comando que baje axel (GitHub) y corra la instalación de una, más la sección del README pensada para que un agente en Claude Code la lea y la siga ("instalá axel siguiendo <url>"), cubriendo también el camino desde adentro de una sesión (las skills se cargan en caliente; el settings rige pleno en la sesión siguiente). Prerequisito: publicar axel en un remote (decisión/acción del humano; el generador puede hacerlo vía `gh` con confirmación explícita). Enfoque a definir en la bajada: probable `install.sh --from <url>` que clona/actualiza `~/.axel` y delega en la instalación local, reusando toda la seguridad ya aprobada del 01; el instalador local no cambia de contrato.
+Pedido humano (2026-07-27, al dar el OK del 01): instalar axel en un destino **sin clon local previo** — un solo comando que baje axel (GitHub) y corra la instalación de una, más la sección del README pensada para que un agente en Claude Code la lea y la siga ("instalá axel siguiendo <url>"), cubriendo también el camino desde adentro de una sesión (las skills se cargan en caliente; el settings rige pleno en la sesión siguiente). Prerequisito **cumplido** (2026-07-27, pedido y visibilidad confirmados por el humano): axel publicado en https://github.com/alexweil/axel (público, `main` como remote `origin`). Enfoque a definir en la bajada: probable `install.sh --from <url>` que clona/actualiza `~/.axel` y delega en la instalación local, reusando toda la seguridad ya aprobada del 01; el instalador local no cambia de contrato.
 
 ### 03 — Hardening del loop
 

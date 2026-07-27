@@ -5,5 +5,6 @@
 - **Ronda de review**: — (ciclo 01 completo: 11 rondas, tres APPROVED — bajada r4, paso A r8, cierre r11; base `fb23165`)
 - **Último veredicto**: APPROVED · ronda 11 · `fb23165`
 - **Esperando**: nada — la próxima sesión (limpia, de ambos agentes) debe correr `/feature` para la bajada fina del 02
+- **Novedad post-OK**: axel publicado en **https://github.com/alexweil/axel** (público; pedido humano 2026-07-27) — prerequisito del 02 cumplido; desde ahora los commits se pushean a `origin/main`
 - **Nota para la ronda 1 del ciclo 02**: los commits de bookkeeping posteriores a la base (`3b1de0a` y el de este OK, que incluye la inserción del feature 02 en el plan por pedido humano) se verifican primero — regla del contrato
 - **Actualizado**: 2026-07-27
