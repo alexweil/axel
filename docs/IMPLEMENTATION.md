@@ -18,7 +18,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 |---|---|---|---|
 | 00 | Bootstrap de la maquinaria | **Cerrado** — APPROVED de Codex (r4) + OK humano, 2026-07-27 | [implementation/00-bootstrap.md](implementation/00-bootstrap.md) |
 | 01 | Instalador: llevar axel a otro proyecto | **Cerrado** — APPROVED de Codex (r11) + OK humano, 2026-07-27 | [implementation/01-installer.md](implementation/01-installer.md) |
-| 02 | Instalación remota: one-liner desde GitHub | **Siguiente** — orden 2º (criterio 1: pedido humano 2026-07-27, "priorizalo para lo que se viene") | — |
+| 02 | Instalación remota: one-liner desde GitHub | **En curso** — bajada fina en review (ciclo abierto 2026-07-27) | [implementation/02-remote-install.md](implementation/02-remote-install.md) |
 | 03 | Hardening del loop de review | Backlog — orden 3º (criterio 3: núcleo safety-critical de uso diario) | — |
 | 04 | Notificaciones y continuidad entre sesiones | Backlog — orden 4º (calidad de vida; el push ya funciona vía harness) | — |
 
@@ -32,7 +32,7 @@ Requisito clave (pedido humano 2026-07-27): **modo adopción** para proyectos ex
 
 ### 02 — Instalación remota (one-liner)
 
-Pedido humano (2026-07-27, al dar el OK del 01): instalar axel en un destino **sin clon local previo** — un solo comando que baje axel (GitHub) y corra la instalación de una, más la sección del README pensada para que un agente en Claude Code la lea y la siga ("instalá axel siguiendo <url>"), cubriendo también el camino desde adentro de una sesión (las skills se cargan en caliente; el settings rige pleno en la sesión siguiente). Prerequisito **cumplido** (2026-07-27, pedido y visibilidad confirmados por el humano): axel publicado en https://github.com/alexweil/axel (público, `main` como remote `origin`). Enfoque a definir en la bajada: probable `install.sh --from <url>` que clona/actualiza `~/.axel` y delega en la instalación local, reusando toda la seguridad ya aprobada del 01; el instalador local no cambia de contrato.
+Pedido humano (2026-07-27, al dar el OK del 01): instalar axel en un destino **sin clon local previo** — un solo comando que baje axel (GitHub) y corra la instalación de una, más la sección del README pensada para que un agente en Claude Code la lea y la siga ("instalá axel siguiendo <url>"), cubriendo también el camino desde adentro de una sesión (las skills se cargan en caliente; el settings rige pleno en la sesión siguiente). Prerequisito **cumplido** (2026-07-27, pedido y visibilidad confirmados por el humano): axel publicado en https://github.com/alexweil/axel (público, `main` como remote `origin`). Enfoque a definir en la bajada: probable `install.sh --from <url>` que clona/actualiza `~/.axel` y delega en la instalación local, reusando toda la seguridad ya aprobada del 01; el instalador local no cambia de contrato. Bajada fina: [implementation/02-remote-install.md](implementation/02-remote-install.md) (2026-07-27).
 
 ### 03 — Hardening del loop
 
