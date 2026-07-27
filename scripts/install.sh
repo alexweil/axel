@@ -17,7 +17,21 @@ set -euo pipefail
 AXEL_ROOT="$(cd "$(dirname "$0")/.." && git rev-parse --show-toplevel)"
 
 # ── Qué instala ───────────────────────────────────────────────────────────────
-# Payload: owned por axel, se sobreescribe en cada corrida (el re-run ES la actualización)
+# Payload: owned por axel, se sobreescribe en cada corrida (el re-run ES la actualización).
+# Arrays paralelos fuente→destino: la política del loop viaja como .claude/axel-policy.json
+# para que /adopt y las sesiones del destino puedan re-verificar settings sin acceso a axel.
+PAYLOAD_SRC=(
+  .claude/skills/adopt/SKILL.md
+  .claude/skills/design/SKILL.md
+  .claude/skills/feature/SKILL.md
+  .claude/skills/plan/SKILL.md
+  .claude/skills/recap/SKILL.md
+  .claude/skills/status/SKILL.md
+  scripts/awake.sh
+  scripts/review.sh
+  docs/design/review-contract.md
+  templates/settings.json
+)
 PAYLOAD=(
   .claude/skills/adopt/SKILL.md
   .claude/skills/design/SKILL.md
@@ -28,6 +42,7 @@ PAYLOAD=(
   scripts/awake.sh
   scripts/review.sh
   docs/design/review-contract.md
+  .claude/axel-policy.json
 )
 # Semillas: owned por el destino, se crean solo si faltan y no se tocan jamás después.
 # Fuente: templates/ de axel (settings incluido: templates/settings.json define además
@@ -107,16 +122,18 @@ fi
 
 is_tracked() { git -C "$TARGET" ls-files --error-unmatch "$1" >/dev/null 2>&1; }
 is_ignored() { git -C "$TARGET" check-ignore -q "$1"; }
-path_symlink_component() {
-  # imprime el primer componente symlink del path relativo (excluida la ruta final si $2=parents-only)
-  local rel="$1" scope="${2:-all}" cur="$TARGET" comp
+bad_parent() {
+  # imprime el primer componente PADRE inválido del path relativo: symlink (escaparía del
+  # árbol) o existente-y-no-directorio (mkdir -p fallaría a mitad de escritura)
+  local rel="$1" cur="$TARGET" comp
   local parts; IFS='/' read -r -a parts <<< "$rel"
   local last=$(( ${#parts[@]} - 1 )) i
   for i in "${!parts[@]}"; do
     comp="${parts[$i]}"
     cur="$cur/$comp"
-    if [ "$i" -eq "$last" ] && [ "$scope" = "parents-only" ]; then break; fi
-    if [ -L "$cur" ]; then echo "${cur#"$TARGET"/}"; return 0; fi
+    [ "$i" -eq "$last" ] && break
+    if [ -L "$cur" ]; then echo "${cur#"$TARGET"/} (symlink)"; return 0; fi
+    if [ -e "$cur" ] && [ ! -d "$cur" ]; then echo "${cur#"$TARGET"/} (no es un directorio)"; return 0; fi
   done
   return 1
 }
@@ -150,9 +167,16 @@ CLAUDE_ACTION="none"   # none | create | conflict
 GITIGNORE_ACTION="none" # none | create | append
 PENDING_MECH=()     # pendientes mecánicos (van a reporte y handoff)
 
-for rel in "${PAYLOAD[@]}"; do
-  if bad="$(path_symlink_component "$rel" parents-only)"; then
-    ERRORS+=("$rel: '$bad' es un symlink — escribir a través escaparía del árbol del repo")
+# La fuente completa se valida ANTES de escribir: una fuente incompleta (p. ej. axel sucio
+# al que le falta un payload) no puede producir mutaciones parciales.
+for src in "${PAYLOAD_SRC[@]}" "${SEED_SRC[@]}"; do
+  [ -f "$AXEL_ROOT/$src" ] || ERRORS+=("fuente inconsistente: falta $src en axel (¿árbol de axel incompleto?)")
+done
+
+for i in "${!PAYLOAD[@]}"; do
+  rel="${PAYLOAD[$i]}"
+  if bad="$(bad_parent "$rel")"; then
+    ERRORS+=("$rel: componente '$bad' — escribir ahí mutaría a medias o escaparía del árbol")
     continue
   fi
   dest="$TARGET/$rel"
@@ -171,10 +195,10 @@ for i in "${!SEED_DEST[@]}"; do
   rel="${SEED_DEST[$i]}"
   dest="$TARGET/$rel"
   if [ -e "$dest" ] || [ -L "$dest" ]; then
-    continue  # semilla existente: no se toca (la verificación de settings corre aparte)
+    continue  # semilla existente: no se toca (settings preexistente se verifica aparte)
   fi
-  if bad="$(path_symlink_component "$rel" parents-only)"; then
-    ERRORS+=("$rel: '$bad' es un symlink — escribir a través escaparía del árbol del repo")
+  if bad="$(bad_parent "$rel")"; then
+    ERRORS+=("$rel: componente '$bad' — escribir ahí mutaría a medias o escaparía del árbol")
     continue
   fi
   is_ignored "$rel" && { ERRORS+=("$rel: nacería ignorado por las reglas del destino"); continue; }
@@ -240,8 +264,8 @@ if [ -e "$handoff_path" ] || [ -L "$handoff_path" ]; then
     ERRORS+=("$HANDOFF_REL: el handoff es estado persistente y debe estar trackeado")
   fi
 else
-  if bad="$(path_symlink_component "$HANDOFF_REL" parents-only)"; then
-    ERRORS+=("$HANDOFF_REL: '$bad' es un symlink")
+  if bad="$(bad_parent "$HANDOFF_REL")"; then
+    ERRORS+=("$HANDOFF_REL: componente '$bad'")
   elif is_ignored "$HANDOFF_REL"; then
     ERRORS+=("$HANDOFF_REL: nacería ignorado por las reglas del destino")
   fi
@@ -254,18 +278,34 @@ if [ "${#ERRORS[@]}" -gt 0 ]; then
 fi
 
 # ── Verificación de settings (estructural, fail-closed) ───────────────────────
-# Compara la política efectiva del settings preexistente contra templates/settings.json:
-# cada permiso requerido en allow y no en deny (deny gana), y defaultMode correcto.
-# JSON inválido, python3 ausente o caso no demostrable ⇒ faltante (fail-closed).
+# Compara la política efectiva del settings preexistente contra templates/settings.json
+# (la misma que se instala como .claude/axel-policy.json): cada permiso requerido en allow,
+# ningún deny que pueda solaparlo (deny gana; solapamiento por prefijo, conservador), y
+# defaultMode correcto. JSON inválido, shapes inesperados, python3 ausente o cualquier
+# caso no demostrable ⇒ faltante (fail-closed).
 check_settings() {
   local existing="$1" required="$AXEL_ROOT/templates/settings.json"
   local py="${AXEL_INSTALL_PYTHON:-python3}"
   if ! command -v "$py" >/dev/null 2>&1; then
-    echo "settings inverificable (python3 no disponible): tratá la política del loop como faltante — compará a mano con templates/settings.json de axel"
+    echo "settings inverificable (python3 no disponible): tratá la política del loop como faltante — compará a mano con .claude/axel-policy.json"
     return 0
   fi
   "$py" - "$required" "$existing" <<'PY' 2>/dev/null || echo "settings inverificable (error al analizar): tratá la política del loop como faltante"
 import json, sys
+
+def overlaps(deny_entry, perm):
+    # Conservador: solo se declara disjunto cuando se puede demostrar por prefijo.
+    def norm(s):
+        # "Tool(cmd:*)" -> "Tool(cmd" (el ":*" es sufijo de patron, no texto del comando)
+        if s.endswith(":*)"): return s[:-3]
+        if s.endswith("*)"): return s[:-2]
+        if s.endswith("*"): return s[:-1]
+        return s
+    if not isinstance(deny_entry, str) or not deny_entry:
+        return True  # entrada rara: no demostrable => bloquea
+    d, p = norm(deny_entry), norm(perm)
+    return p.startswith(d) or d.startswith(p)
+
 try:
     req = json.load(open(sys.argv[1]))
 except Exception:
@@ -277,26 +317,38 @@ except Exception:
     print("settings.json invalido: no parsea como JSON; la politica del loop no es demostrable")
     sys.exit(0)
 rp = req.get("permissions", {}) if isinstance(req, dict) else {}
-ep = ex.get("permissions", {}) if isinstance(ex, dict) else {}
-allow = ep.get("allow", []) if isinstance(ep, dict) else []
-deny = ep.get("deny", []) if isinstance(ep, dict) else []
-if not isinstance(allow, list): allow = []
-if not isinstance(deny, list): deny = []
+if not isinstance(ex, dict) or ("permissions" in ex and not isinstance(ex["permissions"], dict)):
+    print("settings inverificable: permissions no tiene la forma esperada (fail-closed)")
+    sys.exit(0)
+ep = ex.get("permissions", {})
+allow = ep.get("allow", [])
+deny = ep.get("deny", [])
+if not isinstance(allow, list):
+    print("settings inverificable: permissions.allow no es una lista (fail-closed)")
+    sys.exit(0)
+if not isinstance(deny, list):
+    print("settings inverificable: permissions.deny no es una lista (fail-closed)")
+    sys.exit(0)
 for perm in rp.get("allow", []):
     if perm not in allow:
         print(f"permiso faltante en permissions.allow: {perm}")
-    elif perm in deny:
-        print(f"permiso en allow pero tambien en deny (deny gana): {perm}")
+        continue
+    blockers = [d for d in deny if overlaps(d, perm)]
+    if blockers:
+        print(f"permiso en allow pero un deny puede cubrirlo (deny gana): {perm} vs {blockers}")
 want_mode = rp.get("defaultMode", "acceptEdits")
-mode = ep.get("defaultMode") if isinstance(ep, dict) else None
+mode = ep.get("defaultMode")
 if mode != want_mode:
     print(f"permissions.defaultMode debe ser \"{want_mode}\" (actual: {mode!r}); sin eso el loop se frena en cada edicion")
 PY
 }
 
 SETTINGS_ISSUES=""
-if [ -f "$TARGET/.claude/settings.json" ]; then
-  SETTINGS_ISSUES="$(check_settings "$TARGET/.claude/settings.json")"
+settings_path="$TARGET/.claude/settings.json"
+if [ -L "$settings_path" ] || { [ -e "$settings_path" ] && [ ! -f "$settings_path" ]; }; then
+  PENDING_MECH+=("settings: .claude/settings.json existe pero no es un archivo regular; la política del loop no es demostrable (fail-closed)")
+elif [ -f "$settings_path" ]; then
+  SETTINGS_ISSUES="$(check_settings "$settings_path")"
   if [ -n "$SETTINGS_ISSUES" ]; then
     while IFS= read -r line; do PENDING_MECH+=("settings: $line"); done <<< "$SETTINGS_ISSUES"
   fi
@@ -305,9 +357,8 @@ fi
 # ── Escritura ─────────────────────────────────────────────────────────────────
 INSTALLED=(); UPDATED=(); UNCHANGED=(); SKIPPED=()
 
-for rel in "${PAYLOAD[@]}"; do
-  src="$AXEL_ROOT/$rel"; dest="$TARGET/$rel"
-  [ -f "$src" ] || die "fuente inconsistente: falta $rel en axel"
+for i in "${!PAYLOAD[@]}"; do
+  src="$AXEL_ROOT/${PAYLOAD_SRC[$i]}"; rel="${PAYLOAD[$i]}"; dest="$TARGET/$rel"
   mkdir -p "$(dirname "$dest")"
   if [ -f "$dest" ] && cmp -s "$src" "$dest"; then
     UNCHANGED+=("$rel")
@@ -339,7 +390,6 @@ render_seed() {
 }
 for i in ${CREATE_SEEDS[@]+"${CREATE_SEEDS[@]}"}; do   # guard: bash 3.2 + set -u con array vacío
   src="$AXEL_ROOT/${SEED_SRC[$i]}"; rel="${SEED_DEST[$i]}"; dest="$TARGET/$rel"
-  [ -f "$src" ] || die "fuente inconsistente: falta ${SEED_SRC[$i]} en axel"
   mkdir -p "$(dirname "$dest")"
   render_seed "$src" "$dest"
   INSTALLED+=("$rel (semilla)")
@@ -357,7 +407,11 @@ if [ "$CLAUDE_ACTION" = "create" ]; then
 fi
 case "$GITIGNORE_ACTION" in
   create) printf '%s\n' "$GITIGNORE_LINE" > "$gitignore_path"; INSTALLED+=(".gitignore (entrada $GITIGNORE_LINE)") ;;
-  append) printf '%s\n' "$GITIGNORE_LINE" >> "$gitignore_path"; UPDATED+=(".gitignore (entrada $GITIGNORE_LINE)") ;;
+  append)
+    # un .gitignore sin newline final concatenaría la entrada a la última regla
+    [ -s "$gitignore_path" ] && [ "$(tail -c1 "$gitignore_path")" != "" ] && printf '\n' >> "$gitignore_path"
+    printf '%s\n' "$GITIGNORE_LINE" >> "$gitignore_path"
+    UPDATED+=(".gitignore (entrada $GITIGNORE_LINE)") ;;
 esac
 
 # Marker: serialización estable, se reescribe solo si el contenido cambia

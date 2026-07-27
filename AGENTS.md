@@ -48,6 +48,7 @@ cambio → commit → `scripts/review.sh` → si `CHANGES_REQUESTED`: corregir o
 ## Convenciones
 
 - Docs, commits y comunicación en español. Código, nombres de archivos e identificadores en inglés.
+- **El método está duplicado en `templates/AGENTS.md`** (lo que el instalador siembra en otros proyectos): si tocás el proceso o las reglas en este archivo, actualizá también la plantilla — y viceversa.
 - Modelo/esfuerzo del reviewer se tunean SOLO en `scripts/review.sh` (overrides puntuales por env `AXEL_REVIEW_*`).
 - Estado local no versionado (session id de Codex, SHA del último APPROVED, ronda) en `.claude/state/`.
 - Reviews con esfuerzo xhigh pueden tardar >10 minutos: el generador las corre en background y continúa cuando terminan.

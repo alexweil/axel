@@ -38,6 +38,14 @@ assert_dirty() { [ -n "$(git -C "$1" status --porcelain)" ] && ok || ko "árbol 
 OUT=""; RC=0
 run_install() { OUT="$("$INSTALL" "$@" 2>&1)" && RC=0 || RC=$?; }
 
+# Huella del contenido real del filesystem (sin .git): "cero mutaciones" debe cubrir
+# también paths ignorados, que git status no observa
+fs_digest() {
+  (cd "$1" && find . -name .git -prune -o \( -type f -o -type l \) -print | LC_ALL=C sort | while IFS= read -r p; do
+    if [ -L "$p" ]; then printf 'L %s -> %s\n' "$p" "$(readlink "$p")"; else shasum "$p"; fi
+  done | shasum | cut -d' ' -f1)
+}
+
 mk_target() {
   local t="$TESTS_TMP/$1"
   mkdir -p "$t"
@@ -62,6 +70,8 @@ assert_link "$T1/CLAUDE.md" "AGENTS.md"
 assert_in_file "$T1/.gitignore" ".claude/state/"
 assert_file "$T1/.claude/axel-install"
 assert_in_file "$T1/.claude/axel-install" "axel-install-format: 1"
+assert_file "$T1/.claude/axel-policy.json"
+assert_same "$T1/.claude/axel-policy.json" "$AXEL_SRC/templates/settings.json"
 assert_no "$T1/docs/ADOPTION.md"
 assert_in_file "$T1/docs/STATUS.md" "/design"
 assert_not_in_file "$T1/docs/STATUS.md" "adopción"
@@ -252,24 +262,27 @@ OUT="$(AXEL_INSTALL_PYTHON=/nonexistent-python "$INSTALL" "$TH" 2>&1)" && RC=0 |
 assert_rc 1
 assert_in_file "$TH/docs/ADOPTION.md" "inverificable"
 
-# ── T11 · rechazos: exit 2 y cero mutaciones ──────────────────────────────────
-reject_case() {  # $1 = target; corre install y verifica exit 2 + árbol limpio
-  run_install "$1"
+# ── T11 · rechazos: exit 2 y cero mutaciones (huella de contenido antes/después)
+reject_case() {  # $1 = target del install; $2 (opcional) = raíz a la que se le toma la huella
+  local tgt="$1" root="${2:-$1}" before after
+  before="$(fs_digest "$root")"
+  run_install "$tgt"
   assert_rc 2
-  assert_clean "$1"
+  after="$(fs_digest "$root")"
+  [ "$before" = "$after" ] && ok || ko "mutaciones tras el rechazo (la huella del filesystem difiere)"
 }
 
 t "T11a destino sin git"
-NG="$TESTS_TMP/no-git"; mkdir -p "$NG"
-run_install "$NG"; assert_rc 2; assert_no "$NG/AGENTS.md"
+NG="$TESTS_TMP/no-git"; mkdir -p "$NG"; echo propio > "$NG/keep.txt"
+reject_case "$NG"
 
 t "T11b árbol sucio"
 T11B="$(mk_target t11b)"; echo x > "$T11B/pending.txt"
-run_install "$T11B"; assert_rc 2; assert_no "$T11B/AGENTS.md"
+reject_case "$T11B"
 
 t "T11c target subdirectorio"
 T11C="$(mk_target t11c)"; mkdir -p "$T11C/sub"
-run_install "$T11C/sub"; assert_rc 2; assert_clean "$T11C"
+reject_case "$T11C/sub" "$T11C"
 
 t "T11d self-install"
 run_install "$AXEL_SRC"; assert_rc 2; assert_clean "$AXEL_SRC"
@@ -331,6 +344,92 @@ echo ".gitignore" > "$T11M/.git/info/exclude"   # path absoluto: --git-dir devue
 echo "algo-propio/" > "$T11M/.gitignore"    # existe, sin la línea, invisible para git
 reject_case "$T11M"
 assert_not_in_file "$T11M/.gitignore" ".claude/state/"
+
+# ── T12 · huecos cerrados en la ronda 5 ───────────────────────────────────────
+t "T12a componente padre regular (archivo llamado scripts)"
+T12A="$(mk_target t12a)"
+echo "soy un archivo" > "$T12A/scripts"
+tcommit "$T12A" "archivo scripts"
+reject_case "$T12A"
+assert_in_file "$T12A/scripts" "soy un archivo"
+
+t "T12b fuente axel incompleta: rechazo sin mutaciones"
+AXEL_BROKEN="$TESTS_TMP/axel-broken"
+cp -R "$AXEL_SRC" "$AXEL_BROKEN"
+rm "$AXEL_BROKEN/scripts/awake.sh"
+T12B="$(mk_target t12b)"
+before="$(fs_digest "$T12B")"
+OUT="$("$AXEL_BROKEN/scripts/install.sh" "$T12B" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+[ "$before" = "$(fs_digest "$T12B")" ] && ok || ko "mutaciones tras rechazo por fuente incompleta"
+printf '%s' "$OUT" | grep -qF "fuente inconsistente" && ok || ko "'fuente inconsistente' no está en la salida"
+
+t "T12c settings existente como directorio (inverificable)"
+T12C="$(mk_target t12c)"
+mkdir -p "$T12C/.claude/settings.json"; echo x > "$T12C/.claude/settings.json/x"
+tcommit "$T12C" "settings dir"
+run_install "$T12C"
+assert_rc 1
+assert_in_file "$T12C/docs/ADOPTION.md" "no es un archivo regular"
+
+t "T12d .gitignore trackeado sin newline final"
+T12D="$(mk_target t12d)"
+printf 'propio/' > "$T12D/.gitignore"    # sin salto de línea final
+tcommit "$T12D" "gitignore sin newline"
+run_install "$T12D"
+assert_rc 0
+grep -qxF 'propio/' "$T12D/.gitignore" && ok || ko "la regla previa quedó rota por el append"
+grep -qxF '.claude/state/' "$T12D/.gitignore" && ok || ko "falta la entrada .claude/state/"
+
+t "T12e deny de tipo inválido (no lista)"
+T12E="$(mk_target t12e)"
+mkdir -p "$T12E/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T12E/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = "Bash"
+print(json.dumps(d))
+PY
+tcommit "$T12E" "deny string"
+run_install "$T12E"
+assert_rc 1
+assert_in_file "$T12E/docs/ADOPTION.md" "permissions.deny no es una lista"
+
+t "T12f deny más amplio que el permiso requerido"
+T12F="$(mk_target t12f)"
+mkdir -p "$T12F/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T12F/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["Bash(git:*)"]
+print(json.dumps(d))
+PY
+tcommit "$T12F" "deny amplio"
+run_install "$T12F"
+assert_rc 1
+assert_in_file "$T12F/docs/ADOPTION.md" "deny gana"
+
+t "T12g política nueva con handoff abierto: persistida como payload"
+AXEL_MOD="$TESTS_TMP/axel-mod"
+cp -R "$AXEL_SRC" "$AXEL_MOD"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_MOD/templates/settings.json" > "$AXEL_MOD/templates/settings.json.new" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["allow"].append("Bash(true:*)")
+print(json.dumps(d, indent=2))
+PY
+mv "$AXEL_MOD/templates/settings.json.new" "$AXEL_MOD/templates/settings.json"
+T12G="$(mk_target t12g)"
+echo "# notas" > "$T12G/apuntes.md"
+tcommit "$T12G" "doc previo"
+run_install "$T12G"; assert_rc 1               # instala con política vieja, adopción abierta
+tcommit "$T12G" "install (adopción abierta)"
+cp "$T12G/docs/ADOPTION.md" "$TESTS_TMP/t12g-handoff.ref"
+OUT="$("$AXEL_MOD/scripts/install.sh" "$T12G" 2>&1)" && RC=0 || RC=$?
+assert_rc 1
+assert_same "$T12G/docs/ADOPTION.md" "$TESTS_TMP/t12g-handoff.ref"        # handoff intacto
+assert_in_file "$T12G/.claude/axel-policy.json" "Bash(true:*)"            # política nueva persistida
+printf '%s' "$OUT" | grep -qF "Bash(true:*)" && ok || ko "el pendiente nuevo no se reportó"
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
