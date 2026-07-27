@@ -17,9 +17,9 @@ Montar el esqueleto completo de axel para que el método pueda correr de punta a
 
 ## Verificación
 
-- `bash -n scripts/review.sh`: pendiente.
-- Smoke test `new` + `round` con esfuerzo low (valida sesión, resume con contexto, veredicto y exit codes): pendiente.
-- Tras el smoke, `.claude/state/` se resetea para que la primera review real arranque limpia.
+- `bash -n scripts/review.sh`: OK.
+- Smoke test 2026-07-27 con `AXEL_REVIEW_EFFORT=low` contra Codex real: `new` capturó session id y parseó `VERDICT: APPROVED` (exit 0); `round` resumió la sesión conservando contexto (el reviewer recordó el mensaje anterior). El camino de error también quedó ejercitado: un flag inválido en resume produjo exit 2 con puntero a los eventos JSONL, se diagnosticó y se corrigió (`--cd` no existe en `codex exec resume`; el cwd lo garantiza el `cd` del script).
+- `.claude/state/` reseteado tras el smoke para que la primera review real arranque limpia.
 
 ## Review log
 

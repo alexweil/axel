@@ -82,19 +82,20 @@ Reglas: verificá contra los docs de diseño/implementación; podés ejecutar co
 EOF
 )"
 
+# resume no acepta --cd; el cwd correcto lo garantiza el cd de arriba
 COMMON_ARGS=( -m "$REVIEW_MODEL"
   -c "model_reasoning_effort=\"$REVIEW_EFFORT\""
   -c "sandbox_mode=\"$REVIEW_SANDBOX\""
-  --cd "$REPO_ROOT"
   --json
   -o "$MSG_FILE" )
+NEW_ARGS=( "${COMMON_ARGS[@]}" --cd "$REPO_ROOT" )
 
 echo "── review ronda $ROUND · modelo $REVIEW_MODEL · esfuerzo $REVIEW_EFFORT · rango $RANGE ──"
 rm -f "$MSG_FILE"
 RC=0
 if [ "$MODE" = "new" ]; then
   rm -f "$SESSION_FILE"
-  codex exec "${COMMON_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
+  codex exec "${NEW_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
   SID="$(grep -m1 -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$EVENTS_FILE" || true)"
   if [ -n "$SID" ]; then
     echo "$SID" > "$SESSION_FILE"
