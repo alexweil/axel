@@ -15,4 +15,4 @@ Abrí Claude Code en el repo:
 - `/design`, `/plan` — fases de diseño y planificación.
 - `/recap` — resumen de lo hecho desde el último OK.
 
-El loop corre solo (commitea, pide review a Codex, itera) y se frena en cada RECAP a esperar tu OK. Podés responder desde una sesión remota. Para tiradas largas la máquina tiene que quedar despierta (`caffeinate`).
+El loop corre solo (commitea, pide review a Codex, itera) y se frena en cada RECAP a esperar tu OK. Podés responder desde una sesión remota. La máquina se mantiene despierta sola mientras el loop trabaja (`scripts/awake.sh` + `caffeinate` alrededor de Codex); con la tapa cerrada hace falta corriente y display externo.

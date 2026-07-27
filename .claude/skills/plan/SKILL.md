@@ -9,4 +9,4 @@ Sos el generador. Leé `AGENTS.md`, `docs/STATUS.md` y `docs/DESIGN.md` primero.
 2. **Review con acuerdo explícito**: `scripts/review.sh new`; pedile a Codex que evalúe prioridades y orden, y que proponga cambios si no acuerda. Iterá hasta APPROVED — acá APPROVED significa "los dos agentes acuerdan el orden".
 3. **RECAP** con el plan resultante y esperá el OK humano. Con el OK: sesión limpia y `/feature` para el primero de la lista.
 
-Reglas: todo commit toca docs; reviews largas en background; tope de 5 rondas → RECAP con ambas posturas.
+Reglas: al entrar al loop de review, `scripts/awake.sh start`; todo commit toca docs; reviews largas en background; tope de 5 rondas → RECAP con ambas posturas.

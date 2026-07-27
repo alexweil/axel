@@ -15,11 +15,13 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 | 02 | Hardening del loop de review | Backlog (propuesto) | — |
 | 03 | Notificaciones y continuidad entre sesiones | Backlog (propuesto) | — |
 
-El orden 01–03 es propuesta del generador: queda para acordar con el reviewer en el próximo `/plan` (regla del método: las prioridades las acuerdan los dos agentes).
+El orden 01–03 es propuesta del generador y queda para acordar con el reviewer en el próximo `/plan` (regla del método: las prioridades las acuerdan los dos agentes), con una restricción del humano (2026-07-27): **el instalador (01) es prioritario** — tiene un caso de uso concreto esperando: otro proyecto suyo que ya sigue este mismo proceso de forma manual.
 
 ### 01 — Instalador
 
-Un comando que instala la maquinaria en un repo destino: copia `.claude/skills/`, `scripts/review.sh` y `.claude/settings.json`, y siembra `AGENTS.md` + symlink `CLAUDE.md` + estructura `docs/` con plantillas. axel es la fuente de verdad; los proyectos consumidores se actualizan re-corriendo el instalador.
+Un comando que instala la maquinaria en un repo destino: copia `.claude/skills/`, `scripts/` (review.sh, awake.sh) y `.claude/settings.json`, y siembra `AGENTS.md` + symlink `CLAUDE.md` + estructura `docs/` con plantillas. axel es la fuente de verdad; los proyectos consumidores se actualizan re-corriendo el instalador.
+
+Requisito clave (pedido humano 2026-07-27): **modo adopción** para proyectos existentes que ya vienen siguiendo el proceso a mano — detectar docs preexistentes (DESIGN/IMPLEMENTATION o equivalentes), no pisar nada, mapear lo que ya hay a la convención de axel, sembrar solo lo que falte y derivar el `STATUS.md` inicial del estado real del proyecto.
 
 ### 02 — Hardening del loop
 

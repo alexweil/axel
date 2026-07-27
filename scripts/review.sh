@@ -15,6 +15,15 @@ REVIEW_MODEL="${AXEL_REVIEW_MODEL:-gpt-5.6-sol}"
 REVIEW_EFFORT="${AXEL_REVIEW_EFFORT:-xhigh}"
 REVIEW_SANDBOX="${AXEL_REVIEW_SANDBOX:-workspace-write}"  # puede ejecutar para verificar; no debe tocar el repo
 
+# La review no debe cortarse porque la máquina se duerma: caffeinate scoped al proceso de codex
+run_codex() {
+  if command -v caffeinate >/dev/null 2>&1; then
+    caffeinate -is codex "$@"
+  else
+    codex "$@"
+  fi
+}
+
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 STATE_DIR="$REPO_ROOT/.claude/state"
 SESSION_FILE="$STATE_DIR/codex-session-id"
@@ -95,7 +104,7 @@ rm -f "$MSG_FILE"
 RC=0
 if [ "$MODE" = "new" ]; then
   rm -f "$SESSION_FILE"
-  codex exec "${NEW_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
+  run_codex exec "${NEW_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
   SID="$(grep -m1 -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$EVENTS_FILE" || true)"
   if [ -n "$SID" ]; then
     echo "$SID" > "$SESSION_FILE"
@@ -105,9 +114,9 @@ if [ "$MODE" = "new" ]; then
 else
   SID="$(cat "$SESSION_FILE" 2>/dev/null || true)"
   if [ -n "$SID" ]; then
-    codex exec resume "$SID" "${COMMON_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
+    run_codex exec resume "$SID" "${COMMON_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
   else
-    codex exec resume --last "${COMMON_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
+    run_codex exec resume --last "${COMMON_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
   fi
 fi
 

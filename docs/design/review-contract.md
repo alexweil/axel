@@ -41,3 +41,4 @@
 - `round` usa el id guardado en `.claude/state/codex-session-id`. Cambio de feature ⇒ siempre `new`.
 - Config del reviewer: variables al tope de `review.sh`; overrides puntuales por env `AXEL_REVIEW_MODEL/EFFORT/SANDBOX` (p. ej. smoke tests con esfuerzo `low`).
 - Reviews con esfuerzo xhigh pueden tardar >10 minutos: el generador corre `review.sh` en background y continúa cuando termina, sin duplicar la corrida.
+- `review.sh` envuelve la invocación de Codex en `caffeinate -is` (scoped al proceso: la assertion muere con él), para que una review larga nunca se corte porque la máquina se durmió. La cobertura del lado del generador la da `scripts/awake.sh`.

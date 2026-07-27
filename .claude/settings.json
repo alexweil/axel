@@ -13,6 +13,10 @@
       "Bash(scripts/review.sh:*)",
       "Bash(./scripts/review.sh:*)",
       "Bash(bash scripts/review.sh:*)",
+      "Bash(scripts/awake.sh:*)",
+      "Bash(./scripts/awake.sh:*)",
+      "Bash(caffeinate:*)",
+      "Bash(pmset -g:*)",
       "Bash(codex exec:*)",
       "Bash(bash -n:*)",
       "Bash(shellcheck:*)"
