@@ -15,17 +15,28 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 PIDFILE="$REPO_ROOT/.claude/state/caffeinate-pid"
 mkdir -p "$(dirname "$PIDFILE")"
 
-# Vivo = el pid del pidfile existe Y es realmente un caffeinate (un pid reciclado
-# por otro proceso no cuenta, y jamás hay que señalizarlo).
-alive() {
+# Fuente primaria de verdad: pmset (legible incluso desde sandboxes que niegan señales/ps).
+# Tri-estado: 0 = viva (pmset muestra la assertion de ese pid), 1 = muerta confirmada
+# (pmset accesible y sin match), 2 = indeterminado (sin pmset y señales no concluyentes).
+# Con estado indeterminado JAMÁS se limpia el pidfile ni se señaliza el pid.
+check() {
   [ -f "$PIDFILE" ] || return 1
-  local pid
+  local pid asserts
   pid="$(cat "$PIDFILE")"
-  kill -0 "$pid" 2>/dev/null || return 1
-  case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
-    *caffeinate*) return 0 ;;
-    *) return 1 ;;
-  esac
+  asserts="$(pmset -g assertions 2>/dev/null || true)"
+  if [ -n "$asserts" ]; then
+    if printf '%s\n' "$asserts" | grep -q "pid ${pid}(caffeinate)"; then
+      return 0
+    fi
+    return 1
+  fi
+  # Fallback sin pmset: solo afirmamos vida si ambas comprobaciones son concluyentes
+  if kill -0 "$pid" 2>/dev/null; then
+    case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
+      *caffeinate*) return 0 ;;
+    esac
+  fi
+  return 2
 }
 
 case "${1:-status}" in
@@ -43,9 +54,12 @@ case "${1:-status}" in
       echo "error: horas debe ser >= 1" >&2
       exit 2
     fi
-    if alive; then
-      kill "$(cat "$PIDFILE")" 2>/dev/null || true
-    fi
+    RC=0; check || RC=$?
+    case "$RC" in
+      0) kill "$(cat "$PIDFILE")" 2>/dev/null || true ;;
+      1) ;;
+      2) echo "aviso: no pude confirmar el estado de la assertion previa; no la toco (su timeout la vencerá)" ;;
+    esac
     rm -f "$PIDFILE"
     # -i: sin idle sleep (batería incluida) · -s: sistema despierto en corriente · -t: backstop
     nohup caffeinate -is -t "$((HORAS * 3600))" >/dev/null 2>&1 &
@@ -53,22 +67,30 @@ case "${1:-status}" in
     echo "máquina despierta por ${HORAS}h (pid $(cat "$PIDFILE"))"
     ;;
   stop)
-    if alive; then
-      kill "$(cat "$PIDFILE")" 2>/dev/null || true
-      echo "assertion liberada: la máquina puede dormir"
-    else
-      echo "no había assertion activa"
-    fi
-    rm -f "$PIDFILE"
+    RC=0; check || RC=$?
+    case "$RC" in
+      0)
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        rm -f "$PIDFILE"
+        echo "assertion liberada: la máquina puede dormir" ;;
+      1)
+        rm -f "$PIDFILE"
+        echo "no había assertion activa" ;;
+      2)
+        echo "estado indeterminado (sin pmset ni señales): no toco nada; si hace falta, matá el pid $(cat "$PIDFILE" 2>/dev/null || echo '?') a mano" >&2
+        exit 2 ;;
+    esac
     ;;
   status)
-    if alive; then
-      echo "despierta (pid $(cat "$PIDFILE"))"
-    else
-      # Limpia un pidfile viejo (timeout vencido o pid reciclado) para no confundir
-      rm -f "$PIDFILE"
-      echo "sin assertion: la máquina puede dormir"
-    fi
+    RC=0; check || RC=$?
+    case "$RC" in
+      0) echo "despierta (pid $(cat "$PIDFILE"))" ;;
+      1)
+        # pmset confirmó que no existe: limpiar el pidfile huérfano es seguro
+        rm -f "$PIDFILE"
+        echo "sin assertion: la máquina puede dormir" ;;
+      2) echo "indeterminado: hay pidfile ($(cat "$PIDFILE" 2>/dev/null || echo '?')) pero no puedo verificarlo desde acá; no lo toco" ;;
+    esac
     ;;
   *)
     echo "uso: $0 {start [horas]|stop|status}" >&2

@@ -42,7 +42,7 @@ cambio → commit → `scripts/review.sh` → si `CHANGES_REQUESTED`: corregir o
 
 - Tu insumo: el rango de commits indicado en el pedido, los docs modificados y el mensaje del generador.
 - Verificá contra el diseño y el plan: ¿lo hecho coincide con lo documentado? ¿los docs quedaron al día?
-- Podés ejecutar comandos (tests, builds, linters) para verificar por tu cuenta. **No modifiques el repo**; si un comando ensucia el árbol, restauralo.
+- Trabajás sobre un **worktree snapshot** clavado al commit bajo review (se resetea solo en cada ronda): ahí podés ejecutar comandos (tests, builds, linters) para verificar por tu cuenta. El repo canónico no es tu workspace — no lo modifiques. No corras `scripts/review.sh` (recursión) ni `scripts/awake.sh stop`.
 - Feedback en puntos numerados y accionables. Terminá SIEMPRE tu respuesta con una línea exacta: `VERDICT: APPROVED` o `VERDICT: CHANGES_REQUESTED`.
 
 ## Convenciones

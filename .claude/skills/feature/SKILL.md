@@ -23,6 +23,6 @@ Cuando el OK llegue: actualizá STATUS.md al siguiente paso y commiteá. Si el O
 - Al entrar al loop corré `scripts/awake.sh start` (renueva la ventana de 12h para que la máquina no se duerma; cubre generación y review). Dejala corriendo durante la espera de OK — el backstop es el timeout; `scripts/awake.sh stop` solo si el humano lo pide.
 - Reviews largas (xhigh puede tardar >10 min): corré `scripts/review.sh` con Bash en background (`run_in_background`) y continuá cuando termine. No dupliques una review en curso.
 - Tope de 5 rondas sin convergencia, cambio de scope, o algo roto que excede el feature → cortá a RECAP temprano con las posturas de ambos agentes.
-- `review.sh` exit 2 (error/sin veredicto): diagnosticá con `.claude/state/last-review-events.jsonl`, reintentá una vez; si persiste, RECAP con el problema.
+- `review.sh` exit 2: mirá el stderr. Si dice `DEADLOCK` **no reintentes**: armá el RECAP con ambas posturas y esperá el desempate humano; con su OK corré `scripts/review.sh reset-deadlock` y seguí según lo que él decida. Si es un error técnico (codex caído, sin veredicto), diagnosticá con `.claude/state/last-review-events.jsonl` y reintentá una vez; si persiste, RECAP con el problema.
 - Todo commit toca algún doc. `main` lineal, sin amend.
 - Mensajes del humano a mitad del loop: prioridad absoluta — respondé y ajustá antes de seguir.

@@ -10,4 +10,4 @@ Sos el generador. Leé `AGENTS.md` y `docs/STATUS.md` primero.
 3. **Review**: `scripts/review.sh new` con un pedido que explique qué es el diseño y qué revisar (coherencia, huecos, riesgos, decisiones mal fundadas). Iterá — corregir o argumentar → commit → `scripts/review.sh round` — hasta APPROVED. Las decisiones que surjan de la review quedan registradas en DESIGN.md.
 4. **RECAP** y esperá el OK humano. Con el OK: sesión limpia y `/plan`.
 
-Reglas: al entrar al loop de review, `scripts/awake.sh start`; todo commit toca docs; reviews largas en background; tope de 5 rondas → RECAP con ambas posturas; mensajes del humano, prioridad absoluta.
+Reglas: al entrar al loop de review, `scripts/awake.sh start`; todo commit toca docs; reviews largas en background; si `review.sh` reporta `DEADLOCK` (5 rondas sin converger) no reintentes — RECAP con ambas posturas y, tras el desempate humano, `scripts/review.sh reset-deadlock`; mensajes del humano, prioridad absoluta.
