@@ -83,4 +83,4 @@ Bloque nuevo en `tests/install.sh` (mismo arnés: `assert_*`, `fs_digest`, `mk_t
 
 ## Review log
 
-(vacío — arranca con la review de esta bajada)
+- **Ronda 1: no ejecutable en este entorno** (2026-07-27). La bajada se commiteó (`c793298`) y se corrió `scripts/review.sh new` con el pedido (bookkeeping del cierre del 01 + bajada contra DESIGN/IMPLEMENTATION), pero esta sesión corre en un contenedor remoto de Claude Code web **sin el CLI `codex` ni credenciales OpenAI** (verificado: PATH, `~/.codex`, env). Evidencia: exit 2 de `review.sh`, `codex terminó con exit 127`, `last-review-events.jsonl` = `codex: command not found`. No es fallo transitorio ⇒ sin reintento; RECAP temprano para que el humano decida dónde corre el loop. Nota adicional: `.claude/state/` no viaja (no versionado por diseño), así que en este entorno la ronda 1 tampoco tendría la base `fb23165` — cubriría todo el repo.
