@@ -2,8 +2,9 @@
 
 - **Fase**: plan — acordando prioridades del backlog con el reviewer
 - **Feature en curso**: ninguno — [00-bootstrap](implementation/00-bootstrap.md) **cerrado con OK humano** (2026-07-27; APPROVED de Codex en ronda 4, base `a8fc740`)
-- **Ronda de review**: ciclo de plan, ronda 4 completada — r1: criterio y suite (resuelto); r2: consistencia de STATUS y regresión de observación congelada (resuelto); r3: conteo de clases de falla (resuelto); r4: STATUS desactualizado y commit `c49d371` sin tocar STATUS, incumpliendo la regla de commit (resuelto con este commit); ronda 5 pendiente
-- **Último veredicto**: CHANGES_REQUESTED · ronda 4 del ciclo de plan (racha 4 — la ronda 5 es la última antes del freno de deadlock)
-- **Esperando**: el veredicto de la ronda 5 del ciclo de plan; lo sustantivo del plan (orden 01→02→03, criterio, suite en el 02) ya está acordado por el reviewer desde la ronda 3
+- **Ronda de review**: ciclo de plan completo — APPROVED en ronda 5 (base `5b1bc02`); 5 rondas: 2 de sustancia (criterio, suite de regresión) y 3 de bookkeeping del generador
+- **Último veredicto**: APPROVED · ronda 5 del ciclo de plan · 5b1bc02
+- **Esperando**: **OK humano** al RECAP del plan
+- **Al recibir OK**: sesión limpia de ambos agentes y `/feature` para el 01 (instalador con modo adopción); la ronda 1 de ese ciclo barre este commit de cierre
 - **Nota de método**: `/plan` corre en la misma sesión del generador por instrucción directa del humano (su mensaje tiene prioridad sobre la regla de sesión limpia); el reviewer sí estrena sesión
 - **Actualizado**: 2026-07-27
