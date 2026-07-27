@@ -25,4 +25,5 @@ Montar el esqueleto completo de axel para que el método pueda correr de punta a
 
 ## Review log
 
-- Ronda 1: pendiente — esperando OK humano para correr la primera review de Codex sobre todo el bootstrap.
+- 2026-07-27 — OK humano recibido para arrancar el loop de review.
+- Ronda 1: en curso — primera review real de Codex sobre todo el bootstrap (docs + skills + scripts).
