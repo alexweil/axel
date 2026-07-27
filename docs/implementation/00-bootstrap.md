@@ -26,4 +26,10 @@ Montar el esqueleto completo de axel para que el método pueda correr de punta a
 ## Review log
 
 - 2026-07-27 — OK humano recibido para arrancar el loop de review.
-- Ronda 1: en curso — primera review real de Codex sobre todo el bootstrap (docs + skills + scripts).
+- **Ronda 1: CHANGES_REQUESTED** (6 puntos, todos aceptados como problemas reales). Resolución:
+  1. Veredicto laxo + RC ignorado → corregido tal cual: exit ≠ 0 de Codex invalida la corrida, y el veredicto se compara literalmente contra la última línea no vacía.
+  2. Base movida al HEAD vivo (TOCTOU) → corregido con variante argumentada: la review queda clavada a `REVIEW_HEAD` (rango y aprobación); commits durante la review no quedan aprobados y entran al próximo rango, en vez de invalidar la corrida como proponía el reviewer.
+  3. Deadlock mal contado → corregido: racha de `CHANGES_REQUESTED` consecutivas (resetea con APPROVED o `new`), bloqueo en 5 antes de gastar la ronda, `reset-deadlock` para continuar tras el desempate humano.
+  4. Commits de cierre post-APPROVED fuera del rango → resuelto por diseño (opción "excepción explícita" del reviewer): no mueven la base y los verifica la ronda 1 del ciclo siguiente; documentado en el contrato.
+  5. STATUS ↔ IMPLEMENTATION desincronizados → corregido; convención nueva: la tabla de features usa estados gruesos y el detalle fino vive solo en STATUS.md.
+  6. awake.sh: pidfile huérfano/pid reciclado y validación tardía → corregido: identidad de proceso verificada antes de señalizar, horas validadas antes de tocar la assertion vigente.

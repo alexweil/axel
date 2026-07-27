@@ -27,13 +27,20 @@
 
 ## Semántica del veredicto
 
-- `APPROVED` mueve la base: el próximo rango arranca en el HEAD aprobado (`review.sh` guarda `last-approved-sha`). Un APPROVED intermedio (p. ej. de la bajada fina) no cierra el feature; el APPROVED de cierre es contra los criterios de cierre del doc del feature.
-- Sin línea de veredicto → exit 2: el generador reintenta una vez y, si persiste, corta a RECAP.
-- Exit codes de `review.sh`: 0 = APPROVED, 1 = CHANGES_REQUESTED, 2 = error o sin veredicto.
+- El veredicto es la **última línea no vacía** del mensaje del reviewer, comparada literalmente (se toleran solo espacios alrededor). Un veredicto en el medio del mensaje no cuenta: exit 2.
+- Si el proceso de Codex termina con error (exit ≠ 0), **no se toma veredicto** aunque haya quedado un mensaje escrito: exit 2.
+- La review queda **clavada al `REVIEW_HEAD`** capturado al armar el pedido: el rango, el log y la aprobación se refieren a ese SHA. Commits que aparezcan durante una review larga NO quedan aprobados — `review.sh` avisa y entran en el próximo rango. Se eligió esto en vez de invalidar la corrida: la review de un SHA es válida para ese SHA, y descartar una corrida xhigh por commits posteriores sería tirar trabajo bueno.
+- `APPROVED` mueve la base a `REVIEW_HEAD` (`.claude/state/last-approved-sha`) y resetea la racha. Un APPROVED intermedio (p. ej. de la bajada fina) no cierra el feature; el APPROVED de cierre es contra los criterios de cierre del doc del feature.
+- Sin veredicto válido → exit 2: el generador reintenta una vez y, si persiste, corta a RECAP.
+- Exit codes de `review.sh`: 0 = APPROVED, 1 = CHANGES_REQUESTED, 2 = error / sin veredicto / deadlock.
 
 ## Deadlock
 
-5 rondas sin convergencia → el generador corta y arma un RECAP con ambas posturas para que desempate el humano. El contador vive en `.claude/state/round` y lo muestra `scripts/review.sh status`.
+La regla de "5 rondas sin convergencia" se mide con una **racha de `CHANGES_REQUESTED` consecutivas** (`.claude/state/changes-streak`): se incrementa en cada ronda no convergida, se resetea con un APPROVED o al abrir ciclo con `new`. Al llegar a 5, `review.sh` **se niega a lanzar otra ronda** (exit 2, antes de gastar tokens): el generador arma un RECAP con ambas posturas para que desempate el humano, y tras el desempate corre `scripts/review.sh reset-deadlock` para continuar. `status` muestra ronda y racha.
+
+## Commits de cierre (bookkeeping)
+
+Tras el APPROVED final de un feature, el generador hace commits de cierre (solo docs: STATUS.md, IMPLEMENTATION.md, review log) que quedan después de la base aprobada. **No mueven la base**: aparecen al inicio del rango de la ronda 1 del ciclo siguiente, donde el reviewer los verifica como primer ítem. Así ningún commit queda sin review, sin necesidad de una corrida extra por el cierre.
 
 ## Ciclo de vida de sesiones
 

@@ -16,7 +16,7 @@ Cuando el OK llegue: actualizá STATUS.md al siguiente paso y commiteá. Si el O
 2. **Bajada fina** → `docs/implementation/NN-nombre.md`: alcance, enfoque técnico, criterios de cierre, riesgos, y una sección "Review log" vacía. STATUS.md → feature en curso. Commit.
 3. **Review de la bajada**: `scripts/review.sh new` con un pedido que explique qué revisar (la bajada contra DESIGN/IMPLEMENTATION). Iterá hasta APPROVED: cada ronda es corregir o argumentar → commit → `scripts/review.sh round`.
 4. **Implementación en pasos chicos**. En cada paso: cambios + doc del feature al día (decisiones al Review log) + STATUS.md → commit → `scripts/review.sh round` con un pedido que diga QUÉ verificar y la evidencia (tests corridos por vos, con salida). Respondé cada punto numerado del feedback: corrección con commit, o argumento; Codex mantiene contexto por resume, la discusión se resuelve en el loop.
-5. **APPROVED de cierre** (criterios de cierre del doc cumplidos) → IMPLEMENTATION.md marca el feature cerrado, STATUS.md → "esperando OK" → commit de cierre → RECAP → si la herramienta PushNotification está disponible, avisá con un resumen de una línea → **terminá el turno**. No sigas trabajando.
+5. **APPROVED de cierre** (criterios de cierre del doc cumplidos) → IMPLEMENTATION.md marca el feature cerrado, STATUS.md → "esperando OK" → commit de cierre → RECAP → si la herramienta PushNotification está disponible, avisá con un resumen de una línea → **terminá el turno**. No sigas trabajando. (Los commits de cierre no mueven la base: los verifica la ronda 1 del ciclo siguiente — regla del contrato.)
 
 ## Reglas del loop
 

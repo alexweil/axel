@@ -15,7 +15,18 @@ REPO_ROOT="$(git rev-parse --show-toplevel)"
 PIDFILE="$REPO_ROOT/.claude/state/caffeinate-pid"
 mkdir -p "$(dirname "$PIDFILE")"
 
-alive() { [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
+# Vivo = el pid del pidfile existe Y es realmente un caffeinate (un pid reciclado
+# por otro proceso no cuenta, y jamás hay que señalizarlo).
+alive() {
+  [ -f "$PIDFILE" ] || return 1
+  local pid
+  pid="$(cat "$PIDFILE")"
+  kill -0 "$pid" 2>/dev/null || return 1
+  case "$(ps -p "$pid" -o comm= 2>/dev/null)" in
+    *caffeinate*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
 
 case "${1:-status}" in
   start)
@@ -23,10 +34,19 @@ case "${1:-status}" in
       echo "caffeinate no disponible (no es macOS): nada que hacer"
       exit 0
     fi
+    # Validar el argumento ANTES de tocar la assertion vigente
     HORAS="${2:-12}"
+    case "$HORAS" in
+      ''|*[!0-9]*) echo "error: horas debe ser un entero positivo (recibí: '$HORAS')" >&2; exit 2 ;;
+    esac
+    if [ "$HORAS" -lt 1 ]; then
+      echo "error: horas debe ser >= 1" >&2
+      exit 2
+    fi
     if alive; then
       kill "$(cat "$PIDFILE")" 2>/dev/null || true
     fi
+    rm -f "$PIDFILE"
     # -i: sin idle sleep (batería incluida) · -s: sistema despierto en corriente · -t: backstop
     nohup caffeinate -is -t "$((HORAS * 3600))" >/dev/null 2>&1 &
     echo $! > "$PIDFILE"
@@ -35,17 +55,18 @@ case "${1:-status}" in
   stop)
     if alive; then
       kill "$(cat "$PIDFILE")" 2>/dev/null || true
-      rm -f "$PIDFILE"
       echo "assertion liberada: la máquina puede dormir"
     else
-      rm -f "$PIDFILE"
       echo "no había assertion activa"
     fi
+    rm -f "$PIDFILE"
     ;;
   status)
     if alive; then
       echo "despierta (pid $(cat "$PIDFILE"))"
     else
+      # Limpia un pidfile viejo (timeout vencido o pid reciclado) para no confundir
+      rm -f "$PIDFILE"
       echo "sin assertion: la máquina puede dormir"
     fi
     ;;

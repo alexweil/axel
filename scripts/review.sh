@@ -2,9 +2,10 @@
 # axel · wrapper del reviewer (Codex)
 #
 # Uso:
-#   scripts/review.sh new    < pedido   # sesión nueva de reviewer (arranque de fase o feature)
-#   scripts/review.sh round  < pedido   # siguiente ronda en la misma sesión (resume)
-#   scripts/review.sh status            # estado del loop de review
+#   scripts/review.sh new            < pedido   # sesión nueva de reviewer (arranque de fase o feature)
+#   scripts/review.sh round          < pedido   # siguiente ronda en la misma sesión (resume)
+#   scripts/review.sh status                    # estado del loop de review
+#   scripts/review.sh reset-deadlock            # rearma la racha tras un desempate humano
 #
 # El pedido del generador entra por stdin (markdown libre: qué se hizo, qué revisar, evidencia).
 # Salida: la review completa por stdout. Exit: 0=APPROVED, 1=CHANGES_REQUESTED, 2=error/sin veredicto.
@@ -29,6 +30,7 @@ STATE_DIR="$REPO_ROOT/.claude/state"
 SESSION_FILE="$STATE_DIR/codex-session-id"
 BASE_FILE="$STATE_DIR/last-approved-sha"
 ROUND_FILE="$STATE_DIR/round"
+STREAK_FILE="$STATE_DIR/changes-streak"
 MSG_FILE="$STATE_DIR/last-review.md"
 EVENTS_FILE="$STATE_DIR/last-review-events.jsonl"
 
@@ -41,11 +43,27 @@ case "$MODE" in
     echo "sesión reviewer : $(cat "$SESSION_FILE" 2>/dev/null || echo '—')"
     echo "base (últ. APPROVED): $(cat "$BASE_FILE" 2>/dev/null || echo '— (primer review)')"
     echo "ronda           : $(cat "$ROUND_FILE" 2>/dev/null || echo 0)"
+    echo "racha sin converger : $(cat "$STREAK_FILE" 2>/dev/null || echo 0)"
     echo "últ. veredicto  : $(grep -Eo 'VERDICT: [A-Z_]+' "$MSG_FILE" 2>/dev/null | tail -1 || echo '—')"
     exit 0 ;;
+  reset-deadlock)
+    echo 0 > "$STREAK_FILE"
+    echo "racha rearmada: el loop puede continuar tras el desempate humano"
+    exit 0 ;;
   new|round) ;;
-  *) echo "uso: $0 {new|round|status}  (pedido del generador por stdin)" >&2; exit 2 ;;
+  *) echo "uso: $0 {new|round|status|reset-deadlock}  (pedido del generador por stdin)" >&2; exit 2 ;;
 esac
+
+# Regla de deadlock: 5 rondas consecutivas sin convergencia bloquean el loop ANTES de gastar otra ronda.
+STREAK="$(cat "$STREAK_FILE" 2>/dev/null || echo 0)"
+if [ "$MODE" = "new" ]; then
+  STREAK=0
+  echo 0 > "$STREAK_FILE"
+fi
+if [ "$STREAK" -ge 5 ]; then
+  echo "DEADLOCK: $STREAK rondas consecutivas sin convergencia. Armar RECAP con ambas posturas para el humano; tras su desempate, correr: scripts/review.sh reset-deadlock" >&2
+  exit 2
+fi
 
 PEDIDO="$(cat || true)"
 if [ -z "$PEDIDO" ]; then
@@ -53,15 +71,18 @@ if [ -z "$PEDIDO" ]; then
   exit 2
 fi
 
+# La review queda clavada al HEAD del momento del pedido: commits que aparezcan
+# durante una review larga NO quedan aprobados — entran en el próximo rango.
+REVIEW_HEAD="$(git rev-parse HEAD)"
 BASE="$(cat "$BASE_FILE" 2>/dev/null || true)"
 if [ -n "$BASE" ]; then
-  RANGE="$BASE..HEAD"
+  RANGE="$BASE..$REVIEW_HEAD"
   LOG="$(git log --oneline "$RANGE")"
   FILES="$(git diff --name-status "$RANGE")"
 else
-  RANGE="(todo el repo hasta HEAD — primer review)"
-  LOG="$(git log --oneline)"
-  FILES="$(git ls-files)"
+  RANGE="(todo el repo hasta $REVIEW_HEAD — primer review)"
+  LOG="$(git log --oneline "$REVIEW_HEAD")"
+  FILES="$(git ls-tree -r --name-only "$REVIEW_HEAD")"
 fi
 
 if [ "$MODE" = "new" ]; then
@@ -70,8 +91,8 @@ else
   ROUND=$(( $(cat "$ROUND_FILE" 2>/dev/null || echo 0) + 1 ))
 fi
 echo "$ROUND" > "$ROUND_FILE"
-if [ "$ROUND" -gt 5 ]; then
-  echo "AVISO: ronda $ROUND > 5 — regla de deadlock: considerar RECAP temprano" >&2
+if [ "$STREAK" -ge 4 ]; then
+  echo "AVISO: racha de $STREAK sin converger — si esta ronda no converge, se dispara la regla de deadlock" >&2
 fi
 
 PROMPT="$(cat <<EOF
@@ -87,7 +108,7 @@ $FILES
 Pedido del generador:
 $PEDIDO
 
-Reglas: verificá contra los docs de diseño/implementación; podés ejecutar comandos para comprobar (tests, linters, builds), pero NO modifiques el repo (si un comando ensucia el árbol, restauralo). Feedback en puntos numerados y accionables. Terminá tu respuesta con una línea exacta: "VERDICT: APPROVED" o "VERDICT: CHANGES_REQUESTED".
+Reglas: verificá contra los docs de diseño/implementación; podés ejecutar comandos para comprobar (tests, linters, builds), pero NO modifiques el repo (si un comando ensucia el árbol, restauralo). Feedback en puntos numerados y accionables. La ÚLTIMA línea de tu respuesta debe ser exactamente "VERDICT: APPROVED" o "VERDICT: CHANGES_REQUESTED", sin nada después.
 EOF
 )"
 
@@ -120,8 +141,13 @@ else
   fi
 fi
 
+# Un error de codex invalida la corrida aunque haya quedado un mensaje escrito: no se toma veredicto.
+if [ "$RC" -ne 0 ]; then
+  echo "error: codex terminó con exit $RC; no se toma veredicto. Ver $EVENTS_FILE" >&2
+  exit 2
+fi
 if [ ! -s "$MSG_FILE" ]; then
-  echo "error: codex no produjo mensaje final (exit $RC); ver $EVENTS_FILE" >&2
+  echo "error: codex no produjo mensaje final; ver $EVENTS_FILE" >&2
   exit 2
 fi
 
@@ -129,16 +155,22 @@ echo
 cat "$MSG_FILE"
 echo
 
-VERDICT="$(grep -Eo 'VERDICT: (APPROVED|CHANGES_REQUESTED)' "$MSG_FILE" | tail -1 || true)"
+# Contrato estricto: el veredicto es la ÚLTIMA línea no vacía del mensaje, comparada literalmente.
+VERDICT="$(awk 'NF {line=$0} END {print line}' "$MSG_FILE" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 case "$VERDICT" in
   "VERDICT: APPROVED")
-    git rev-parse HEAD > "$BASE_FILE"
-    echo "── resultado: APPROVED (base movida a $(git rev-parse --short HEAD)) ──"
+    echo "$REVIEW_HEAD" > "$BASE_FILE"
+    echo 0 > "$STREAK_FILE"
+    echo "── resultado: APPROVED (base movida a $(git rev-parse --short "$REVIEW_HEAD")) ──"
+    if [ "$(git rev-parse HEAD)" != "$REVIEW_HEAD" ]; then
+      echo "AVISO: hay commits posteriores a $(git rev-parse --short "$REVIEW_HEAD") hechos durante la review — NO están aprobados; entran en el próximo rango" >&2
+    fi
     exit 0 ;;
   "VERDICT: CHANGES_REQUESTED")
-    echo "── resultado: CHANGES_REQUESTED (ronda $ROUND) ──"
+    echo "$((STREAK + 1))" > "$STREAK_FILE"
+    echo "── resultado: CHANGES_REQUESTED (ronda $ROUND, racha $((STREAK + 1))) ──"
     exit 1 ;;
   *)
-    echo "error: el reviewer no emitió veredicto parseable; ver $MSG_FILE" >&2
+    echo "error: la última línea del mensaje no es un veredicto válido (\"$VERDICT\"); ver $MSG_FILE" >&2
     exit 2 ;;
 esac
