@@ -39,10 +39,16 @@ OUT=""; RC=0
 run_install() { OUT="$("$INSTALL" "$@" 2>&1)" && RC=0 || RC=$?; }
 
 # Huella del contenido real del filesystem (sin .git): "cero mutaciones" debe cubrir
-# también paths ignorados, que git status no observa
+# también paths ignorados (invisibles para git status), directorios vacíos y modos
 fs_digest() {
-  (cd "$1" && find . -name .git -prune -o \( -type f -o -type l \) -print | LC_ALL=C sort | while IFS= read -r p; do
-    if [ -L "$p" ]; then printf 'L %s -> %s\n' "$p" "$(readlink "$p")"; else shasum "$p"; fi
+  (cd "$1" && find . -name .git -prune -o \( -type f -o -type l -o -type d \) -print | LC_ALL=C sort | while IFS= read -r p; do
+    if [ -L "$p" ]; then
+      printf 'L %s -> %s\n' "$p" "$(readlink "$p")"
+    elif [ -d "$p" ]; then
+      printf 'D %s %s\n' "$(ls -ld "$p" | awk '{print $1}')" "$p"
+    else
+      printf 'F %s %s %s\n' "$(ls -ld "$p" | awk '{print $1}')" "$p" "$(shasum "$p" | cut -d' ' -f1)"
+    fi
   done | shasum | cut -d' ' -f1)
 }
 
@@ -256,11 +262,13 @@ run_install "$TG"
 assert_rc 1
 assert_in_file "$TG/docs/ADOPTION.md" "defaultMode"
 
-t "T10h python3 no disponible (fail-closed)"
+t "T10h python3 no disponible (fail-closed: rechazo, la policy fuente no es demostrable)"
 TH="$(mk_target t10h)"; seed_settings "$TH"; tcommit "$TH" "settings"
+before="$(fs_digest "$TH")"
 OUT="$(AXEL_INSTALL_PYTHON=/nonexistent-python "$INSTALL" "$TH" 2>&1)" && RC=0 || RC=$?
-assert_rc 1
-assert_in_file "$TH/docs/ADOPTION.md" "inverificable"
+assert_rc 2
+[ "$before" = "$(fs_digest "$TH")" ] && ok || ko "mutaciones tras rechazo sin python3"
+printf '%s' "$OUT" | grep -qF "no es demostrable" && ok || ko "falta el motivo del rechazo en la salida"
 
 # ── T11 · rechazos: exit 2 y cero mutaciones (huella de contenido antes/después)
 reject_case() {  # $1 = target del install; $2 (opcional) = raíz a la que se le toma la huella
@@ -285,7 +293,7 @@ T11C="$(mk_target t11c)"; mkdir -p "$T11C/sub"
 reject_case "$T11C/sub" "$T11C"
 
 t "T11d self-install"
-run_install "$AXEL_SRC"; assert_rc 2; assert_clean "$AXEL_SRC"
+reject_case "$AXEL_SRC"
 
 t "T11e worktree del propio axel"
 git -C "$AXEL_SRC" worktree add -q "$TESTS_TMP/axel-wt" >/dev/null 2>&1
@@ -430,6 +438,56 @@ assert_rc 1
 assert_same "$T12G/docs/ADOPTION.md" "$TESTS_TMP/t12g-handoff.ref"        # handoff intacto
 assert_in_file "$T12G/.claude/axel-policy.json" "Bash(true:*)"            # política nueva persistida
 printf '%s' "$OUT" | grep -qF "Bash(true:*)" && ok || ko "el pendiente nuevo no se reportó"
+
+# ── T13 · huecos cerrados en la ronda 6 ───────────────────────────────────────
+t "T13a deny con wildcard medio (intersección no demostrable)"
+T13A="$(mk_target t13a)"
+mkdir -p "$T13A/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T13A/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["Bash(git * .)"]
+print(json.dumps(d))
+PY
+tcommit "$T13A" "deny wildcard medio"
+run_install "$T13A"
+assert_rc 1
+assert_in_file "$T13A/docs/ADOPTION.md" "deny gana"
+
+t "T13a2 deny de otra herramienta literal (disjunto demostrable)"
+T13A2="$(mk_target t13a2)"
+mkdir -p "$T13A2/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T13A2/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["WebFetch(domain:*.example.com)"]
+print(json.dumps(d))
+PY
+tcommit "$T13A2" "deny disjunto"
+run_install "$T13A2"
+assert_rc 0
+
+t "T13b policy fuente con JSON inválido: rechazo sin mutaciones"
+AXEL_BADPOL="$TESTS_TMP/axel-badpol"
+cp -R "$AXEL_SRC" "$AXEL_BADPOL"
+echo '{ nope' > "$AXEL_BADPOL/templates/settings.json"
+T13B="$(mk_target t13b)"
+before="$(fs_digest "$T13B")"
+OUT="$("$AXEL_BADPOL/scripts/install.sh" "$T13B" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+[ "$before" = "$(fs_digest "$T13B")" ] && ok || ko "mutaciones tras rechazo por policy fuente"
+printf '%s' "$OUT" | grep -qF "policy fuente inválida" && ok || ko "falta el motivo en la salida"
+
+t "T13c policy fuente con estructura inválida: rechazo sin mutaciones"
+AXEL_BADPOL2="$TESTS_TMP/axel-badpol2"
+cp -R "$AXEL_SRC" "$AXEL_BADPOL2"
+printf '{"permissions": {"defaultMode": "acceptEdits", "allow": "todo"}}\n' > "$AXEL_BADPOL2/templates/settings.json"
+T13C="$(mk_target t13c)"
+before="$(fs_digest "$T13C")"
+OUT="$("$AXEL_BADPOL2/scripts/install.sh" "$T13C" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+[ "$before" = "$(fs_digest "$T13C")" ] && ok || ko "mutaciones tras rechazo por estructura de policy"
+printf '%s' "$OUT" | grep -qF "permissions.allow debe ser una lista" && ok || ko "falta el motivo en la salida"
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo

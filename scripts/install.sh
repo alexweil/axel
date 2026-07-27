@@ -173,6 +173,40 @@ for src in "${PAYLOAD_SRC[@]}" "${SEED_SRC[@]}"; do
   [ -f "$AXEL_ROOT/$src" ] || ERRORS+=("fuente inconsistente: falta $src en axel (¿árbol de axel incompleto?)")
 done
 
+# La policy fuente es la verdad del loop en el destino (semilla de settings + axel-policy):
+# si no parsea o no tiene la forma esperada, se rechaza antes de escribir nada (fail-closed;
+# sin python3 la validez no es demostrable y también se rechaza).
+check_policy_source() {
+  local policy="$AXEL_ROOT/templates/settings.json"
+  local py="${AXEL_INSTALL_PYTHON:-python3}"
+  if ! command -v "$py" >/dev/null 2>&1; then
+    echo "python3 no disponible: la validez de la policy fuente no es demostrable"
+    return 0
+  fi
+  "$py" - "$policy" <<'PY' 2>/dev/null || echo "error al validar la policy fuente"
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception as e:
+    print(f"templates/settings.json no parsea como JSON: {e}")
+    sys.exit(0)
+ok = isinstance(d, dict) and isinstance(d.get("permissions"), dict)
+p = d.get("permissions", {}) if ok else {}
+if not ok:
+    print("templates/settings.json: falta el objeto permissions")
+elif not (isinstance(p.get("allow"), list) and p.get("allow") and all(isinstance(x, str) for x in p["allow"])):
+    print("templates/settings.json: permissions.allow debe ser una lista no vacia de strings")
+elif "deny" in p and not (isinstance(p["deny"], list) and all(isinstance(x, str) for x in p["deny"])):
+    print("templates/settings.json: permissions.deny debe ser una lista de strings")
+elif not isinstance(p.get("defaultMode"), str):
+    print("templates/settings.json: falta permissions.defaultMode")
+PY
+}
+if [ -f "$AXEL_ROOT/templates/settings.json" ]; then
+  POLICY_ERR="$(check_policy_source)"
+  [ -n "$POLICY_ERR" ] && ERRORS+=("policy fuente inválida — $POLICY_ERR")
+fi
+
 for i in "${!PAYLOAD[@]}"; do
   rel="${PAYLOAD[$i]}"
   if bad="$(bad_parent "$rel")"; then
@@ -294,7 +328,14 @@ check_settings() {
 import json, sys
 
 def overlaps(deny_entry, perm):
-    # Conservador: solo se declara disjunto cuando se puede demostrar por prefijo.
+    # Conservador: solo se declara disjunto cuando se puede DEMOSTRAR. Claude Code admite
+    # "*" en cualquier posicion y deny gana sobre allow, asi que:
+    #   - tools distintos y sin wildcard en el tool => disjunto demostrable
+    #   - mismo tool con wildcards solo de sufijo => razonamiento por prefijo
+    #   - cualquier otra forma (wildcard medio/inicial, shape raro) => bloquea
+    def tool_of(s):
+        head = s.split("(", 1)[0]
+        return head if head and "*" not in head and "?" not in head else None
     def norm(s):
         # "Tool(cmd:*)" -> "Tool(cmd" (el ":*" es sufijo de patron, no texto del comando)
         if s.endswith(":*)"): return s[:-3]
@@ -303,7 +344,12 @@ def overlaps(deny_entry, perm):
         return s
     if not isinstance(deny_entry, str) or not deny_entry:
         return True  # entrada rara: no demostrable => bloquea
+    dt, pt = tool_of(deny_entry), tool_of(perm)
+    if dt and pt and dt != pt:
+        return False  # tools literales distintos: disjuncion demostrable
     d, p = norm(deny_entry), norm(perm)
+    if "*" in d or "?" in d or "*" in p or "?" in p:
+        return True  # wildcard fuera del sufijo: interseccion no demostrable => bloquea
     return p.startswith(d) or d.startswith(p)
 
 try:

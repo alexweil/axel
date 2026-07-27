@@ -2,7 +2,7 @@
 
 {{PROJECT}} se desarrolla con **axel**, una maquinaria de dos agentes en loop: **Claude Code genera, Codex revisa**, iterando hasta acuerdo, con la documentación como memoria persistente y checkpoints de OK humano.
 
-> **Maquinaria instalada desde axel.** Las skills (`.claude/skills/`), los scripts del loop (`scripts/review.sh`, `scripts/awake.sh`) y el contrato de review (`docs/design/review-contract.md`) son archivos de la maquinaria: se actualizan re-corriendo el instalador de axel y **no se editan acá** — los cambios de maquinaria se hacen en axel. (Si tocás el método en axel, actualizá también su `templates/AGENTS.md`.)
+> **Maquinaria instalada desde axel.** Las skills (`.claude/skills/`), los scripts del loop (`scripts/review.sh`, `scripts/awake.sh`), la política del loop (`.claude/axel-policy.json`) y el contrato de review (`docs/design/review-contract.md`) son archivos de la maquinaria: se actualizan re-corriendo el instalador de axel y **no se editan acá** — los cambios de maquinaria se hacen en axel. (Si tocás el método en axel, actualizá también su `templates/AGENTS.md`.)
 
 ## Sobre este proyecto
 
