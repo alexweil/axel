@@ -489,6 +489,82 @@ assert_rc 2
 [ "$before" = "$(fs_digest "$T13C")" ] && ok || ko "mutaciones tras rechazo por estructura de policy"
 printf '%s' "$OUT" | grep -qF "permissions.allow debe ser una lista" && ok || ko "falta el motivo en la salida"
 
+# ── T14 · huecos cerrados en la ronda 7 ───────────────────────────────────────
+t "T14a ask solapante frena el loop"
+T14A="$(mk_target t14a)"
+mkdir -p "$T14A/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T14A/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["ask"] = ["Bash(git add:*)"]
+print(json.dumps(d))
+PY
+tcommit "$T14A" "ask solapante"
+run_install "$T14A"
+assert_rc 1
+assert_in_file "$T14A/docs/ADOPTION.md" "ask puede frenarlo"
+
+t "T14b selector por parámetro del mismo tool en deny"
+T14B="$(mk_target t14b)"
+mkdir -p "$T14B/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T14B/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["Bash(run_in_background:true)"]
+print(json.dumps(d))
+PY
+tcommit "$T14B" "deny por parámetro"
+run_install "$T14B"
+assert_rc 1
+assert_in_file "$T14B/docs/ADOPTION.md" "deny gana"
+
+t "T14c deny de comando disjunto demostrable (mismo tool, ambos :*)"
+T14C="$(mk_target t14c)"
+mkdir -p "$T14C/.claude"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_SRC/templates/settings.json" > "$T14C/.claude/settings.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["Bash(rm -rf:*)"]
+print(json.dumps(d))
+PY
+tcommit "$T14C" "deny disjunto mismo tool"
+run_install "$T14C"
+assert_rc 0
+
+t "T14d policy fuente con defaultMode fuera de contrato"
+AXEL_BADMODE="$TESTS_TMP/axel-badmode"
+cp -R "$AXEL_SRC" "$AXEL_BADMODE"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_BADMODE/templates/settings.json" > "$AXEL_BADMODE/templates/settings.json.new" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["defaultMode"] = "typo-mode"
+print(json.dumps(d, indent=2))
+PY
+mv "$AXEL_BADMODE/templates/settings.json.new" "$AXEL_BADMODE/templates/settings.json"
+T14D="$(mk_target t14d)"
+before="$(fs_digest "$T14D")"
+OUT="$("$AXEL_BADMODE/scripts/install.sh" "$T14D" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+[ "$before" = "$(fs_digest "$T14D")" ] && ok || ko "mutaciones tras rechazo por defaultMode"
+printf '%s' "$OUT" | grep -qF 'defaultMode debe ser "acceptEdits"' && ok || ko "falta el motivo en la salida"
+
+t "T14e policy fuente con conflicto interno deny/allow"
+AXEL_CONFL="$TESTS_TMP/axel-confl"
+cp -R "$AXEL_SRC" "$AXEL_CONFL"
+"${AXEL_INSTALL_PYTHON:-python3}" - "$AXEL_CONFL/templates/settings.json" > "$AXEL_CONFL/templates/settings.json.new" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+d["permissions"]["deny"] = ["Bash(git:*)"]
+print(json.dumps(d, indent=2))
+PY
+mv "$AXEL_CONFL/templates/settings.json.new" "$AXEL_CONFL/templates/settings.json"
+T14E="$(mk_target t14e)"
+before="$(fs_digest "$T14E")"
+OUT="$("$AXEL_CONFL/scripts/install.sh" "$T14E" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+[ "$before" = "$(fs_digest "$T14E")" ] && ok || ko "mutaciones tras rechazo por conflicto interno"
+printf '%s' "$OUT" | grep -qF "conflicto interno" && ok || ko "falta el motivo en la salida"
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
 echo "── tests/install.sh: $PASS ok · $FAIL fail ──"

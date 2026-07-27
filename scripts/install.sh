@@ -190,6 +190,26 @@ try:
 except Exception as e:
     print(f"templates/settings.json no parsea como JSON: {e}")
     sys.exit(0)
+def overlaps(rule, perm):
+    def tool_of(s):
+        head = s.split("(", 1)[0]
+        return head if head and "*" not in head and "?" not in head else None
+    def cmd_prefix(s):
+        if s.endswith(":*)"):
+            body = s[:-3]
+            if "*" not in body and "?" not in body:
+                return body
+        return None
+    if not isinstance(rule, str) or not rule:
+        return True
+    rt, pt = tool_of(rule), tool_of(perm)
+    if rt and pt and rt != pt:
+        return False
+    r, p = cmd_prefix(rule), cmd_prefix(perm)
+    if r is None or p is None:
+        return True
+    return p.startswith(r) or r.startswith(p)
+
 ok = isinstance(d, dict) and isinstance(d.get("permissions"), dict)
 p = d.get("permissions", {}) if ok else {}
 if not ok:
@@ -198,8 +218,15 @@ elif not (isinstance(p.get("allow"), list) and p.get("allow") and all(isinstance
     print("templates/settings.json: permissions.allow debe ser una lista no vacia de strings")
 elif "deny" in p and not (isinstance(p["deny"], list) and all(isinstance(x, str) for x in p["deny"])):
     print("templates/settings.json: permissions.deny debe ser una lista de strings")
-elif not isinstance(p.get("defaultMode"), str):
-    print("templates/settings.json: falta permissions.defaultMode")
+elif "ask" in p and not (isinstance(p["ask"], list) and all(isinstance(x, str) for x in p["ask"])):
+    print("templates/settings.json: permissions.ask debe ser una lista de strings")
+elif p.get("defaultMode") != "acceptEdits":
+    # el valor es contractual (la bajada lo exige): un typo acá se sembraria en cada destino
+    print(f"templates/settings.json: permissions.defaultMode debe ser \"acceptEdits\" (actual: {p.get('defaultMode')!r})")
+else:
+    conflicts = [(r, a) for r in p.get("deny", []) + p.get("ask", []) for a in p["allow"] if overlaps(r, a)]
+    if conflicts:
+        print(f"templates/settings.json: conflicto interno — deny/ask solapa permisos del propio allow: {conflicts}")
 PY
 }
 if [ -f "$AXEL_ROOT/templates/settings.json" ]; then
@@ -327,30 +354,34 @@ check_settings() {
   "$py" - "$required" "$existing" <<'PY' 2>/dev/null || echo "settings inverificable (error al analizar): tratá la política del loop como faltante"
 import json, sys
 
-def overlaps(deny_entry, perm):
-    # Conservador: solo se declara disjunto cuando se puede DEMOSTRAR. Claude Code admite
-    # "*" en cualquier posicion y deny gana sobre allow, asi que:
-    #   - tools distintos y sin wildcard en el tool => disjunto demostrable
-    #   - mismo tool con wildcards solo de sufijo => razonamiento por prefijo
-    #   - cualquier otra forma (wildcard medio/inicial, shape raro) => bloquea
+def overlaps(rule, perm):
+    # Conservador: solo se declara disjunto cuando se puede DEMOSTRAR. Claude Code evalua
+    # deny -> ask -> allow, admite "*" en cualquier posicion y tiene selectores por
+    # parametro del mismo tool (p. ej. "Bash(run_in_background:true)"), asi que:
+    #   - tools literales distintos => disjuncion demostrable (las reglas son por tool)
+    #   - mismo tool: solo si AMBOS lados son patrones de prefijo de comando explicitos
+    #     ("...:*)") sin wildcards internos y ningun prefijo contiene al otro
+    #   - todo lo demas (selector por parametro, comando exacto, wildcard medio,
+    #     shape raro) => interseccion no demostrable => bloquea
     def tool_of(s):
         head = s.split("(", 1)[0]
         return head if head and "*" not in head and "?" not in head else None
-    def norm(s):
-        # "Tool(cmd:*)" -> "Tool(cmd" (el ":*" es sufijo de patron, no texto del comando)
-        if s.endswith(":*)"): return s[:-3]
-        if s.endswith("*)"): return s[:-2]
-        if s.endswith("*"): return s[:-1]
-        return s
-    if not isinstance(deny_entry, str) or not deny_entry:
+    def cmd_prefix(s):
+        # patron de prefijo de comando explicito: "Tool(algo:*)" -> "Tool(algo"; si no, None
+        if s.endswith(":*)"):
+            body = s[:-3]
+            if "*" not in body and "?" not in body:
+                return body
+        return None
+    if not isinstance(rule, str) or not rule:
         return True  # entrada rara: no demostrable => bloquea
-    dt, pt = tool_of(deny_entry), tool_of(perm)
-    if dt and pt and dt != pt:
+    rt, pt = tool_of(rule), tool_of(perm)
+    if rt and pt and rt != pt:
         return False  # tools literales distintos: disjuncion demostrable
-    d, p = norm(deny_entry), norm(perm)
-    if "*" in d or "?" in d or "*" in p or "?" in p:
-        return True  # wildcard fuera del sufijo: interseccion no demostrable => bloquea
-    return p.startswith(d) or d.startswith(p)
+    r, p = cmd_prefix(rule), cmd_prefix(perm)
+    if r is None or p is None:
+        return True  # no demostrable (selector por parametro, comando exacto, wildcard...)
+    return p.startswith(r) or r.startswith(p)
 
 try:
     req = json.load(open(sys.argv[1]))
@@ -369,11 +400,15 @@ if not isinstance(ex, dict) or ("permissions" in ex and not isinstance(ex["permi
 ep = ex.get("permissions", {})
 allow = ep.get("allow", [])
 deny = ep.get("deny", [])
+ask = ep.get("ask", [])
 if not isinstance(allow, list):
     print("settings inverificable: permissions.allow no es una lista (fail-closed)")
     sys.exit(0)
 if not isinstance(deny, list):
     print("settings inverificable: permissions.deny no es una lista (fail-closed)")
+    sys.exit(0)
+if not isinstance(ask, list):
+    print("settings inverificable: permissions.ask no es una lista (fail-closed)")
     sys.exit(0)
 for perm in rp.get("allow", []):
     if perm not in allow:
@@ -382,6 +417,9 @@ for perm in rp.get("allow", []):
     blockers = [d for d in deny if overlaps(d, perm)]
     if blockers:
         print(f"permiso en allow pero un deny puede cubrirlo (deny gana): {perm} vs {blockers}")
+    askers = [a for a in ask if overlaps(a, perm)]
+    if askers:
+        print(f"permiso en allow pero un ask puede frenarlo (pide confirmacion): {perm} vs {askers}")
 want_mode = rp.get("defaultMode", "acceptEdits")
 mode = ep.get("defaultMode")
 if mode != want_mode:
