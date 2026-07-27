@@ -26,6 +26,8 @@ Maquinaria reusable para desarrollar proyectos con dos agentes en loop — un **
 | `scripts/review.sh` | Wrapper del reviewer: config de modelo, ciclo de vida de sesiones (new/resume), rango de commits, contrato de veredicto. Detalle: [design/review-contract.md](design/review-contract.md). |
 | `.claude/state/` | Estado local no versionado: session id de Codex, SHA del último APPROVED, contador de ronda. |
 | `.claude/settings.json` | Permisos preaprobados para que el loop no se frene en confirmaciones mientras el humano no está. |
+| `scripts/install.sh` + `templates/` | Instalador: lleva la maquinaria a otro repo (instalación, adopción de proyectos con proceso manual previo, actualización con axel como fuente de verdad). Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
+| `/adopt` + `docs/ADOPTION.md` | Cierre de adopción en el destino: el instalador deja el handoff persistente con los hallazgos y la skill lo consume con el humano (mapear docs, derivar el STATUS real). |
 
 ## El flujo
 
@@ -53,6 +55,7 @@ Dentro de un feature: cambio → commit → review → corregir o argumentar →
 | 2026-07-27 | Rol del reviewer | Puede ejecutar (workspace-write), no modifica | Verificación independiente: no confía en la evidencia del generador. |
 | 2026-07-27 | Config de modelos | Variables al tope de `review.sh` (+ env `AXEL_REVIEW_*`) | Cambiar de modelo o esfuerzo = tocar una línea versionada, sin depender de config global. |
 | 2026-07-27 | RECAP | El turno termina y la sesión queda esperando; push si está disponible | El OK puede llegar desde una sesión remota en cualquier momento. |
+| 2026-07-27 | Instalador | Payload sobreescribible vs. semillas intocables; modos por marker; adopción = script mecánico + `/adopt` semántico; git + preflight como red (fail-closed) | El re-run es la actualización sin pisar lo del proyecto; nada del instalador queda fuera del diff ni se decide adivinando. Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
 
 ## Profundizaciones
 
