@@ -9,7 +9,7 @@ Estructura:
 
 1. **Qué se hizo** — en términos de resultado, con los commits como respaldo.
 2. **Decisiones y review** — qué acordaron o discutieron los agentes, cuántas rondas llevó, qué cedió cada uno.
-3. **Estado** — docs al día, árbol limpio, veredicto vigente.
+3. **Estado** — docs al día, árbol limpio, veredicto vigente. Listá siempre los commits posteriores a la última base aprobada (`git log $(cat .claude/state/last-approved-sha 2>/dev/null)..HEAD --oneline`, si existe base) marcados como **aún no revisados por Codex**. Si el RECAP es terminal (no habrá ciclo siguiente que los barra), decilo explícitamente: el OK humano es lo que los cubre, y ofrecé una mini-review previa (`scripts/review.sh round`) si tuvieron sustancia más allá de bookkeeping — camino terminal del contrato.
 4. **Riesgos o pendientes** — lo que el humano debería saber antes de dar el OK.
 5. **Qué viene con tu OK** — el próximo paso concreto (siguiente feature, o continuar el loop actual).
 

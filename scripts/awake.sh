@@ -39,6 +39,21 @@ check() {
   return 2
 }
 
+# Señaliza el pid trackeado y CONFIRMA la muerte (vía check) antes de que el caller
+# pierda el rastro. El pidfile solo se borra tras muerte confirmada.
+kill_confirmed() {
+  local pid="$1" i rc
+  kill "$pid" 2>/dev/null || true
+  for i in 1 2 3; do
+    rc=0; check || rc=$?
+    if [ "$rc" = 1 ]; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  return 1
+}
+
 case "${1:-status}" in
   start)
     if ! command -v caffeinate >/dev/null 2>&1; then
@@ -56,9 +71,15 @@ case "${1:-status}" in
     fi
     RC=0; check || RC=$?
     case "$RC" in
-      0) kill "$(cat "$PIDFILE")" 2>/dev/null || true ;;
+      0)
+        if ! kill_confirmed "$(cat "$PIDFILE")"; then
+          echo "error: no pude confirmar la muerte de la assertion previa (pid $(cat "$PIDFILE")); conservo el pidfile — resolvé a mano o dejá que la venza su timeout" >&2
+          exit 2
+        fi ;;
       1) ;;
-      2) echo "aviso: no pude confirmar el estado de la assertion previa; no la toco (su timeout la vencerá)" ;;
+      2)
+        echo "error: estado de la assertion previa indeterminado; no arranco otra ni pierdo su rastro — reintentá desde un contexto sin sandbox o esperá su timeout" >&2
+        exit 2 ;;
     esac
     rm -f "$PIDFILE"
     # -i: sin idle sleep (batería incluida) · -s: sistema despierto en corriente · -t: backstop
@@ -70,9 +91,13 @@ case "${1:-status}" in
     RC=0; check || RC=$?
     case "$RC" in
       0)
-        kill "$(cat "$PIDFILE")" 2>/dev/null || true
-        rm -f "$PIDFILE"
-        echo "assertion liberada: la máquina puede dormir" ;;
+        if kill_confirmed "$(cat "$PIDFILE")"; then
+          rm -f "$PIDFILE"
+          echo "assertion liberada: la máquina puede dormir"
+        else
+          echo "error: la señal no surtió efecto o fue denegada (pid $(cat "$PIDFILE")); conservo el pidfile — la assertion sigue viva" >&2
+          exit 2
+        fi ;;
       1)
         rm -f "$PIDFILE"
         echo "no había assertion activa" ;;

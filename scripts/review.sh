@@ -83,7 +83,26 @@ REVIEW_HEAD_SHORT="$(git rev-parse --short HEAD)"
 
 # Worktree snapshot: se crea una vez y se re-clava (reset --hard + clean) en cada ronda,
 # lo que además deshace cualquier suciedad que el reviewer haya dejado en la ronda anterior.
-if git -C "$WT_DIR" rev-parse --git-dir >/dev/null 2>&1; then
+#
+# CRÍTICO: reset/clean solo si WT_DIR es VERDADERAMENTE el worktree registrado. Un
+# directorio común dentro del repo también pasa `rev-parse`, y el reset --hard caería
+# sobre el repo canónico. Triple verificación antes de cualquier operación destructiva:
+# toplevel == WT_DIR, git-dir bajo .git/worktrees/ del repo, y registrado en worktree list.
+wt_valid() {
+  [ -d "$WT_DIR" ] || return 1
+  local top gitdir
+  top="$(git -C "$WT_DIR" rev-parse --show-toplevel 2>/dev/null)" || return 1
+  [ "$top" = "$(cd "$WT_DIR" && pwd -P)" ] || return 1
+  gitdir="$(git -C "$WT_DIR" rev-parse --absolute-git-dir 2>/dev/null)" || return 1
+  case "$gitdir" in
+    "$REPO_ROOT/.git/worktrees/"*) ;;
+    *) return 1 ;;
+  esac
+  git worktree list --porcelain | grep -Fqx "worktree $top" || return 1
+  return 0
+}
+
+if wt_valid; then
   git -C "$WT_DIR" reset --hard "$REVIEW_HEAD" >/dev/null
   git -C "$WT_DIR" clean -fdx >/dev/null
 else
