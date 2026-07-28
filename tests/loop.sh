@@ -35,7 +35,7 @@ assert_file() { [ -f "$1" ] && ok || ko "falta archivo: $1"; }
 assert_no()   { { [ ! -e "$1" ] && [ ! -L "$1" ]; } && ok || ko "no debería existir: $1"; }
 assert_alive() { kill -0 "$1" 2>/dev/null && ok || ko "pid $1 debería estar vivo"; }
 assert_dead()  { kill -0 "$1" 2>/dev/null && ko "pid $1 debería estar muerto" || ok; }
-wait_dead()    { local i; for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$1" 2>/dev/null || return 0; sleep 0.2; done; return 1; }
+wait_dead()    { for _ in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$1" 2>/dev/null || return 0; sleep 0.2; done; return 1; }
 
 # ── Dobles por PATH ───────────────────────────────────────────────────────────
 STUBS="$TESTS_TMP/stubs"
@@ -245,7 +245,7 @@ t "L1 mensaje ausente y mensaje vacío"
 FAKE_CODEX_MSG=@none run_review "$R1" round p
 assert_rc 2
 assert_out "no produjo mensaje final"
-FAKE_CODEX_MSG= run_review "$R1" round p
+FAKE_CODEX_MSG='' run_review "$R1" round p
 assert_rc 2
 assert_eq "$(result_state "$R1")" "$RS_L1" "estado de resultado"
 
@@ -338,7 +338,7 @@ R3="$(mk_repo l3)"
 codex_reset
 FAKE_CODEX_MSG=$'VERDICT: CHANGES_REQUESTED' run_review "$R3" new p
 assert_rc 1
-for i in 2 3 4; do
+for _ in 2 3 4; do
   FAKE_CODEX_MSG=$'VERDICT: CHANGES_REQUESTED' run_review "$R3" round p
   assert_rc 1
 done
@@ -754,6 +754,34 @@ assert_rc 0
 assert_out "2 ronda(s) · 3 intento(s) · 3 evento(s)"
 assert_out "PROC_FAIL=1"
 assert_out "CHANGES_REQUESTED=1"
+
+t "L9 retry durante new: el intento 2 no abre ciclo — el ciclo arranca en el intento 1"
+codex_reset
+PLAN9B="$TESTS_TMP/plan-l9b"; rm -rf "$PLAN9B"; mkdir -p "$PLAN9B"
+echo 9 > "$PLAN9B/1.rc"
+FAKE_CODEX_PLAN="$PLAN9B" run_review "$R9" new p
+assert_rc 0
+awk -F'\t' 'END { exit !($2=="new" && $3=="1" && $4=="2" && $5=="APPROVED") }' "$RL9" && ok || ko "última línea inesperada: $(tail -1 "$RL9")"
+run_review "$R9" status
+assert_rc 0
+assert_out "1 ronda(s) · 2 intento(s) · 2 evento(s)"
+assert_out "PROC_FAIL=1"
+assert_out "APPROVED=1"
+
+t "L9 métricas best-effort: log inescribible no altera RC ni estado"
+rm -f "$RL9"; mkdir "$RL9"   # rounds-log convertido en directorio: el append falla
+run_review "$R9" round p
+assert_rc 0
+assert_out "no pude escribir"
+assert_eq "$(st "$R9" last-approved-sha)" "$(git -C "$R9" rev-parse HEAD)" "APPROVED movió la base igual"
+run_review "$R9" new ""
+assert_rc 2
+assert_out "falta el pedido"
+echo 5 > "$R9/.claude/state/changes-streak"
+run_review "$R9" round p
+assert_rc 2
+assert_out "DEADLOCK"
+rmdir "$RL9"
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo

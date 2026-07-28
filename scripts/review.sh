@@ -55,11 +55,13 @@ case "$MODE" in
     echo "ronda           : $(cat "$ROUND_FILE" 2>/dev/null || echo 0)"
     echo "racha sin converger : $(cat "$STREAK_FILE" 2>/dev/null || echo 0)"
     echo "últ. resultado validado: $(cat "$VERDICT_FILE" 2>/dev/null || echo '—')"
-    # Resumen del ciclo actual (desde la última línea de modo `new`, falle o no):
-    # eventos = líneas · intentos = líneas con intento numérico · rondas = números distintos
+    # Resumen del ciclo actual, delimitado por la línea que ABRE el último ciclo: el
+    # intento 1 (o el INPUT_ERROR) de un `new` — el intento 2 de un retry de `new` NO
+    # abre ciclo nuevo, pertenece al mismo. Eventos = líneas · intentos = líneas con
+    # intento numérico · rondas = números distintos.
     if [ -s "$ROUNDS_LOG" ]; then
       awk -F'\t' '
-        $2 == "new" { start = NR }
+        $2 == "new" && ($4 == "1" || $4 == "-") { start = NR }
         { line[NR] = $0 }
         END {
           if (NR == 0) exit
@@ -91,10 +93,12 @@ esac
 # Métricas locales (rounds-log): una línea por evento del loop, con esquema fijo
 # fecha·modo·ronda·intento·resultado·sha·racha. Los eventos pre-invocación (DEADLOCK,
 # INPUT_ERROR) llevan ronda/intento/sha en "-" y quedan fuera del denominador de intentos.
-# Observabilidad local: la memoria oficial por feature es el Review log de los docs.
+# Observabilidad local NO autoritativa y best-effort: si el log no puede escribirse se
+# avisa por stderr y NADA más cambia — jamás altera veredicto, estado ni exit code.
 log_event() { # log_event <resultado> <ronda> <intento> <sha> <racha>
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-    "$(date '+%F %T')" "$MODE" "$2" "$3" "$1" "$4" "$5" >> "$ROUNDS_LOG"
+    "$(date '+%F %T')" "$MODE" "$2" "$3" "$1" "$4" "$5" >> "$ROUNDS_LOG" 2>/dev/null \
+    || echo "aviso: no pude escribir $ROUNDS_LOG (métricas locales); el resultado no cambia" >&2
 }
 
 # Regla de deadlock: 5 rondas consecutivas sin convergencia bloquean el loop ANTES de gastar otra ronda.
