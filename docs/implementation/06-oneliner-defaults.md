@@ -177,7 +177,7 @@ prueba (`git init -b main` + commit vacío). Detalle importante: el delegado que
 **Publicación y aceptación con el comando exacto** (2026-07-28, autorizada por el humano al recibir el
 RECAP del checkpoint: *"dale, publicá vos y corré el one-liner exacto"*). `main` se publicó en
 `af0850a` (46 commits, desde el cierre del feature 02) y `raw.githubusercontent` pasó a servir el
-instalador nuevo. Los cuatro escenarios corrieron con el **comando byte a byte del README**
+instalador nuevo. Los escenarios 1–3 corrieron con el **comando byte a byte del README** (el 4 cambia deliberadamente la URL, para inducir un 404 real)
 —`curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash`—, con
 `AXEL_HOME` exportado aparte (el override documentado) para aislar el cache:
 
@@ -222,6 +222,16 @@ criterio se cumple recién con las corridas de esta sección.
   3. T16n verificaba solo la última línea, así que dos líneas finales habrían pasado → helper nuevo `assert_one_final_rc` que exige **exactamente una** permitiendo el diagnóstico de incompletitud previo (el estricto `assert_final_rc` lo sigue prohibiendo), y el comentario residual "antes de cualquier git" del encabezado de T16 quedó corregido a "operación de red".
 - **Ronda 8 (paso A): CHANGES_REQUESTED** (1 punto documental, aceptado; convergiendo 3→3→1. El reviewer no encontró problemas de código: verificó por su cuenta el repro `AXEL_INSTALL_INNER=$$`, el fallo real de `mktemp` con delegado nuevo, el lock liberado, la única línea final, y suite/`bash -n`/`git diff --check`/shellcheck). Resolución:
   1. Tres afirmaciones quedaron atrás del RC interno 3 → corregidas: el caso "no armado" ahora dice **top-level** y remite a la excepción del delegado; la nota de aditividad ya no afirma que el único RC alterado sea el 0 ni que no exista en la matriz (T16n induce justamente un 1 del delegado que sale como 3); y la evidencia del paso A pasa a **459 asserts**, señalando que los 425 eran la primera versión, previa a los casos de r6 y r7.
+- **Ronda 9 (paso A): APPROVED** — las tres correcciones documentales de r8 verificadas como fieles al comportamiento implementado y a T16n; suite (459 ok), `bash -n`, `git diff --check` y shellcheck limpios. Base movida a `0a60a86`; el paso B quedó explícitamente fuera de ese veredicto. Convergencia del paso A: 3→3→1→0 (r6–r9).
 - **Ronda 10 (paso B): CHANGES_REQUESTED** (2 puntos, ambos bloqueantes y ambos aceptados; el reviewer verificó suite —459 ok—, lint, `bash -n` y `git diff --check`). Resolución:
   1. **Criterio 7 no cumplido**: la aceptación corrió el wrapper local por stdin, no el comando exacto del README; el reviewer ejecutó el one-liner publicado en un repo limpio y obtuvo **RC 2 con el uso del instalador viejo y sin línea final** — el camino principal documentado no funciona para un tercero hasta que se publique. **No corregible por el loop**: publicar es decisión del humano → el feature queda frenado en checkpoint, con la evidencia y las dos salidas (publicar y re-verificar, o modificar explícitamente el criterio) registradas arriba y llevadas al RECAP.
   2. **Garantía falsa en la plantilla**: `templates/AGENTS.md` afirmaba que la ausencia de línea final significa "la descarga falló y no se instaló nada", cuando el contrato solo habilita "no hay finalización confirmada" —una caída posterior a las escrituras deja diff parcial— → corregido ahí y en el paso 3 de la guía del README, ambos con la instrucción de revisar `git status` antes de reintentar; la plantilla incluye además los dos pipelines completos y ejecutables (corto y explícito), porque `bash -s -- --from …` suelto no es un comando que se pueda correr.
+- **Ronda 11: APPROVED (cierre)** — los dos bloqueantes de r10 resueltos y **la aceptación reproducida por el reviewer**: `main` en `af0850a`, raw sirviendo exactamente ese `install.sh`, initial/update RC 0 con marker igual al cache, lock liberado y una sola línea final, fuera de git RC 2, y el 404 dando RC 0 sin línea / RC 56 con `pipefail`. Regresión limpia (459 ok), lint, `bash -n` y `git diff --check` pasando; los **siete criterios de cierre satisfechos**. Base movida a `a158a63`. Bookkeeping pedido en el mismo veredicto (registrar el APPROVED de r9 y precisar que el escenario 4 cambia la URL a propósito): incorporado en este commit de cierre. Convergencia del ciclo: bajada 4→2→1→1→0 (r1–r5), paso A 3→3→1→0 (r6–r9), paso B 2→0 (r10–r11).
+
+## Cierre
+
+Feature cerrado el 2026-07-28 con el APPROVED de Codex en la ronda 11. Hito del ciclo: el checkpoint
+humano de publicación —el criterio 7 no podía cumplirse sin una acción hacia afuera que el loop no
+toma por su cuenta—, resuelto con el OK explícito del humano y la re-verificación con el comando
+exacto. Este commit de cierre es bookkeeping (solo docs): por contrato no mueve la base, y al ser el
+último feature previsto no hay ciclo siguiente que lo barra — lo cubre el OK humano.
