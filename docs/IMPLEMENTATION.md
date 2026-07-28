@@ -28,7 +28,7 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 
 **Extensión 2026-07-28 (feature 05)**: APPROVED del ciclo de `/plan` que agregó el 05 en su ronda 2 (base `60cf68d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1); ambos agentes acuerdan la entrada, el bootstrap autoaplicado y el origen derivado del resumen. OK humano de la extensión: recibido el 2026-07-28.
 
-**Extensión 2026-07-28 (feature 06)**: APPROVED del ciclo de `/plan` que agregó el 06 en su ronda 2 (base `4336f4d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1; además alinea con el criterio 2: reduce la fricción de llevar axel a otros proyectos); ambos agentes acuerdan la entrada, los dos tradeoffs registrados en r1 (semántica de fallo del transporte, destino ambiental) y las decisiones que quedan explícitamente para la bajada. OK humano de la extensión: pendiente.
+**Extensión 2026-07-28 (feature 06)**: APPROVED del ciclo de `/plan` que agregó el 06 en su ronda 2 (base `4336f4d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1; además alinea con el criterio 2: reduce la fricción de llevar axel a otros proyectos); ambos agentes acuerdan la entrada, los dos tradeoffs registrados en r1 (semántica de fallo del transporte, destino ambiental) y las decisiones que quedan explícitamente para la bajada. OK humano de la extensión: recibido el 2026-07-28 (sin restricciones adicionales: las dos decisiones abiertas quedan para la bajada).
 
 ### 01 — Instalador
 
