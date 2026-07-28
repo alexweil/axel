@@ -8,7 +8,7 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 
 ## Criterio de orden
 
-1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27; gate de confirmación 05 como único ítem del backlog nuevo, 2026-07-28).
+1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27; gate de confirmación 05 como único ítem del backlog nuevo, 2026-07-28; one-liner corto 06 como único ítem del backlog nuevo, 2026-07-28).
 2. **Valor desbloqueado antes que pulido**: primero lo que habilita uso nuevo (llevar axel a otros proyectos) sobre lo que mejora lo que ya funciona.
 3. **Núcleo antes que confort**: desbloqueado el valor nuevo, primero consolidar el código safety-critical de uso diario — prioridad por riesgo × centralidad × radio de daño (`review.sh` y `awake.sh` ejecutan `reset --hard`, `clean -fdx` y señales de procesos en cada ciclo) — y recién después la calidad de vida.
 
@@ -22,10 +22,13 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 | 03 | Hardening del loop de review | **Cerrado** — APPROVED de Codex (r8) + OK humano, 2026-07-28 | [implementation/03-loop-hardening.md](implementation/03-loop-hardening.md) |
 | 04 | Notificaciones y continuidad entre sesiones | **Cerrado** — APPROVED de Codex (r5) + OK humano (terminal), 2026-07-28 | [implementation/04-notifications-continuity.md](implementation/04-notifications-continuity.md) |
 | 05 | Confirmación previa a la implementación en `/feature` | **Cerrado** — APPROVED de Codex (r4) + OK humano (terminal), 2026-07-28 | [implementation/05-feature-gate.md](implementation/05-feature-gate.md) |
+| 06 | One-liner corto: defaults del bootstrap remoto | **Pendiente** — bajada fina al arrancar su `/feature` | — (la crea su bajada fina) |
 
 **Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: recibido el 2026-07-27 (registrado en `860c80b`). **Nota de numeración**: esa cita usa la numeración original del plan; con el OK del 01 (2026-07-27) el humano insertó *instalación remota* como 02 (criterio 1), corriendo hardening a 03 y notificaciones a 04 — el orden relativo acordado entre agentes no cambió.
 
 **Extensión 2026-07-28 (feature 05)**: APPROVED del ciclo de `/plan` que agregó el 05 en su ronda 2 (base `60cf68d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1); ambos agentes acuerdan la entrada, el bootstrap autoaplicado y el origen derivado del resumen. OK humano de la extensión: recibido el 2026-07-28.
+
+**Extensión 2026-07-28 (feature 06)**: ciclo de `/plan` en curso — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1; además alinea con el criterio 2: reduce la fricción de llevar axel a otros proyectos). Acuerdo entre agentes pendiente.
 
 ### 01 — Instalador
 
@@ -56,3 +59,20 @@ Pedido humano (2026-07-28, al extender el plan): al arrancar un feature nuevo co
 **Persistencia y bootstrap** (r1 de este ciclo): el estado del gate queda persistido en docs — al presentarlo, STATUS pasa a "esperando confirmación de arranque"; al recibir la confirmación, el doc del feature la registra junto con cualquier corrección de alcance del humano — de modo que una sesión reabierta **re-presenta** el gate en vez de saltearlo (análogo al camino "esperando OK"). Y el 05 se aplica a sí mismo: la sesión `/feature` que lo implemente abre con el gate en modo manual — resumen derivado de esta entrada + confirmación humana antes de su propia bajada fina — porque la skill todavía no lo trae; esta entrada es la instrucción que esa sesión sigue.
 
 Superficie estimada — la bajada fina decide el detalle: skill `feature` (el gate como paso 0 del camino "feature nuevo" + re-presentación al reabrir), la línea de proceso de `/feature` en `AGENTS.md` + `templates/AGENTS.md` (regla de sincronía), el flujo en `DESIGN.md` (diagrama y fila de decisiones), y la línea "Cómo se trabaja un feature" de este doc y de `templates/IMPLEMENTATION.md`. Pregunta restante para la bajada: encaje fino con el protocolo de aviso del feature 04 (la espera del gate se alcanza interactivamente ⇒ sin push; qué pasa si la sesión se reabre después).
+
+### 06 — One-liner corto: defaults del bootstrap remoto
+
+Pedido humano (2026-07-28, al extender el plan): soportar la versión "de verdad corta" del one-liner de instalación:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
+```
+
+Hoy el modo piped exige `--from <url>` y el destino explícito — decisión fail-closed deliberada del feature 02 (piped sin `--from` ⇒ exit 2 con mensaje que apunta a `--from`). El feature la revisa con dos defaults independientes:
+
+- **`--from` ausente** → la URL canónica de axel (`https://github.com/alexweil/axel`), cableada en el script — la misma constante que hoy vive solo en el string del README.
+- **Destino ausente** → el toplevel del repo git donde está parado el caller (el equivalente de `git rev-parse --show-toplevel` del cwd); cwd fuera de un repo git ⇒ rechazo con diagnóstico claro.
+
+**Por qué es aceptable revisar el fail-closed del 02**: aquella exigencia no protegía de una acción destructiva sino de la **ambigüedad** (¿qué fuente? ¿qué destino?) en un modo sin `$0` en disco. Los defaults eliminan la ambigüedad declarándola en vez de exigirla: la corrida anuncia fuente y destino asumidos antes de actuar, y **toda** la validación existente queda intacta — cache fail-closed, disjunción cache/lock↔destino, lock, y el preflight del delegado (toplevel, árbol limpio, rechazo de self-install). El instalador sigue sin commitear (el diff queda para el proceso del destino) y las formas explícitas actuales no cambian de contrato: los defaults solo completan argumentos ausentes.
+
+Preguntas que la bajada fina debe resolver (estimadas, no exhaustivas): combinaciones intermedias (`--from <url>` sin destino; destino sin `--from` — intuición: cada default es independiente y ambas valen, la bajada lo decide y lo testea); qué pasa con el modo **local** sin argumentos (¿también defaultea el destino al toplevel del cwd, o el default es solo del camino `--from`/piped? — atención al caso de correrlo parado adentro del propio clon de axel, hoy rechazado por el preflight de self-install); la **sutileza del fork** (el script piped de un fork defaultearía a la URL canónica, no al fork — no hay forma de detectar el origen de un script por stdin; probablemente se documenta); testeabilidad **sin red** del default de URL (la matriz actual corre con remotos locales — el default cableado a GitHub necesita override por env para los tests, o cobertura solo en la aceptación real); y la actualización del README + guía para agentes (el one-liner corto como primera opción, las formas explícitas conservadas).
