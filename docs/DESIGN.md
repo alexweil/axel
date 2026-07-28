@@ -54,7 +54,7 @@ Dentro de un feature: cambio → commit → review → corregir o argumentar →
 | 2026-07-27 | Git | `main` lineal, un commit por paso, sin amend | La historia ES el registro del loop; el reviewer ve deltas por rango de commits. |
 | 2026-07-27 | Rol del reviewer | Puede ejecutar (workspace-write), no modifica | Verificación independiente: no confía en la evidencia del generador. |
 | 2026-07-27 | Config de modelos | Variables al tope de `review.sh` (+ env `AXEL_REVIEW_*`) | Cambiar de modelo o esfuerzo = tocar una línea versionada, sin depender de config global. |
-| 2026-07-27 | RECAP | El turno termina y la sesión queda esperando; push si está disponible | El OK puede llegar desde una sesión remota en cualquier momento. |
+| 2026-07-27, refinada 2026-07-28 (feature 04) | RECAP y esperas | El turno termina y la sesión queda esperando; el aviso sigue el criterio de autonomía (espera alcanzada por trabajo autónomo → push de una línea; respuesta directa → sin push) y tras un OK que cierra fase o feature se facilita la sesión siguiente (chip de spawn / instrucción única). Protocolo: skill `recap` y skills de fase. | El OK puede llegar desde una sesión remota en cualquier momento; presencia no se adivina — se decide por cómo se llegó a la espera. |
 | 2026-07-27 | Instalador | Payload sobreescribible vs. semillas intocables; modos por marker; adopción = script mecánico + `/adopt` semántico; git + preflight como red (fail-closed) | El re-run es la actualización sin pisar lo del proyecto; nada del instalador queda fuera del diff ni se decide adivinando. Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
 
 ## Profundizaciones

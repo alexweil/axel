@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: feature 04 — notificaciones y continuidad entre sesiones, en curso (bajada fina en review)
-- **Feature en curso**: 04 ([implementation/04-notifications-continuity.md](implementation/04-notifications-continuity.md))
-- **Ronda de review**: 2 respondida (2 puntos aceptados y corregidos; convergencia 5→2) — lanzando ronda 3
-- **Último veredicto**: CHANGES_REQUESTED · ronda 2 · `dd624af` (racha 2)
-- **Esperando**: veredicto de Codex sobre las correcciones de la ronda 2
+- **Fase**: feature 04 — notificaciones y continuidad entre sesiones, en curso (implementación hecha, entrando a review)
+- **Feature en curso**: 04 ([implementation/04-notifications-continuity.md](implementation/04-notifications-continuity.md)) — bajada APPROVED (r3); paso único de implementación commiteado
+- **Ronda de review**: lanzando ronda 4 (review del paso de implementación)
+- **Último veredicto**: APPROVED (bajada) · ronda 3 · base `496d9bd`
+- **Esperando**: veredicto de Codex sobre la implementación
 - **Actualizado**: 2026-07-28
