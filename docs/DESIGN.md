@@ -37,6 +37,7 @@ Maquinaria reusable para desarrollar proyectos con dos agentes en loop — un **
                  ┌────────────────────────────────────────────┘
                  ▼
         /feature (sesión limpia)
+        gate de arranque: resumen ─► confirmación humana
         bajada fina ─review─► implementar ─commit─► review ─► … ─► APPROVED
                  │
                  ▼
@@ -56,6 +57,7 @@ Dentro de un feature: cambio → commit → review → corregir o argumentar →
 | 2026-07-27 | Config de modelos | Variables al tope de `review.sh` (+ env `AXEL_REVIEW_*`) | Cambiar de modelo o esfuerzo = tocar una línea versionada, sin depender de config global. |
 | 2026-07-27, refinada 2026-07-28 (feature 04) | RECAP y esperas | El turno termina y la sesión queda esperando; el aviso sigue el criterio de autonomía (espera alcanzada por trabajo autónomo → push de una línea; respuesta directa → sin push) y tras un OK que cierra fase o feature se facilita la sesión siguiente (chip de spawn / instrucción única). Protocolo: skill `recap` y skills de fase. | El OK puede llegar desde una sesión remota en cualquier momento; presencia no se adivina — se decide por cómo se llegó a la espera. |
 | 2026-07-27 | Instalador | Payload sobreescribible vs. semillas intocables; modos por marker; adopción = script mecánico + `/adopt` semántico; git + preflight como red (fail-closed) | El re-run es la actualización sin pisar lo del proyecto; nada del instalador queda fuera del diff ni se decide adivinando. Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
+| 2026-07-28 | Gate de arranque de feature | `/feature` presenta un resumen derivado de los docs y espera la confirmación humana antes de la bajada fina; estado persistido en STATUS («esperando confirmación de arranque») con re-presentación al reabrir | Validar el rumbo cuando el humano está presente por construcción, antes de gastar bajada y rondas de review; el OK final de integración no se reemplaza. Detalle: [implementation/05-feature-gate.md](implementation/05-feature-gate.md). |
 
 ## Profundizaciones
 

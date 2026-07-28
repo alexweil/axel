@@ -1,8 +1,8 @@
 # STATUS
 
 - **Fase**: feature — **05 (confirmación previa a la implementación en `/feature`)**, en curso
-- **Feature en curso**: 05 — gate manual confirmado por el humano (2026-07-28, sin correcciones; registro en [implementation/05-feature-gate.md](implementation/05-feature-gate.md)); bajada fina escrita, mandándose a review
-- **Ronda de review**: 2 del ciclo del 05 (en curso) — r1 CHANGES_REQUESTED (2 puntos, ambos aceptados y corregidos: registro fiel del bootstrap sin literalidad retroactiva; criterio 2 acotado a las skills de fase)
-- **Último veredicto**: CHANGES_REQUESTED · ronda 1 · `c8085a9`
-- **Esperando**: veredicto de Codex ronda 2 sobre la bajada corregida
+- **Feature en curso**: 05 — bajada **APPROVED** (r2, base `3306704`); paso único de implementación hecho (skill `feature` con gate + re-presentación, ejemplo en `recap`, AGENTS + plantilla, IMPLEMENTATION + plantilla, DESIGN), mandándose a review
+- **Ronda de review**: 3 del ciclo del 05 (en curso) — pedida como review de cierre contra los criterios del doc
+- **Último veredicto**: APPROVED · ronda 2 · `3306704`
+- **Esperando**: veredicto de Codex ronda 3 sobre la implementación (criterios de cierre de [implementation/05-feature-gate.md](implementation/05-feature-gate.md))
 - **Actualizado**: 2026-07-28

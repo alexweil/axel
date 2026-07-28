@@ -32,7 +32,7 @@ Fases, cada una con su skill:
 1. `/adopt` — solo si hay `docs/ADOPTION.md`: cerrar la adopción (mapear docs preexistentes, derivar el estado real) antes de todo lo demás.
 2. `/design` — ping-pong de ideas con el humano → consolidar `docs/DESIGN.md` → loop de review → RECAP → OK.
 3. `/plan` — `docs/IMPLEMENTATION.md` con features priorizados; el orden lo acuerdan generador y reviewer → RECAP → OK.
-4. `/feature` — el siguiente feature: bajada fina → review → implementación iterando con review → RECAP → OK. Se repite feature por feature, cada uno en sesión limpia.
+4. `/feature` — el siguiente feature: gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación iterando con review → RECAP → OK. Se repite feature por feature, cada uno en sesión limpia.
 5. `/status` y `/recap` — consulta en cualquier momento, no cambian el trabajo.
 
 ### El loop dentro de un feature
