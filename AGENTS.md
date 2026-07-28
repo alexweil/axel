@@ -13,7 +13,7 @@ El contexto de chat es efímero y se descarta entre features; **el estado vive e
 
 ## Roles
 
-- **Generador**: Claude Code (hoy: Fable 5, esfuerzo xhigh — lo elige el humano en la sesión). Diseña, escribe docs y código, commitea, y orquesta el loop.
+- **Generador**: Claude Code (hoy: esquema mixto por fase — Fable 5 para `/design` y `/plan`, Opus 5 para `/feature`, esfuerzo xhigh; lo elige el humano en la sesión). Diseña, escribe docs y código, commitea, y orquesta el loop.
 - **Reviewer**: Codex, invocado como subproceso vía `scripts/review.sh` (hoy: gpt-5.6-sol, esfuerzo xhigh — config SOLO en las variables al tope de ese script). Revisa cada rango de commits, puede ejecutar tests/builds para verificar por su cuenta, y emite un veredicto. No modifica el repo.
 - **Humano**: da el OK en los checkpoints (RECAP). No dirige el detalle: valida dónde estamos y qué sigue. Sus mensajes a mitad de loop tienen prioridad absoluta.
 
