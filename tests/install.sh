@@ -12,7 +12,8 @@ trap 'rm -rf "$TESTS_TMP"' EXIT
 # consultaría la URL canónica y el cache real ~/.axel — es decir, red y estado del usuario.
 # Ambos se apuntan a fixtures locales para TODA la suite (AXEL_DEFAULT_REMOTE se fija en la
 # sección T15, apenas existe el remoto de fixture). Los casos que necesitan el valor CABLEADO
-# lo piden con AXEL_DEFAULT_REMOTE="" y cortan antes de cualquier invocación de git.
+# lo piden con AXEL_DEFAULT_REMOTE="" y cortan antes de cualquier operación de RED (git local sí
+# corre: rev-parse y remote get-url del guard).
 export AXEL_HOME="$TESTS_TMP/axel-home-fallback"
 
 # Fuente = copia del árbol actual de axel (sin .git ni estado local), con repo propio:
@@ -1018,7 +1019,7 @@ assert_in_file "$T15T8/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-pars
 # Sin red: AXEL_DEFAULT_REMOTE ya apunta al remoto de fixture (hermetismo global). Los dos
 # casos que nombran la URL canónica real cortan antes de cualquier git.
 FINAL_PREFIX_T="── axel · fin:"
-assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, y aparece una sola vez
+assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, una sola vez y sin incompletitud
   local want="$1" count last
   count="$(printf '%s\n' "$OUT" | grep -cF "$FINAL_PREFIX_T" || true)"
   count="$(printf '%s' "$count" | tr -d '[:space:]')"
@@ -1028,6 +1029,10 @@ assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, y apar
     "$FINAL_PREFIX_T rc=$want "*) ok ;;
     *) ko "la última línea no es la final con rc=$want: [$last]" ;;
   esac
+  # una corrida firmada no puede haber pasado por el diagnóstico de incompletitud: si aparece,
+  # algo se dio por completo sin serlo (r6)
+  printf '%s\n' "$OUT" | grep -qF "sin finalización confirmada" \
+    && ko "la corrida firmó pese al diagnóstico de incompletitud" || ok
 }
 assert_no_final() {
   printf '%s\n' "$OUT" | grep -qF "$FINAL_PREFIX_T" && ko "no debería haber línea final" || ok
@@ -1240,6 +1245,33 @@ OUT="$(cd "$T16L" && AXEL_HOME="$TESTS_TMP/home16l" AXEL_DEFAULT_REMOTE="--uploa
 assert_rc 2
 assert_out "no puede empezar con '-'"
 [ "$before" = "$(fs_digest "$T16L")" ] && ok || ko "mutaciones tras el rechazo"
+
+t "T16n delegado que no completa: el wrapper NO lo firma como contractual (repro r6)"
+# el delegado del remoto es el instalador real cortado tras el trap más un fallo: sin punto
+# final, con RC 1 — contractual y por lo tanto mentiroso si el wrapper lo propagara tal cual
+trap_line16="$(grep -n "^trap 'axel_on_exit" "$INSTALL" | head -1 | cut -d: -f1)"
+{ sed -n "1,${trap_line16}p" "$INSTALL"; echo 'echo "delegado: escribí algo" > "$1/parcial.txt"'; echo 'false'; } \
+  > "$TESTS_TMP/delegado-incompleto.sh"
+RINC16="$(mk_stub_remote rinc16 "$(cat "$TESTS_TMP/delegado-incompleto.sh")")"
+T16N="$(mk_target t16n)"
+run_piped "$TESTS_TMP/home16n" "$T16N" --from "$RINC16"
+assert_rc 2                                      # normalizado, no el 1 del delegado
+assert_out "no llegó a completarse"
+assert_out "revisá"
+assert_file "$T16N/parcial.txt"                  # el diff parcial queda visible
+assert_no "$TESTS_TMP/home16n.lock"
+last16n="$(printf '%s\n' "$OUT" | tail -1)"
+case "$last16n" in "$FINAL_PREFIX_T rc=2 "*) ok ;; *) ko "el wrapper no cerró con rc=2: [$last16n]" ;; esac
+
+t "T16o marcador heredado del entorno: no puede silenciar una corrida top-level (repro r6)"
+T16O="$(mk_target t16o)"
+OUT="$(cd "$T16O" && AXEL_INSTALL_INNER=1 "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_final_rc 2                                # el marcador ajeno no ata: la línea sale igual
+OUT="$(AXEL_INSTALL_INNER=99999 "$INSTALL" "$T16O" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_final_rc 0
+assert_file "$T16O/AGENTS.md"
 
 t "T16m invariante: todo exit vive en finish o en el trap de salida"
 fn_range() {  # imprime "inicio fin" del cuerpo de una función que abre con '<name>() {'

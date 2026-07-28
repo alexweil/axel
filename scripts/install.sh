@@ -38,9 +38,16 @@ set -euo pipefail
 AXEL_FINISHED=""
 FINAL_PREFIX="── axel · fin:"
 axel_rc=0   # RC observado que los traps compuestos capturan antes de limpiar
-finish() {  # $1=rc  $2=motivo · AXEL_INSTALL_INNER (reservado) suprime la línea del delegado
+AXEL_RC_INCOMPLETE=3   # RC no contractual del delegado: "no completé" (0/1/2 mentirían)
+is_inner() {
+  # Delegado de un wrapper vivo. El marcador vale SOLO si lo puso nuestro padre: atado a
+  # la delegación concreta, un AXEL_INSTALL_INNER heredado del entorno no puede silenciar
+  # una corrida top-level (que quedaría sin línea final, indistinguible de una descarga rota).
+  [ "${AXEL_INSTALL_INNER:-}" = "$PPID" ]
+}
+finish() {  # $1=rc  $2=motivo — único terminal del script
   AXEL_FINISHED=1
-  if [ -z "${AXEL_INSTALL_INNER:-}" ]; then
+  if ! is_inner; then
     printf '%s rc=%s · %s ──\n' "$FINAL_PREFIX" "$1" "$2"
   fi
   exit "$1"
@@ -48,6 +55,9 @@ finish() {  # $1=rc  $2=motivo · AXEL_INSTALL_INNER (reservado) suprime la lín
 axel_on_exit() {  # $1 = RC observado; no inventa errores: solo convierte el 0 engañoso
   if [ -n "$AXEL_FINISHED" ]; then return 0; fi
   echo "rechazo: la corrida terminó sin finalización confirmada (¿script truncado o descarga parcial?); no hay instalación demostrable" >&2
+  # Como delegado, un RC contractual sería una firma falsa: el wrapper lo propagaría como
+  # instalación buena. Se sale con un RC fuera de la taxonomía para que lo normalice a 2.
+  if is_inner; then exit "$AXEL_RC_INCOMPLETE"; fi
   if [ "$1" -eq 0 ]; then exit 2; fi
   return 0
 }
@@ -354,7 +364,9 @@ if [ -n "$FROM_MODE" ]; then
   # Delegación en background + wait: una señal al wrapper interrumpe el wait y el
   # trap reenvía TERM al delegado y espera su muerte antes de soltar el lock.
   set +e
-  AXEL_INSTALL_INNER=1 "$BOOT_DELEGATE" "$BOOT_TARGET" &
+  # El marcador lleva NUESTRO pid: el delegado suprime su línea final solo si el padre real
+  # es este wrapper (un valor heredado del entorno no alcanza).
+  AXEL_INSTALL_INNER=$$ "$BOOT_DELEGATE" "$BOOT_TARGET" &
   BOOT_CHILD=$!
   wait "$BOOT_CHILD"
   boot_rc=$?
@@ -362,6 +374,9 @@ if [ -n "$FROM_MODE" ]; then
   BOOT_CHILD=""
   case "$boot_rc" in
     0 | 1 | 2) finish "$boot_rc" "$(rc_reason "$boot_rc")" ;;
+    "$AXEL_RC_INCOMPLETE")
+      echo "aviso: el instalador delegado no llegó a completarse (salida incompleta, sin punto final); pudo quedar a mitad de escritura — revisá 'git -C $BOOT_TARGET status' antes de seguir" >&2
+      finish 2 "delegado incompleto — revisá git status en el destino" ;;
     *)
       echo "aviso: el instalador delegado terminó con un código anómalo ($boot_rc) — pudo quedar interrumpido a mitad de escritura; revisá 'git -C $BOOT_TARGET status' antes de seguir" >&2
       finish 2 "delegado interrumpido (RC $boot_rc) — revisá git status en el destino" ;;
