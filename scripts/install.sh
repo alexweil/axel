@@ -164,7 +164,7 @@ if [ -n "$FROM_MODE" ]; then
   [ "$cur_branch" = "$DEFAULT_BRANCH" ] \
     || die "AXEL_HOME está en el branch '$cur_branch' y el default real del remoto es '$DEFAULT_BRANCH' ($BOOT_CACHE); resolvelo a mano"
 
-  git -C "$BOOT_CACHE" fetch --quiet -- "$FROM_URL" "refs/heads/$DEFAULT_BRANCH" 2>/dev/null \
+  git -C "$BOOT_CACHE" -c core.hooksPath=/dev/null fetch --no-tags --quiet -- "$FROM_URL" "refs/heads/$DEFAULT_BRANCH" 2>/dev/null \
     || die "git fetch falló: $FROM_URL (¿red?)"
   remote_tip="$(git -C "$BOOT_CACHE" rev-parse FETCH_HEAD)" || die "no pude leer FETCH_HEAD tras el fetch"
   if [ "$(git -C "$BOOT_CACHE" rev-parse HEAD)" != "$remote_tip" ]; then
@@ -183,32 +183,41 @@ if [ -n "$FROM_MODE" ]; then
   bad_flags="$(git -C "$BOOT_CACHE" ls-files -v | grep -v '^H ' || true)"
   [ -z "$bad_flags" ] \
     || die "AXEL_HOME tiene paths con flags que ocultan cambios del árbol (skip-worktree/assume-unchanged); resolvelo a mano: $BOOT_CACHE"
-  verify_tree() {  # $1=commit — imprime la primera discrepancia; salida vacía = árbol idéntico
-    local TAB line meta mode sha path
+  tree_list="$(git -C "$BOOT_CACHE" ls-tree -r "$remote_tip")" \
+    || die "no pude listar el árbol del commit remoto en el cache"
+  [ -n "$tree_list" ] || die "el commit remoto tiene un árbol vacío; no parece axel"
+  verify_tree() {  # imprime la primera discrepancia; salida vacía = árbol idéntico.
+    # Lee TODO el listado por herestring — sin pipes ni salidas tempranas: un consumidor
+    # que corta antes le mete SIGPIPE a ls-tree y pipefail lo convertiría en un RC 141
+    # fuera de la taxonomía. hash-object corre con -C: el object-format es el del cache,
+    # no el del repo que rodee al cwd del caller (un caller SHA-256 daría falso rechazo).
+    local TAB line meta mode sha path err=""
     TAB="$(printf '\t')"
-    git -C "$BOOT_CACHE" ls-tree -r "$1" | while IFS= read -r line; do
+    while IFS= read -r line; do
+      if [ -n "$err" ]; then continue; fi
       meta="${line%%"$TAB"*}"; path="${line#*"$TAB"}"
       mode="${meta%% *}"; sha="${meta##* }"
       case "$mode" in
         120000)
           if [ ! -L "$BOOT_CACHE/$path" ] \
-             || [ "$(printf '%s' "$(readlink "$BOOT_CACHE/$path")" | git hash-object --stdin)" != "$sha" ]; then
-            echo "$path (symlink distinto al commit)"; exit 0
+             || [ "$(printf '%s' "$(readlink "$BOOT_CACHE/$path")" | git -C "$BOOT_CACHE" hash-object --stdin)" != "$sha" ]; then
+            err="$path (symlink distinto al commit)"
           fi ;;
         100644 | 100755)
           if [ -L "$BOOT_CACHE/$path" ] || [ ! -f "$BOOT_CACHE/$path" ] \
-             || [ "$(git hash-object -- "$BOOT_CACHE/$path")" != "$sha" ]; then
-            echo "$path (contenido distinto al commit)"; exit 0
-          fi
-          case "$mode" in
-            100755) [ -x "$BOOT_CACHE/$path" ] || { echo "$path (perdió el bit de ejecución)"; exit 0; } ;;
-            *) [ ! -x "$BOOT_CACHE/$path" ] || { echo "$path (bit de ejecución inesperado)"; exit 0; } ;;
-          esac ;;
-        *) echo "$path (tipo $mode inesperado en axel)"; exit 0 ;;
+             || [ "$(git -C "$BOOT_CACHE" hash-object -- "$BOOT_CACHE/$path")" != "$sha" ]; then
+            err="$path (contenido distinto al commit)"
+          elif [ "$mode" = "100755" ] && [ ! -x "$BOOT_CACHE/$path" ]; then
+            err="$path (perdió el bit de ejecución)"
+          elif [ "$mode" = "100644" ] && [ -x "$BOOT_CACHE/$path" ]; then
+            err="$path (bit de ejecución inesperado)"
+          fi ;;
+        *) err="$path (tipo $mode inesperado en axel)" ;;
       esac
-    done
+    done <<< "$tree_list"
+    printf '%s' "$err"
   }
-  tree_err="$(verify_tree "$remote_tip")"
+  tree_err="$(verify_tree)"
   [ -z "$tree_err" ] \
     || die "el árbol del cache no coincide con el commit remoto — $tree_err; resolvelo a mano: $BOOT_CACHE"
 

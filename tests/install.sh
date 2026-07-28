@@ -965,6 +965,46 @@ assert_out "no puede ser vacía"
 assert_no "$T15T5/AGENTS.md"
 assert_clean "$T15T5"
 
+t "T15t6 gitlink primero + árbol grande: RC 2 contractual con diagnóstico, sin SIGPIPE (repro r6)"
+RBIG15="$TESTS_TMP/rbig15"; mkdir -p "$RBIG15/files"
+git -C "$RBIG15" init -q -b main
+git -C "$RBIG15" update-index --add --cacheinfo "160000,$(git -C "$R15" rev-parse HEAD),000sub"
+i=1; while [ "$i" -le 2000 ]; do echo "relleno $i" > "$RBIG15/files/f$i"; i=$((i + 1)); done
+git -C "$RBIG15" add files
+git -C "$RBIG15" -c user.email=t@t -c user.name=t commit -qm "gitlink + arbol grande"
+H15T6="$TESTS_TMP/home15t6"
+T15T6="$(mk_target t15t6)"
+before="$(fs_digest "$T15T6")"
+run_boot "$H15T6" "$RBIG15" "$T15T6"
+assert_rc 2
+assert_out "tipo 160000 inesperado"
+[ "$before" = "$(fs_digest "$T15T6")" ] && ok || ko "mutaciones en el destino"
+assert_no "$H15T6.lock"
+
+t "T15t7 caller desde un repo SHA-256: los hashes se computan en el contexto del cache (repro r6)"
+SR15="$TESTS_TMP/sha256repo"; mkdir -p "$SR15"
+git -C "$SR15" init -q --object-format=sha256 -b main
+H15T7="$TESTS_TMP/home15t7"
+T15T7="$(mk_target t15t7)"
+OUT="$(cd "$SR15" && AXEL_HOME="$H15T7" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" "$INSTALL" --from "$R15" "$T15T7" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_in_file "$T15T7/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
+t "T15t8 reference-transaction hook en fetch: deshabilitado; tags implícitos no entran (repro r6)"
+H15T8="$TESTS_TMP/home15t8"
+git clone -q -- "$R15" "$H15T8"
+mkdir -p "$H15T8/.git/hooks"
+printf '#!/bin/sh\ntouch "%s/FETCH_HOOKED"\n' "$TESTS_TMP" > "$H15T8/.git/hooks/reference-transaction"
+chmod +x "$H15T8/.git/hooks/reference-transaction"
+echo "avance 4" >> "$R15/README.md"; tcommit "$R15" "avance 4"
+git -C "$R15" tag v-test15   # tag alcanzable: el auto-follow lo traería
+T15T8="$(mk_target t15t8)"
+run_boot "$H15T8" "$R15" "$T15T8"
+assert_rc 0
+[ ! -e "$TESTS_TMP/FETCH_HOOKED" ] && ok || ko "el hook reference-transaction corrió durante el fetch"
+[ -z "$(git -C "$H15T8" tag -l v-test15)" ] && ok || ko "el tag implícito entró al cache pese a --no-tags"
+assert_in_file "$T15T8/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
 echo "── tests/install.sh: $PASS ok · $FAIL fail ──"
