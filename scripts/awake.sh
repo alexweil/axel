@@ -42,9 +42,9 @@ check() {
 # Señaliza el pid trackeado y CONFIRMA la muerte (vía check) antes de que el caller
 # pierda el rastro. El pidfile solo se borra tras muerte confirmada.
 kill_confirmed() {
-  local pid="$1" i rc
+  local pid="$1" rc
   kill "$pid" 2>/dev/null || true
-  for i in 1 2 3; do
+  for _ in 1 2 3; do
     rc=0; check || rc=$?
     if [ "$rc" = 1 ]; then
       return 0
