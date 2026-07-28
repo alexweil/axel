@@ -8,7 +8,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 
 ## Criterio de orden
 
-1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27).
+1. **Restricciones humanas fijan posiciones**: los pedidos explícitos del humano no se discuten entre agentes (hoy: instalador 01 primero, 2026-07-27; gate de confirmación 05 como único ítem del backlog nuevo, 2026-07-28).
 2. **Valor desbloqueado antes que pulido**: primero lo que habilita uso nuevo (llevar axel a otros proyectos) sobre lo que mejora lo que ya funciona.
 3. **Núcleo antes que confort**: desbloqueado el valor nuevo, primero consolidar el código safety-critical de uso diario — prioridad por riesgo × centralidad × radio de daño (`review.sh` y `awake.sh` ejecutan `reset --hard`, `clean -fdx` y señales de procesos en cada ciclo) — y recién después la calidad de vida.
 
@@ -21,6 +21,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 | 02 | Instalación remota: one-liner desde GitHub | **Cerrado** — APPROVED de Codex (r10) + OK humano, 2026-07-27 | [implementation/02-remote-install.md](implementation/02-remote-install.md) |
 | 03 | Hardening del loop de review | **Cerrado** — APPROVED de Codex (r8) + OK humano, 2026-07-28 | [implementation/03-loop-hardening.md](implementation/03-loop-hardening.md) |
 | 04 | Notificaciones y continuidad entre sesiones | **Cerrado** — APPROVED de Codex (r5) + OK humano (terminal), 2026-07-28 | [implementation/04-notifications-continuity.md](implementation/04-notifications-continuity.md) |
+| 05 | Confirmación previa a la implementación en `/feature` | **Pendiente** — bajada fina al arrancar su `/feature` | — (la crea su bajada fina) |
 
 **Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: recibido el 2026-07-27 (registrado en `860c80b`). **Nota de numeración**: esa cita usa la numeración original del plan; con el OK del 01 (2026-07-27) el humano insertó *instalación remota* como 02 (criterio 1), corriendo hardening a 03 y notificaciones a 04 — el orden relativo acordado entre agentes no cambió.
 
@@ -43,3 +44,9 @@ Además: captura robusta del session id (hoy: primer UUID de los eventos JSONL, 
 ### 04 — Notificaciones y continuidad
 
 Push de RECAP consistente en todos los caminos, y facilitar el arranque de la siguiente sesión limpia tras el OK (chip de spawn en desktop / instrucción única).
+
+### 05 — Confirmación previa a la implementación en `/feature`
+
+Pedido humano (2026-07-28, al extender el plan): al arrancar un feature nuevo con `/feature`, **lo primero** es mostrarle al humano un breve resumen de lo que se va a implementar y pedir su confirmación **antes** de ejecutar la implementación. Con la confirmación, el flujo sigue idéntico al actual: bajada fina → review → implementación con loop → RECAP → OK humano de integración. El checkpoint nuevo no reemplaza al OK final — agrega un gate barato al inicio, cuando el humano está presente por construcción (acaba de abrir la sesión o clickear el chip), para validar el rumbo antes de gastar bajada y rondas de review en algo desviado.
+
+El resumen sale de lo que ya existe al momento del gate: la entrada del feature en este plan (tabla + su sección). Superficie estimada — la bajada fina decide el detalle: skill `feature` (el gate como paso 0 del camino "feature nuevo"), la línea de proceso de `/feature` en `AGENTS.md` + `templates/AGENTS.md` (regla de sincronía), y el flujo en `DESIGN.md` (diagrama y fila de decisiones). Preguntas para la bajada: qué registrar si el humano corrige el alcance al confirmar (¿decisión en el doc del feature antes de la bajada?), y encaje con el protocolo de aviso del feature 04 (espera interactiva al arranque ⇒ sin push; la sesión reabierta con el gate pendiente debería re-presentarlo, análogo al camino "esperando OK").
