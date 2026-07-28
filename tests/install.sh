@@ -1017,7 +1017,8 @@ assert_in_file "$T15T8/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-pars
 
 # ── T16 · defaults del bootstrap remoto y finalización verificable (feature 06) ─
 # Sin red: AXEL_DEFAULT_REMOTE ya apunta al remoto de fixture (hermetismo global). Los dos
-# casos que nombran la URL canónica real cortan antes de cualquier git.
+# casos que nombran la URL canónica real cortan antes de cualquier operación de RED (git local
+# sí corre: rev-parse y remote get-url del guard).
 FINAL_PREFIX_T="── axel · fin:"
 assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, una sola vez y sin incompletitud
   local want="$1" count last
@@ -1033,6 +1034,17 @@ assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, una so
   # algo se dio por completo sin serlo (r6)
   printf '%s\n' "$OUT" | grep -qF "sin finalización confirmada" \
     && ko "la corrida firmó pese al diagnóstico de incompletitud" || ok
+}
+assert_one_final_rc() {  # una sola línea final con ese rc, permitiendo el diagnóstico previo
+  local want="$1" count last
+  count="$(printf '%s\n' "$OUT" | grep -cF "$FINAL_PREFIX_T" || true)"
+  count="$(printf '%s' "$count" | tr -d '[:space:]')"
+  last="$(printf '%s\n' "$OUT" | tail -1)"
+  [ "$count" = "1" ] && ok || ko "esperaba exactamente una línea final, hubo $count"
+  case "$last" in
+    "$FINAL_PREFIX_T rc=$want "*) ok ;;
+    *) ko "la última línea no es la final con rc=$want: [$last]" ;;
+  esac
 }
 assert_no_final() {
   printf '%s\n' "$OUT" | grep -qF "$FINAL_PREFIX_T" && ko "no debería haber línea final" || ok
@@ -1260,14 +1272,17 @@ assert_out "no llegó a completarse"
 assert_out "revisá"
 assert_file "$T16N/parcial.txt"                  # el diff parcial queda visible
 assert_no "$TESTS_TMP/home16n.lock"
-last16n="$(printf '%s\n' "$OUT" | tail -1)"
-case "$last16n" in "$FINAL_PREFIX_T rc=2 "*) ok ;; *) ko "el wrapper no cerró con rc=2: [$last16n]" ;; esac
+assert_one_final_rc 2                            # una sola: la del wrapper, pese al diagnóstico del delegado
+assert_out "sin finalización confirmada"          # el delegado sí dejó su rastro en la salida
 
 t "T16o marcador heredado del entorno: no puede silenciar una corrida top-level (repro r6)"
 T16O="$(mk_target t16o)"
 OUT="$(cd "$T16O" && AXEL_INSTALL_INNER=1 "$INSTALL" 2>&1)" && RC=0 || RC=$?
 assert_rc 2
 assert_final_rc 2                                # el marcador ajeno no ata: la línea sale igual
+OUT="$(cd "$T16O" && AXEL_INSTALL_INNER=$$ "$INSTALL" 2>&1)" && RC=0 || RC=$?   # repro r7: el PPID real
+assert_rc 2
+assert_final_rc 2                                # nombrar al padre no alcanza: hace falta el lock vivo
 OUT="$(AXEL_INSTALL_INNER=99999 "$INSTALL" "$T16O" 2>&1)" && RC=0 || RC=$?
 assert_rc 0
 assert_final_rc 0

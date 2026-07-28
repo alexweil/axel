@@ -39,11 +39,18 @@ AXEL_FINISHED=""
 FINAL_PREFIX="── axel · fin:"
 axel_rc=0   # RC observado que los traps compuestos capturan antes de limpiar
 AXEL_RC_INCOMPLETE=3   # RC no contractual del delegado: "no completé" (0/1/2 mentirían)
+lock_token_for() { printf 'axel-bootstrap pid=%s host=%s' "$1" "$(hostname)"; }
 is_inner() {
-  # Delegado de un wrapper vivo. El marcador vale SOLO si lo puso nuestro padre: atado a
-  # la delegación concreta, un AXEL_INSTALL_INNER heredado del entorno no puede silenciar
-  # una corrida top-level (que quedaría sin línea final, indistinguible de una descarga rota).
-  [ "${AXEL_INSTALL_INNER:-}" = "$PPID" ]
+  # Delegado de un wrapper vivo. El marcador no alcanza con nombrar al padre —el PPID es
+  # justamente lo que el padre conoce, así que un `AXEL_INSTALL_INNER=$$` del entorno
+  # bastaría—: tiene que apuntar al LOCK VIVO cuyo token nombra a nuestro padre en este
+  # host, evidencia que solo produce un wrapper que efectivamente tomó el lock. Sin eso,
+  # un marcador heredado silenciaría una corrida top-level, que es exactamente el síntoma
+  # de una descarga rota.
+  local marker="${AXEL_INSTALL_INNER:-}"
+  [ -n "$marker" ] || return 1
+  [ -L "$marker" ] || return 1
+  [ "$(readlink "$marker" 2>/dev/null || true)" = "$(lock_token_for "$PPID")" ]
 }
 finish() {  # $1=rc  $2=motivo — único terminal del script
   AXEL_FINISHED=1
@@ -52,7 +59,8 @@ finish() {  # $1=rc  $2=motivo — único terminal del script
   fi
   exit "$1"
 }
-axel_on_exit() {  # $1 = RC observado; no inventa errores: solo convierte el 0 engañoso
+axel_on_exit() {  # $1 = RC observado · dos capas: top-level convierte el 0 engañoso y conserva
+                  # el no-cero real; como delegado, TODA incompletitud sale del contrato (RC 3)
   if [ -n "$AXEL_FINISHED" ]; then return 0; fi
   echo "rechazo: la corrida terminó sin finalización confirmada (¿script truncado o descarga parcial?); no hay instalación demostrable" >&2
   # Como delegado, un RC contractual sería una firma falsa: el wrapper lo propagaría como
@@ -222,7 +230,7 @@ if [ -n "$FROM_MODE" ]; then
   # Lock: symlink atómico con la propiedad en el target (pid + host). Jamás se libera
   # con el delegado vivo; pid muerto o lock ajeno ⇒ rechazo sin borrar nada (fail-closed).
   mkdir -p "$(dirname "$BOOT_CACHE")" || die "no pude crear el directorio padre del cache: $(dirname "$BOOT_CACHE")"
-  LOCK_TOKEN="axel-bootstrap pid=$$ host=$(hostname)"
+  LOCK_TOKEN="$(lock_token_for "$$")"
   BOOT_CHILD=""
   boot_cleanup() {
     if [ -n "$BOOT_CHILD" ] && kill -0 "$BOOT_CHILD" 2>/dev/null; then
@@ -364,9 +372,9 @@ if [ -n "$FROM_MODE" ]; then
   # Delegación en background + wait: una señal al wrapper interrumpe el wait y el
   # trap reenvía TERM al delegado y espera su muerte antes de soltar el lock.
   set +e
-  # El marcador lleva NUESTRO pid: el delegado suprime su línea final solo si el padre real
-  # es este wrapper (un valor heredado del entorno no alcanza).
-  AXEL_INSTALL_INNER=$$ "$BOOT_DELEGATE" "$BOOT_TARGET" &
+  # El marcador es el path del lock que tenemos tomado: el delegado suprime su línea final
+  # solo si ese lock existe y su token lo nombra a él como hijo nuestro (ver is_inner).
+  AXEL_INSTALL_INNER="$BOOT_LOCK" "$BOOT_DELEGATE" "$BOOT_TARGET" &
   BOOT_CHILD=$!
   wait "$BOOT_CHILD"
   boot_rc=$?
