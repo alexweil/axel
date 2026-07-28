@@ -170,6 +170,10 @@ Reproducibilidad: los SHAs corresponden a `origin/main` = `1fa8566` al momento d
   3. La invocación ilustrativa de `templates/AGENTS.md` omitía el `<repo-destino>` obligatorio → firma completa y puntero al comando del README.
 - **Ronda 10: APPROVED (cierre)** — las tres correcciones de r9 verificadas; el reviewer ejecutó literalmente el comando auditable desde un destino (RC 0, clon afuera, plantilla corregida instalada) y dio los criterios 1–6 por cumplidos. Base: `7c1fda3`. Convergencia del ciclo: bajada 6→3→2→0 (r1–r4), paso A 4→3→1→0 (r5–r8), paso B 3→0 (r9–r10).
 
+## Revisiones posteriores
+
+- **Feature 06 (2026-07-28)** — el criterio 2 de este doc ("piped sin `--from` rechaza con mensaje que apunta a `--from`") quedó **superado**: ese camino ahora defaultea la fuente a la URL canónica y el destino al toplevel del cwd, y instala. Lo demás del contrato sigue vigente tal cual, incluida toda la validación del cache, el lock, la disjunción y la taxonomía 0/1/2. El test T15s2 se retiró con su puntero a la cobertura nueva (T16). Detalle: [06-oneliner-defaults.md](06-oneliner-defaults.md).
+
 ## Cierre
 
 Feature cerrado el 2026-07-27 con el APPROVED de Codex en la ronda 10. Este commit de cierre es bookkeeping (solo docs): por contrato no mueve la base y lo verifica la ronda 1 del ciclo siguiente (feature 03).

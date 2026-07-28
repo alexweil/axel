@@ -155,6 +155,32 @@ Cierre con **aceptación real contra GitHub**: el **one-liner corto exacto del R
 - **Hermetismo de la suite, encontrado por el propio cambio**: con el default de fuente, T15s2 —que corría piped **sin** overrides esperando un rechazo— pasó a consultar la URL canónica real y el cache `~/.axel` del usuario: red y estado de la máquina adentro de una corrida de tests. Corregido de raíz: `AXEL_HOME` y `AXEL_DEFAULT_REMOTE` se exportan a fixtures locales para toda la suite, de modo que un caso que omita los overrides siga siendo hermético; los dos casos que necesitan la URL cableada la piden con `AXEL_DEFAULT_REMOTE=""` y cortan antes de cualquier **operación de red** — el guard y la validación de URL corren git solo localmente.
 - **Corrección de la señal no capturada**: la tabla de fronteras decía "ninguna línea" y la corrida real mostró que bash 3.2, con un hijo en curso, **sí** alcanza a correr el trap `EXIT` y emite el diagnóstico de incompletitud aunque el proceso muera con 143. Lo que el contrato promete —que no hay **línea final**— se cumple igual; la fila se corrigió para no prometer silencio total.
 
+## Aceptación real contra GitHub (paso B, 2026-07-28)
+
+Corrida en esta máquina con red real (git → github.com), cache **fresco y aislado** vía `AXEL_HOME`, el
+script **por stdin y sin argumentos** —la forma del one-liner corto— y el cwd adentro de un repo de
+prueba (`git init -b main` + commit vacío). Detalle importante: el delegado que ejecutó es el
+`install.sh` **publicado** en `main` (`2e0b5b7`), o sea que estas corridas son además un caso real de
+**skew wrapper nuevo / delegado viejo**, y la línea final salió una sola vez, la del wrapper.
+
+**Corrida 1 — instalación desde cero** (`cd $ACC/demo && bash < scripts/install.sh`, con `AXEL_HOME` aislado):
+
+- Anuncio: `── axel bootstrap · fuente: https://github.com/alexweil/axel (por defecto) · destino: $ACC/demo (por defecto: toplevel del cwd) ──` — ambos defaults marcados, antes de tocar nada.
+- RC **0**, `modo: initial`, los 10 payloads + 5 semillas + `CLAUDE.md → AGENTS.md` + `.gitignore` + marker.
+- Cache: `origin` = `https://github.com/alexweil/axel`, branch `main`, HEAD `2e0b5b79835d6e6560790b59f96aef06861c6bc3`; marker del destino `axel-sha:` **idéntico** al HEAD del cache; lock liberado.
+- Cierre: `── axel · fin: rc=0 · instalado/actualizado sin pendientes ──`, una sola vez.
+
+**Corrida 2 — mismo comando, cache existente, destino commiteado**: RC **0**, `modo: update`, `git status --porcelain` del destino **vacío** (update no-op sin diff), línea final `rc=0`.
+
+**Control — mismo comando parado fuera de un repo git**: RC **2** con el diagnóstico esperado ("sin `<target-dir>` el destino es el repo git donde estás parado, y … no está dentro del árbol de trabajo de ninguno") y su línea final `rc=2`.
+
+**Gap declarado**: lo que estas corridas **no** cubren es `curl` bajando el script **nuevo** de
+`raw.githubusercontent`, porque `main` publicado está 46 commits atrás (sirve todavía el instalador
+del feature 02). El one-liner exacto del README solo puede verificarse **después de publicar**; hasta
+entonces, lo verificado es todo el resto del camino real: stdin sin argumentos, default de fuente
+contra la URL canónica, consulta y clone reales contra github.com, default de destino, lock,
+delegación y línea final. Queda anotado para el RECAP: es una acción de publicación que decide el humano.
+
 ## Review log
 
 - **Ronda 1 (bajada): CHANGES_REQUESTED** (4 puntos, los cuatro aceptados; el reviewer verificó además `bash -n`, `git diff --check` y la suite base —321 asserts, 0 fallas— y dio por consistente el bookkeeping previo del rango. Acordó el corte de defaults —solo bootstrap— con el argumento de que `--from` selecciona explícitamente ese contrato, y aprobó parser, forma de la supersesión y el resto de T16). Resolución:
