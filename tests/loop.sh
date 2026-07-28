@@ -35,6 +35,7 @@ assert_file() { [ -f "$1" ] && ok || ko "falta archivo: $1"; }
 assert_no()   { { [ ! -e "$1" ] && [ ! -L "$1" ]; } && ok || ko "no debería existir: $1"; }
 assert_alive() { kill -0 "$1" 2>/dev/null && ok || ko "pid $1 debería estar vivo"; }
 assert_dead()  { kill -0 "$1" 2>/dev/null && ko "pid $1 debería estar muerto" || ok; }
+wait_dead()    { local i; for i in 1 2 3 4 5 6 7 8 9 10; do kill -0 "$1" 2>/dev/null || return 0; sleep 0.2; done; return 1; }
 
 # ── Dobles por PATH ───────────────────────────────────────────────────────────
 STUBS="$TESTS_TMP/stubs"
@@ -134,7 +135,17 @@ case "${FAKE_PMSET_MODE:-track}" in
   *) exit 1 ;;
 esac
 STUB
-chmod +x "$STUBS/codex" "$STUBS/caffeinate" "$STUBS/pmset"
+# ps: con FAKE_PS_COMM imprime ese comm (congela el fallback de awake.sh de forma
+# determinista, inmune a sandboxes que niegan ps); sin la variable, delega en el real.
+cat > "$STUBS/ps" <<'STUB'
+#!/usr/bin/env bash
+if [ -n "${FAKE_PS_COMM:-}" ]; then
+  printf '%s\n' "$FAKE_PS_COMM"
+  exit 0
+fi
+exec /bin/ps "$@"
+STUB
+chmod +x "$STUBS/codex" "$STUBS/caffeinate" "$STUBS/pmset" "$STUBS/ps"
 
 CODEX_LOG="$TESTS_TMP/codex.log"
 export FAKE_CODEX_LOG="$CODEX_LOG"
@@ -367,6 +378,8 @@ mkdir -p "$WT4"
 echo impostor > "$WT4/impostor.txt"
 echo "modificación local sin commit" >> "$R4/observed.txt"
 echo untracked > "$R4/untracked-sentinel.txt"
+# precondición (a): el subdir hereda el repo padre — toplevel ≠ WT_DIR (la invariante que cae)
+assert_eq "$(git -C "$WT4" rev-parse --show-toplevel)" "$R4" "precondición (a): toplevel heredado del padre"
 run_review "$R4" new p
 assert_rc 0
 grep -q "modificación local sin commit" "$R4/observed.txt" && ok || ko "reset --hard cayó sobre el canónico"
@@ -383,6 +396,12 @@ echo nested > "$WT4/nested.txt"
 git -C "$WT4" add -A
 git -C "$WT4" -c user.email=t@t -c user.name=t commit -qm nested
 echo "segunda modificación local" >> "$R4/observed.txt"
+# precondiciones (b): toplevel SÍ coincide; el git-dir queda fuera de .git/worktrees del repo
+assert_eq "$(git -C "$WT4" rev-parse --show-toplevel)" "$WT4" "precondición (b): toplevel coincide"
+case "$(git -C "$WT4" rev-parse --absolute-git-dir)" in
+  "$R4/.git/worktrees/"*) ko "precondición (b): el git-dir no debería estar bajo .git/worktrees" ;;
+  *) ok ;;
+esac
 run_review "$R4" round p
 assert_rc 0
 grep -q "segunda modificación local" "$R4/observed.txt" && ok || ko "reset tocó el canónico (repo anidado)"
@@ -395,6 +414,13 @@ git -C "$R4" worktree remove --force "$WT4"
 git -C "$R4" worktree add --detach "$R4/.claude/state/other-wt" HEAD >/dev/null 2>&1
 mv "$R4/.claude/state/other-wt" "$WT4"
 echo "tercera modificación local" >> "$R4/observed.txt"
+# precondiciones (c): las dos primeras invariantes PASAN; solo el registro delata el path viejo
+assert_eq "$(git -C "$WT4" rev-parse --show-toplevel)" "$WT4" "precondición (c): toplevel coincide"
+case "$(git -C "$WT4" rev-parse --absolute-git-dir)" in
+  "$R4/.git/worktrees/"*) ok ;;
+  *) ko "precondición (c): el git-dir debería estar bajo .git/worktrees ($(git -C "$WT4" rev-parse --absolute-git-dir))" ;;
+esac
+git -C "$R4" worktree list --porcelain | grep -qx "worktree $WT4" && ko "precondición (c): el registro no debería apuntar a WT_DIR" || ok
 run_review "$R4" round p
 assert_rc 0
 grep -q "tercera modificación local" "$R4/observed.txt" && ok || ko "reset tocó el canónico (worktree movido)"
@@ -403,15 +429,21 @@ git -C "$R4" worktree list --porcelain | grep -qx "worktree $R4/.claude/state/ot
 git -C "$R4" worktree list --porcelain | grep -qx "worktree $WT4" && ok || ko "worktree final no registrado"
 assert_eq "$(git -C "$WT4" rev-parse HEAD)" "$(git -C "$R4" rev-parse HEAD)" "worktree recreado al HEAD"
 
-t "L4 worktree válido se reusa y re-clava; borrado se recrea"
+t "L4 worktree válido se reusa (git-dir administrativo sobrevive) y re-clava"
+ADMIN4="$(git -C "$WT4" rev-parse --absolute-git-dir)"
+echo centinela > "$ADMIN4/suite-sentinel"   # fuera del alcance de reset/clean: solo muere si se recrea el worktree
 echo junk > "$WT4/junk.txt"
 run_review "$R4" round p
 assert_rc 0
 assert_no "$WT4/junk.txt"
+assert_file "$ADMIN4/suite-sentinel"
+
+t "L4 worktree borrado se recrea (el git-dir administrativo es otro)"
 rm -rf "$WT4"
 run_review "$R4" round p
 assert_rc 0
 assert_eq "$(git -C "$WT4" rev-parse HEAD)" "$(git -C "$R4" rev-parse HEAD)" "worktree recreado tras borrado"
+assert_no "$ADMIN4/suite-sentinel"   # prune + add: el centinela del admin viejo no sobrevive una recreación
 
 # ── L5 · tri-estado y kill_confirmed de awake.sh (r1.6, r2.4, r3.2) ───────────
 t "L5 start fresco deja proceso vivo y pidfile"
@@ -491,25 +523,42 @@ assert_eq "$(st "$R5" caffeinate-pid)" "$SL" "start no pisó el pidfile"
 kill -9 "$SL" 2>/dev/null || true
 rm -f "$R5/.claude/state/caffeinate-pid"
 
-t "L5 fallback sin pmset con caffeinate real vivo: despierta; stop no puede confirmar"
-# una copia renombrada de sleep muere por firma en macOS sellado: se usa el caffeinate real,
-# lanzado por la suite (el stub de PATH solo rige adentro de run_awake/run_review)
-if [ -x /usr/bin/caffeinate ]; then
+t "L5 fallback sin pmset (ps doblado): despierta; stop señaliza pero no confirma"
+# camino contractual con el doble de ps: determinista incluso en sandboxes que niegan ps
+sleep 300 & FP=$!; disown; note_pid "$FP"
+echo "$FP" > "$R5/.claude/state/caffeinate-pid"
+FAKE_PMSET_MODE=absent FAKE_PS_COMM=caffeinate run_awake "$R5" status
+assert_rc 0
+assert_out "despierta (pid $FP)"
+# congelado conservador: sin pmset la muerte no es confirmable (kill -0 a un pid muerto
+# ⇒ indeterminado, no muerte confirmada) — stop señaliza, el proceso MUERE, el pidfile queda
+FAKE_PMSET_MODE=absent FAKE_PS_COMM=caffeinate run_awake "$R5" stop
+assert_rc 2
+assert_out "la señal no surtió efecto"
+assert_eq "$(st "$R5" caffeinate-pid)" "$FP" "pidfile conservado (fail-closed sin pmset)"
+wait_dead "$FP" || true
+assert_dead "$FP"   # la señal salió de verdad: no fue denegada ni ignorada
+rm -f "$R5/.claude/state/caffeinate-pid"
+
+t "L5 smoke de identidad real (no contractual): caffeinate y ps verdaderos"
+# solo corre donde ps funciona (fuera de sandboxes); una copia renombrada de sleep no sirve:
+# muere por firma en macOS sellado — se usa el caffeinate real, lanzado por la suite
+if [ -x /usr/bin/caffeinate ] && [ -n "$(/bin/ps -p $$ -o comm= 2>/dev/null)" ]; then
   /usr/bin/caffeinate -t 300 & CP=$!; disown; note_pid "$CP"
   echo "$CP" > "$R5/.claude/state/caffeinate-pid"
   FAKE_PMSET_MODE=absent run_awake "$R5" status
   assert_rc 0
   assert_out "despierta (pid $CP)"
-  # congelado conservador: sin pmset, la muerte no es confirmable (kill -0 a un pid muerto
-  # devuelve indeterminado, no muerte) ⇒ stop mata pero conserva el pidfile con exit 2
   FAKE_PMSET_MODE=absent run_awake "$R5" stop
   assert_rc 2
   assert_out "la señal no surtió efecto"
   assert_eq "$(st "$R5" caffeinate-pid)" "$CP" "pidfile conservado (fail-closed sin pmset)"
+  wait_dead "$CP" || true
+  assert_dead "$CP"
   kill -9 "$CP" 2>/dev/null || true
   rm -f "$R5/.claude/state/caffeinate-pid"
 else
-  echo "SKIP [$CURRENT]: sin /usr/bin/caffeinate (no-macOS)" >&2
+  echo "SKIP [$CURRENT]: sin caffeinate real o ps denegado (sandbox) — el camino contractual quedó cubierto con el doble de ps" >&2
 fi
 
 # ── L6 · base a REVIEW_HEAD (r1.2) ────────────────────────────────────────────
