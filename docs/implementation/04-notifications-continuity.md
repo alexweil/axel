@@ -34,7 +34,7 @@ El universo del inventario son los **turnos que terminan esperando una respuesta
 | RECAP de diseño (tras el loop de review) | skill `design`, paso 4 |
 | RECAP de plan (tras el loop de review) | skill `plan`, paso 3 |
 | RECAP temprano: deadlock (racha 5) | reglas de `feature`/`design`/`plan` |
-| RECAP temprano: tope de rondas, cambio de scope, sorpresa, exit 2 persistente, veredicto inválido repetido | reglas de `feature`/`design`/`plan` |
+| RECAP temprano alcanzado tras trabajo autónomo: tope de rondas, exit 2 persistente, veredicto inválido repetido, o un cambio de scope/sorpresa que el propio loop detecta | reglas de `feature`/`design`/`plan` |
 
 **Esperas interactivas** — respuesta directa a un mensaje recién mandado, sin aviso:
 
@@ -42,6 +42,7 @@ El universo del inventario son los **turnos que terminan esperando una respuesta
 |---|---|
 | Ping-pong de `/design` (preguntas de rumbo al humano) | skill `design`, paso 1 |
 | Decisiones de `/adopt` (mapeo doc por doc, pendientes mecánicos, confirmaciones) | skill `adopt` |
+| RECAP temprano disparado por el mensaje humano recién recibido (el cambio de scope o la sorpresa surge de lo que el humano acaba de decir y el RECAP es la respuesta inmediata) | reglas de `feature`/`design`/`plan` |
 | `/recap` a demanda | skill `recap` |
 | Reapertura con STATUS "esperando OK" (re-presentar el RECAP) | skill `feature`, camino esperando-OK |
 
@@ -78,7 +79,7 @@ Protocolo, tras registrar el OK (STATUS.md actualizado + commit):
 El delta es chico y coherente (prosa interdependiente): un solo paso de implementación tras el APPROVED de la bajada — skills + AGENTS + plantilla + DESIGN en un commit — y luego el cierre. La aceptación tiene dos planos con frontera explícita:
 
 - **Dentro del rango que revisa Codex**: en el paso de implementación se ejercita la herramienta real de push desde esta sesión con un aviso de prueba de una línea, y el resultado (disponibilidad, carga, envío, respuesta de la herramienta) queda registrado en este doc — evidencia verificable en la review.
-- **Post-APPROVED**: el ejercicio vivo del protocolo completo (push del RECAP de cierre + rama terminal de continuidad) ocurre necesariamente después del APPROVED de cierre, así que no puede entrar en su rango: queda cubierto por el **OK humano terminal**, y el RECAP lo registra explícitamente junto a los commits de cierre no-revisados — camino terminal del contrato (no hay 05 en IMPLEMENTATION que barra el cierre del 04). La rama terminal de la continuidad se demuestra ahí mismo (sin chip por default, ofrecimiento de `/plan`).
+- **Post-APPROVED**: el ejercicio vivo del protocolo completo (push del RECAP de cierre + rama terminal de continuidad) ocurre necesariamente después del APPROVED de cierre, así que **no es criterio de cierre ni condición del veredicto de Codex**: vive en la sección «Aceptación terminal» (tras los criterios), cubierto por el OK humano terminal.
 
 ## Criterios de cierre
 
@@ -86,11 +87,18 @@ El delta es chico y coherente (prosa interdependiente): un solo paso de implemen
 2. **Protocolo en un solo lugar**: formato, criterio y degradación viven solo en la skill `recap`; `feature`/`design`/`plan` referencian sin restatement; la condición ambigua actual ("si el humano no está activo") y la mención suelta del paso 5 de `feature` eliminadas.
 3. **Continuidad documentada**: las **tres transiciones con spawn** (diseño→`/plan`, plan→`/feature`, feature→`/feature` siguiente), cada una en su skill con chip + fallback de instrucción única parametrizada por el comando del cruce, **más la rama terminal sin spawn por default** (ofrecimiento de `/plan` en el texto del RECAP); el prompt del chip es solo el comando de la skill; la degradación cubre tanto ausencia de la herramienta como fallo de su invocación.
 4. **Docs sincronizados**: `AGENTS.md` y `templates/AGENTS.md` con la misma convención nueva (duplicación raíz↔plantilla verificable por diff de la sección); `DESIGN.md` con la fila RECAP actualizada en su lugar (sin formulación vieja residual); IMPLEMENTATION/STATUS al día.
-5. **Aceptación en dos planos con frontera explícita**: dentro del rango revisado, la prueba real de la herramienta de push desde esta sesión con su resultado registrado en este doc; el ejercicio vivo del protocolo completo (push del RECAP de cierre + rama terminal de continuidad) queda como aceptación **post-APPROVED cubierta por el OK humano terminal**, registrada en el RECAP junto a los commits de cierre no-revisados — camino terminal del contrato.
+5. **Prueba real del push dentro del rango**: durante el paso de implementación se ejercita la herramienta real de push desde esta sesión con un aviso de prueba de una línea, y el resultado (disponibilidad, carga, envío, respuesta de la herramienta) queda registrado en este doc — evidencia verificable por Codex en la review.
+
+Los cinco criterios son verificables por Codex al momento del APPROVED de cierre. Lo que ocurre después vive en la sección siguiente y **no** es condición de ese APPROVED.
+
+## Aceptación terminal (post-APPROVED, fuera de los criterios de cierre)
+
+El ejercicio vivo del protocolo completo — el push del RECAP de cierre del 04 y la rama terminal de la continuidad (sin chip por default, ofrecimiento de `/plan`) — ocurre necesariamente después del APPROVED de cierre, así que no puede ser condición de ese veredicto. Queda cubierto por el **OK humano terminal** (camino terminal del contrato: no hay 05 en IMPLEMENTATION que barra el cierre del 04): el RECAP terminal registra explícitamente el resultado del push junto a los commits de cierre listados como no-revisados-por-Codex, y el OK del humano es lo que cubre ambos.
 
 ## Decisiones
 
 - 2026-07-28 (bajada): **Criterio de autonomía** para el aviso — push si la espera se alcanzó por trabajo autónomo, no si responde a un pedido directo del humano; reemplaza la condición de presencia ("humano no activo") que pedía adivinar, por una que se decide mirando el turno; en la duda, aviso. **Protocolo centralizado en `recap`** con referencias desde las otras skills — lección del r7 del ciclo 03: los restatements divergen. **Chip con prompt autocontenido** (solo `/feature` o `/plan`): el estado vive en los docs (principio 1), llevar contexto de chat en el chip lo violaría. **Sin cambios en scripts ni contrato**: las herramientas son del harness; el loop mecánico no cambia. **Sin tests automatizados**: el delta es lenguaje natural en skills; un grep sobre prosa sería frágil y falso — la verificación es el inventario de este doc contra las skills, en la review. **Caso terminal sin chip por default**: sin siguiente feature no hay comando obvio que spawnear; se ofrece `/plan` en el texto del RECAP.
+- 2026-07-28 (ronda 2): **la procedencia manda incluso en el RECAP temprano** — un cambio de scope/sorpresa que surge del mensaje humano recién recibido produce un RECAP interactivo (sin aviso: el humano está ahí); la fila autónoma queda para lo que el propio loop detecta. **La aceptación post-APPROVED sale de los criterios de cierre**: el criterio 5 retiene solo la prueba del push dentro del rango (verificable por Codex al aprobar); el ejercicio terminal pasa a sección propia cubierta por el OK humano — Codex debe poder afirmar los cinco criterios al dar el APPROVED de cierre.
 - 2026-07-28 (ronda 1): **el universo del inventario son las esperas de respuesta, de cualquier tipo** — incluye las interactivas (ping-pong de `/design`, decisiones de `/adopt`) clasificadas sin aviso por respuesta directa; `/status` sale del inventario porque no espera nada. **La fila RECAP de DESIGN se actualiza en su lugar** (refinada + remisión a `recap`), no se deja como antecedente con la formulación vieja viva; la línea de AGENTS/plantilla es referencia de alto nivel, no norma paralela. **Instrucción única parametrizada por el comando del cruce** y degradación que cubre también el fallo de invocación del chip. **Aceptación en dos planos**: prueba real del push dentro del rango revisado (paso de implementación, resultado en este doc) + ejercicio vivo post-APPROVED cubierto por el OK humano terminal — el criterio original era circular: el push del RECAP de cierre ocurre después del APPROVED que debía verificarlo.
 
 ## Riesgos
@@ -102,6 +110,9 @@ El delta es chico y coherente (prosa interdependiente): un solo paso de implemen
 
 ## Review log
 
+- **Ronda 2: CHANGES_REQUESTED** (2 puntos, ambos aceptados; convergiendo 5→2 — el reviewer dio por bien resueltos el bookkeeping y las correcciones de DESIGN/continuidad, y verificó delta solo-Markdown, archivos protegidos intactos, `git diff --check` y `tests/lint.sh` limpios). Resolución:
+  1. El inventario contradecía su propio criterio ("cómo se llegó, no dónde"): la fila de RECAP temprano clasificaba "cambio de scope, sorpresa" siempre como autónoma, pero esos casos pueden ser la respuesta inmediata a un mensaje humano a mitad del loop → corregido: la fila autónoma queda para lo detectado por el propio loop, y las esperas interactivas ganan la rama del RECAP temprano disparado por el mensaje recién recibido.
+  2. La circularidad del criterio 5 no estaba eliminada estructuralmente (el contrato exige que el APPROVED de cierre se dé contra los criterios, y el 5 incluía una acción post-APPROVED: Codex no podría afirmar los cinco al cerrar) → corregido: el criterio 5 retiene solo la prueba real del push dentro del rango; el ejercicio del RECAP terminal se mueve a la sección nueva «Aceptación terminal (post-APPROVED, fuera de los criterios de cierre)», cubierta por el OK humano y explícitamente no-condición del APPROVED.
 - **Ronda 1: CHANGES_REQUESTED** (5 puntos, todos aceptados; el reviewer verificó además el bookkeeping del cierre del 03 contra su APPROVED de r8, que el rango es solo Markdown con scripts/skills/contrato intactos, y `git diff --check` + `tests/lint.sh` limpios). Resolución:
   1. IMPLEMENTATION desactualizada (fila 03 aún "esperando OK humano" pese a `3c0e410`; fila 04 en Backlog sin link pese a STATUS y la bajada ya existente — y la evidencia del pedido afirmaba un link que no estaba) → corregido: ambas filas al día (03 cerrado con OK; 04 en curso con link).
   2. El inventario no cumplía su propia promesa ("turnos que terminan esperando al humano"): faltaba el ping-pong de `/design`, y `/adopt` estaba mal agrupado con `/status` (que no espera nada) → corregido: universo definido explícitamente como esperas de respuesta de cualquier tipo, en dos grupos (autónomas con aviso / interactivas sin aviso, incluidas `/design` paso 1 y `/adopt`); `/status` fuera del universo con la razón.
