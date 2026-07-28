@@ -1,9 +1,9 @@
 # STATUS
 
-- **Fase**: feature 02 **cerrado con OK humano** (2026-07-27) — listo para arrancar el feature 03 en sesión limpia
-- **Feature en curso**: ninguno. El siguiente es el 03 — hardening del loop de review ([IMPLEMENTATION.md §03](IMPLEMENTATION.md)): sesión nueva + `/feature`
-- **Ronda de review**: — (ciclo 02 completo: 10 rondas, tres APPROVED — bajada r4, paso A r8, cierre r10)
-- **Último veredicto**: APPROVED · ronda 10 · `7c1fda3`
-- **Esperando**: nada — el próximo paso es abrir la sesión limpia del feature 03
-- **Nota para la ronda 1 del ciclo 03**: los commits de bookkeeping posteriores a la base `7c1fda3` (cierre `8e0bfeb` y este del OK) se verifican primero — regla del contrato
+- **Fase**: feature 03 — hardening del loop de review, **en curso** (bajada fina escrita, entrando al loop de review)
+- **Feature en curso**: 03 — [implementation/03-loop-hardening.md](implementation/03-loop-hardening.md): suite de regresión del loop (7 clases, doble de codex por PATH), session id por `thread.started`, retry transitorio, métricas de rondas, shellcheck como puerta
+- **Ronda de review**: por lanzarse la ronda 1 (`new` — ciclo nuevo, sesión fresca de Codex)
+- **Último veredicto**: — (ciclo 03 recién abierto; el cierre del 02 quedó APPROVED r10 en `7c1fda3`)
+- **Esperando**: veredicto de Codex sobre la bajada fina
+- **Nota para la ronda 1**: verificar primero los commits de bookkeeping posteriores a la base `7c1fda3` (cierre `8e0bfeb` y OK humano `2e0b5b7`) — regla del contrato
 - **Actualizado**: 2026-07-27
