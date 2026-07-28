@@ -25,7 +25,7 @@ Sesión limpia → `/feature` → bajada fina → review → implementación con
 
 **Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: recibido el 2026-07-27 (registrado en `860c80b`). **Nota de numeración**: esa cita usa la numeración original del plan; con el OK del 01 (2026-07-27) el humano insertó *instalación remota* como 02 (criterio 1), corriendo hardening a 03 y notificaciones a 04 — el orden relativo acordado entre agentes no cambió.
 
-**Extensión 2026-07-28 (feature 05)**: APPROVED del ciclo de `/plan` que agregó el 05 en su ronda 2 (base `60cf68d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1); ambos agentes acuerdan la entrada, el bootstrap autoaplicado y el origen derivado del resumen. OK humano de la extensión: pendiente.
+**Extensión 2026-07-28 (feature 05)**: APPROVED del ciclo de `/plan` que agregó el 05 en su ronda 2 (base `60cf68d`) — único ítem del backlog nuevo, posición fijada por pedido humano (criterio 1); ambos agentes acuerdan la entrada, el bootstrap autoaplicado y el origen derivado del resumen. OK humano de la extensión: recibido el 2026-07-28.
 
 ### 01 — Instalador
 

@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: `/plan` — extensión con el feature 05 **aprobada por Codex** (r2), esperando OK humano del RECAP
-- **Feature en curso**: ninguno — el 05 (confirmación previa a la implementación en `/feature`) queda **Pendiente**; tras el OK arranca en sesión limpia con `/feature`, abriendo con el gate en modo manual (bootstrap de su propia entrada)
-- **Ronda de review**: — (ciclo de plan completo: 2 rondas — r1 CHANGES_REQUESTED, r2 APPROVED)
+- **Fase**: plan extendido **cerrado con OK humano** (2026-07-28) — el backlog tiene un feature: 05
+- **Feature en curso**: ninguno todavía — el siguiente es el **05 (confirmación previa a la implementación en `/feature`)**, en sesión limpia con `/feature`; esa sesión abre con el gate en modo manual (bootstrap de su propia entrada en IMPLEMENTATION.md)
+- **Ronda de review**: — (ciclo de plan completo: r1 CHANGES_REQUESTED, r2 APPROVED)
 - **Último veredicto**: APPROVED · ronda 2 · `60cf68d`
-- **Esperando**: OK humano del plan extendido. Este commit de bookkeeping post-APPROVED lo barre la ronda 1 del ciclo del 05 (regla del contrato) y el OK lo cubre mientras tanto
+- **Esperando**: sesión limpia + `/feature` para el 05 (la ronda 1 de ese ciclo barre los commits de bookkeeping `160fbc0` y este, cubiertos por el OK del RECAP mientras tanto)
 - **Actualizado**: 2026-07-28
