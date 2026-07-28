@@ -2,19 +2,191 @@
 # axel · installer: lleva la maquinaria de axel a un repo destino
 #
 # Uso:
-#   scripts/install.sh <target-dir>
+#   scripts/install.sh <target-dir>                    # modo local: desde un clon de axel
+#   scripts/install.sh --from <url> <target-dir>       # bootstrap remoto: sin clon previo
+#   curl -fsSL <raw>/scripts/install.sh | bash -s -- --from <url> <target-dir>
 #
-# Tres modos, clasificados por el marker .claude/axel-install del destino:
+# Con --from clona/actualiza un cache de axel (AXEL_HOME, default ~/.axel) fail-closed
+# y delega en el install.sh de ese clon; el modo local no cambia de contrato.
+# Tres modos de instalación, clasificados por el marker .claude/axel-install del destino:
 #   - corrida inicial (sin marker): inventario, siembra, payload, handoff si hay pendientes
 #   - actualización (con marker): payload + re-verificación; nunca reabre una adopción cerrada
-# Detalle completo: docs/implementation/01-installer.md del repo axel.
+# Detalle completo: docs/implementation/01-installer.md y 02-remote-install.md del repo axel.
 #
 # Exit: 0 = instalado/actualizado sin pendientes
 #       1 = instalado/actualizado con pendientes (handoff en docs/ADOPTION.md; siguiente paso: /adopt)
-#       2 = rechazo sin mutaciones (precondiciones o preflight)
+#       2 = rechazo sin mutaciones del destino (precondiciones, preflight o bootstrap)
 set -euo pipefail
 
-AXEL_ROOT="$(cd "$(dirname "$0")/.." && git rev-parse --show-toplevel)"
+die() { echo "rechazo: $*" >&2; exit 2; }
+canon_dir() { (cd "$1" 2>/dev/null && pwd -P); }
+usage() { echo "uso: $0 [--from <url>] <target-dir>" >&2; exit 2; }
+
+# ── Bootstrap remoto (--from): corre ANTES de toda resolución de AXEL_ROOT ────
+# En modo piped no hay $0 en disco: nada de este bloque depende del entorno del
+# script que corre — la fuente que instala es siempre el clon del cache.
+FROM_URL=""
+if [ "${1:-}" = "--from" ]; then
+  [ $# -eq 3 ] || usage
+  FROM_URL="$2"
+  shift 2
+fi
+[ $# -eq 1 ] || usage
+
+if [ -n "$FROM_URL" ]; then
+  case "$FROM_URL" in
+    -*) die "--from: la URL no puede empezar con '-' (se confundiría con una opción de git): $FROM_URL" ;;
+  esac
+  [ -d "$1" ] || die "el destino no existe o no es un directorio: $1"
+  BOOT_TARGET="$(canon_dir "$1")" || die "no pude resolver el path del destino: $1"
+
+  # Canonicaliza aunque el path no exista: ancestro existente más profundo + resto.
+  # Así un cache/lock planeado adentro del destino con padres sin crear también se detecta.
+  canon_path() {
+    local p="$1" rest="" d=""
+    while ! d="$(canon_dir "$p")"; do
+      rest="/$(basename "$p")$rest"
+      p="$(dirname "$p")"
+    done
+    [ "$d" = "/" ] && d=""
+    printf '%s%s' "$d" "$rest"
+  }
+  path_overlaps() {  # iguales o uno dentro del otro
+    case "$1" in "$2" | "$2"/*) return 0 ;; esac
+    case "$2" in "$1"/*) return 0 ;; esac
+    return 1
+  }
+  BOOT_CACHE="$(canon_path "${AXEL_HOME:-$HOME/.axel}")"
+  BOOT_LOCK="$BOOT_CACHE.lock"
+  if path_overlaps "$BOOT_CACHE" "$BOOT_TARGET"; then
+    die "cache y destino no son disjuntos ($BOOT_CACHE vs $BOOT_TARGET); el bootstrap no puede mutar el destino — usá otro AXEL_HOME"
+  fi
+  if path_overlaps "$BOOT_LOCK" "$BOOT_TARGET"; then
+    die "el lock del cache y el destino no son disjuntos ($BOOT_LOCK vs $BOOT_TARGET) — usá otro AXEL_HOME"
+  fi
+
+  # Lock: symlink atómico con la propiedad en el target (pid + host). Jamás se libera
+  # con el delegado vivo; pid muerto o lock ajeno ⇒ rechazo sin borrar nada (fail-closed).
+  mkdir -p "$(dirname "$BOOT_CACHE")" || die "no pude crear el directorio padre del cache: $(dirname "$BOOT_CACHE")"
+  LOCK_TOKEN="axel-bootstrap pid=$$ host=$(hostname)"
+  BOOT_CHILD=""
+  boot_cleanup() {
+    if [ -n "$BOOT_CHILD" ] && kill -0 "$BOOT_CHILD" 2>/dev/null; then
+      kill -TERM "$BOOT_CHILD" 2>/dev/null || true
+      wait "$BOOT_CHILD" 2>/dev/null || true   # esperar la muerte del hijo antes de soltar
+    fi
+    [ "$(readlink "$BOOT_LOCK" 2>/dev/null)" = "$LOCK_TOKEN" ] && rm -f "$BOOT_LOCK"
+    return 0
+  }
+  boot_on_signal() {
+    boot_cleanup
+    echo "rechazo: bootstrap interrumpido por señal" >&2
+    exit 2
+  }
+  lock_wait=0
+  lock_timeout="${AXEL_BOOTSTRAP_LOCK_TIMEOUT:-60}"
+  while :; do
+    # ln -s sobre un directorio existente crearía el link ADENTRO (no falla): el caso
+    # directorio-ajeno se rechaza antes de intentar, y la adquisición se verifica después.
+    if [ -d "$BOOT_LOCK" ] && [ ! -L "$BOOT_LOCK" ]; then
+      die "$BOOT_LOCK: existe y no es un lock de axel (directorio ajeno); no lo borro — verificá y movelo a mano"
+    fi
+    if ln -s "$LOCK_TOKEN" "$BOOT_LOCK" 2>/dev/null; then
+      [ "$(readlink "$BOOT_LOCK" 2>/dev/null)" = "$LOCK_TOKEN" ] && break
+      rm -f "$BOOT_LOCK/$LOCK_TOKEN" 2>/dev/null || true   # residuo propio dentro de un dir ajeno aparecido en el medio
+      die "$BOOT_LOCK: apareció un objeto ajeno mientras tomaba el lock; verificá y movelo a mano"
+    fi
+    if [ ! -L "$BOOT_LOCK" ]; then
+      [ -e "$BOOT_LOCK" ] || continue   # desapareció entre el intento y el chequeo: reintentar
+      die "$BOOT_LOCK: existe y no es un lock de axel (¿archivo ajeno?); no lo borro — verificá y movelo a mano"
+    fi
+    lock_tok="$(readlink "$BOOT_LOCK" 2>/dev/null || true)"
+    lock_pid="$(printf '%s' "$lock_tok" | sed -n 's/^axel-bootstrap pid=\([0-9][0-9]*\) host=..*$/\1/p')"
+    [ -n "$lock_pid" ] || die "$BOOT_LOCK: symlink sin formato de lock de axel; no lo borro — verificá y movelo a mano"
+    lock_host="${lock_tok##* host=}"
+    [ "$lock_host" = "$(hostname)" ] \
+      || die "$BOOT_LOCK: lock tomado desde otro host ($lock_host); no puedo verificar su proceso — resolvelo a mano"
+    kill -0 "$lock_pid" 2>/dev/null \
+      || die "$BOOT_LOCK: lock de un proceso que ya no existe (pid $lock_pid); verificá que no corra otra instalación y borralo a mano: rm '$BOOT_LOCK'"
+    [ "$lock_wait" -lt "$lock_timeout" ] \
+      || die "$BOOT_LOCK: en poder del pid $lock_pid tras ${lock_timeout}s de espera; reintentá cuando termine"
+    sleep 1
+    lock_wait=$((lock_wait + 1))
+  done
+  trap boot_cleanup EXIT
+  trap boot_on_signal INT TERM
+
+  # La verdad del branch default y de su tip viene del remoto, jamás de metadata
+  # local del cache (origin/HEAD, upstream y remote.*.fetch son adulterables).
+  symref_out="$(git ls-remote --symref -- "$FROM_URL" HEAD 2>/dev/null)" \
+    || die "no pude consultar el remoto: $FROM_URL (¿URL o red?)"
+  DEFAULT_BRANCH="$(printf '%s\n' "$symref_out" | sed -n 's|^ref: refs/heads/\(..*\)[[:space:]]HEAD$|\1|p' | head -1)"
+  [ -n "$DEFAULT_BRANCH" ] || die "el remoto no informa su branch default (symref de HEAD); la fuente no es demostrable — fail-closed"
+
+  url_norm() { local u="${1%/}"; printf '%s' "${u%.git}"; }
+  if [ -e "$BOOT_CACHE" ] || [ -L "$BOOT_CACHE" ]; then
+    [ -d "$BOOT_CACHE" ] || die "AXEL_HOME existe y no es un directorio: $BOOT_CACHE; no lo piso — resolvelo a mano"
+    git -C "$BOOT_CACHE" rev-parse --show-toplevel >/dev/null 2>&1 \
+      || die "AXEL_HOME existe y no es un repo git: $BOOT_CACHE; no lo piso — resolvelo a mano"
+    cache_top="$(canon_dir "$(git -C "$BOOT_CACHE" rev-parse --show-toplevel)")"
+    [ "$cache_top" = "$BOOT_CACHE" ] || die "AXEL_HOME no es el toplevel de su repo ($cache_top): $BOOT_CACHE"
+    cache_origin="$(git -C "$BOOT_CACHE" remote get-url origin 2>/dev/null)" \
+      || die "AXEL_HOME no tiene remote origin: $BOOT_CACHE; no puedo demostrar su procedencia — resolvelo a mano"
+    [ "$(url_norm "$cache_origin")" = "$(url_norm "$FROM_URL")" ] \
+      || die "AXEL_HOME apunta a otro origin ($cache_origin, pedido: $FROM_URL); usá otro AXEL_HOME o resolvelo a mano"
+    [ -z "$(git -C "$BOOT_CACHE" status --porcelain)" ] \
+      || die "AXEL_HOME tiene cambios sin commitear ($BOOT_CACHE); no piso trabajo que podría ser tuyo — resolvelo a mano"
+  else
+    git clone --quiet -- "$FROM_URL" "$BOOT_CACHE" >/dev/null 2>&1 \
+      || die "git clone falló: $FROM_URL → $BOOT_CACHE (¿URL o red?)"
+  fi
+
+  cur_branch="$(git -C "$BOOT_CACHE" symbolic-ref --quiet --short HEAD)" \
+    || die "AXEL_HOME está en detached HEAD y el default real del remoto es '$DEFAULT_BRANCH' ($BOOT_CACHE); resolvelo a mano"
+  [ "$cur_branch" = "$DEFAULT_BRANCH" ] \
+    || die "AXEL_HOME está en el branch '$cur_branch' y el default real del remoto es '$DEFAULT_BRANCH' ($BOOT_CACHE); resolvelo a mano"
+
+  git -C "$BOOT_CACHE" fetch --quiet -- "$FROM_URL" "refs/heads/$DEFAULT_BRANCH" 2>/dev/null \
+    || die "git fetch falló: $FROM_URL (¿red?)"
+  remote_tip="$(git -C "$BOOT_CACHE" rev-parse FETCH_HEAD)" || die "no pude leer FETCH_HEAD tras el fetch"
+  if [ "$(git -C "$BOOT_CACHE" rev-parse HEAD)" != "$remote_tip" ]; then
+    # Ancestría explícita: pull --ff-only devuelve 0 con commits locales ahead
+    git -C "$BOOT_CACHE" merge-base --is-ancestor HEAD "$remote_tip" \
+      || die "AXEL_HOME tiene commits que el remoto no conoce (ahead o divergido); no instalo código no publicado — resolvelo a mano: $BOOT_CACHE"
+    git -C "$BOOT_CACHE" merge --ff-only --quiet "$remote_tip" >/dev/null 2>&1 \
+      || die "fast-forward del cache falló; resolvelo a mano: $BOOT_CACHE"
+  fi
+
+  BOOT_DELEGATE="$BOOT_CACHE/scripts/install.sh"
+  { [ -f "$BOOT_DELEGATE" ] && [ -r "$BOOT_DELEGATE" ] && [ -x "$BOOT_DELEGATE" ]; } \
+    || die "el remoto no parece axel: falta scripts/install.sh ejecutable en $BOOT_CACHE"
+
+  echo "── axel bootstrap · remoto: $FROM_URL · cache: $BOOT_CACHE ($DEFAULT_BRANCH @ $(git -C "$BOOT_CACHE" rev-parse --short HEAD)) ──"
+  # Delegación en background + wait: una señal al wrapper interrumpe el wait y el
+  # trap reenvía TERM al delegado y espera su muerte antes de soltar el lock.
+  set +e
+  "$BOOT_DELEGATE" "$BOOT_TARGET" &
+  BOOT_CHILD=$!
+  wait "$BOOT_CHILD"
+  boot_rc=$?
+  set -e
+  BOOT_CHILD=""
+  case "$boot_rc" in
+    0 | 1 | 2) exit "$boot_rc" ;;
+    *)
+      echo "aviso: el instalador delegado terminó con un código anómalo ($boot_rc) — pudo quedar interrumpido a mitad de escritura; revisá 'git -C $BOOT_TARGET status' antes de seguir" >&2
+      exit 2 ;;
+  esac
+fi
+
+# ── Modo local: exige correr desde un clon real de axel en disco ──────────────
+SCRIPT_PATH="${BASH_SOURCE[0]:-}"
+{ [ -n "$SCRIPT_PATH" ] && [ -f "$SCRIPT_PATH" ]; } \
+  || die "no estoy corriendo desde un clon de axel en disco (¿piped por stdin?); usá: install.sh --from <url> <target-dir>"
+AXEL_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && git rev-parse --show-toplevel)" \
+  || die "no pude resolver el repo de axel desde $SCRIPT_PATH"
+[ -f "$AXEL_ROOT/scripts/install.sh" ] && [ -d "$AXEL_ROOT/templates" ] \
+  || die "la fuente no parece un clon de axel: $AXEL_ROOT"
 
 # ── Qué instala ───────────────────────────────────────────────────────────────
 # Payload: owned por axel, se sobreescribe en cada corrida (el re-run ES la actualización).
@@ -67,12 +239,7 @@ HANDOFF_REL="docs/ADOPTION.md"
 HANDOFF_SIGNATURE="<!-- generated by axel installer -->"
 GITIGNORE_LINE=".claude/state/"
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-die() { echo "rechazo: $*" >&2; exit 2; }
-canon_dir() { (cd "$1" 2>/dev/null && pwd -P); }
-
-usage() { echo "uso: $0 <target-dir>" >&2; exit 2; }
-[ $# -eq 1 ] || usage
+# ── Destino ───────────────────────────────────────────────────────────────────
 [ -d "$1" ] || die "el destino no existe o no es un directorio: $1"
 TARGET="$(canon_dir "$1")" || die "no pude resolver el path del destino: $1"
 

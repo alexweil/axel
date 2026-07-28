@@ -102,6 +102,11 @@ Cierre con **aceptación real contra GitHub**: el **one-liner piped exacto del R
 - **Delegado interrumpido (señal/kill)**: el destino puede quedar con un diff parcial; el bootstrap sale 2 con aviso de mirar `git status` en el destino. Misma exposición que el modo local del 01; el diff visible de git sigue siendo la red.
 - **Lock sin auto-reclaim**: un crash duro (SIGKILL, corte de energía) deja el lock y la próxima corrida exige verificación y borrado manual (el mensaje trae el pid y la instrucción exacta). Aceptado: molesto pero jamás engañoso; la alternativa —reclaim automático— tiene carrera entre dos reclaimers.
 
+## Verificación — resultados
+
+- **Paso A** (2026-07-27): `install.sh --from` implementado (bootstrap completo: args/URL option-like, disjunción canónica con `canon_path` para paths inexistentes, lock symlink atómico con espera acotada y trap que espera al hijo, verdad remota vía `ls-remote --symref` + fetch por URL a `FETCH_HEAD`, ancestría explícita, sanity y delegación con normalización de RCs; modo local endurecido con `BASH_SOURCE` + estructura esperada). Suite: **287 asserts, 0 fallas** — los 158 del feature 01 intactos (contrato local sin cambios) + 129 nuevos de la matriz T15 (bootstrap fresco y update, los ocho estados fail-closed del cache, metadata adulterada ×3, disjunción ×4 + padre externo creado, URL option-like, remoto malformado ×2, red rota ×2, lock ×5 incluida la señal al wrapper con delegado vivo y el smoke concurrente, passthrough 1/2, normalización de RCs ×3, piped ×2). `bash -n` limpio sobre `install.sh` y `tests/install.sh`.
+- Bug encontrado y corregido por la propia suite (T15p3): `ln -s` sobre un **directorio** existente no falla — crea el link adentro —, con lo que el lock se "tomaba" dentro de un directorio ajeno y la instalación seguía; corregido con pre-chequeo del caso directorio antes del `ln -s` más verificación de propiedad post-adquisición (y retiro del residuo propio si un directorio ajeno aparece en la ventana).
+
 ## Review log
 
 - **Ronda 1: CHANGES_REQUESTED** (6 puntos, todos aceptados; bookkeeping del cierre del 01 verificado sin observaciones). Resolución:

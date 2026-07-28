@@ -565,6 +565,345 @@ assert_rc 2
 [ "$before" = "$(fs_digest "$T14E")" ] && ok || ko "mutaciones tras rechazo por conflicto interno"
 printf '%s' "$OUT" | grep -qF "conflicto interno" && ok || ko "falta el motivo en la salida"
 
+# ── T15 · bootstrap remoto (--from): fixtures locales, sin red ────────────────
+# El "remoto" es un clon local de la fuente (git clone acepta paths); AXEL_HOME se
+# apunta a un directorio temporal por caso. La huella de "cache intacto" cubre el
+# worktree (sin .git): la promesa es no pisar trabajo, no congelar refs internas.
+R15="$TESTS_TMP/r15"
+git clone -q -- "$AXEL_SRC" "$R15"
+BOOT_TIMEOUT=3
+run_boot() {  # $1=AXEL_HOME $2=url $3=target
+  OUT="$(AXEL_HOME="$1" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" "$INSTALL" --from "$2" "$3" 2>&1)" && RC=0 || RC=$?
+}
+boot_reject() {  # rc2 y cero mutaciones de destino (y de cache, si existe como dir)
+  local before_t before_c=""
+  before_t="$(fs_digest "$3")"
+  [ -d "$1" ] && before_c="$(fs_digest "$1")"
+  run_boot "$1" "$2" "$3"
+  assert_rc 2
+  [ "$before_t" = "$(fs_digest "$3")" ] && ok || ko "mutaciones en el destino tras el rechazo"
+  if [ -n "$before_c" ]; then
+    [ "$before_c" = "$(fs_digest "$1")" ] && ok || ko "mutaciones en el worktree del cache tras el rechazo"
+  fi
+}
+mk_stub_remote() {  # $1=nombre $2=contenido de scripts/install.sh (stub de delegado)
+  local r="$TESTS_TMP/$1"
+  mkdir -p "$r/scripts"
+  printf '%s\n' "$2" > "$r/scripts/install.sh"
+  chmod +x "$r/scripts/install.sh"
+  git -C "$r" init -q -b main
+  tcommit "$r" stub
+  printf '%s' "$r"
+}
+
+t "T15a bootstrap fresco: clona (padre inexistente fuera del destino), delega, marker == HEAD del remoto"
+H15A="$TESTS_TMP/home15a/axel"       # el padre home15a/ no existe: se crea
+T15A="$(mk_target t15a)"
+run_boot "$H15A" "$R15" "$T15A"
+assert_rc 0
+assert_file "$T15A/AGENTS.md"
+assert_file "$T15A/scripts/review.sh"
+assert_in_file "$T15A/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+assert_no "$H15A.lock"               # lock liberado
+assert_out "modo: initial"
+assert_out "axel bootstrap"
+
+t "T15b re-run con remoto avanzado: ff-update del cache y SHA nuevo en el destino"
+tcommit "$T15A" "install inicial"
+echo "avance remoto" >> "$R15/README.md"
+tcommit "$R15" "avance"
+run_boot "$H15A" "$R15" "$T15A"
+assert_rc 0
+assert_out "modo: update"
+[ "$(git -C "$H15A" rev-parse HEAD)" = "$(git -C "$R15" rev-parse HEAD)" ] && ok || ko "el cache no quedó en el tip del remoto"
+assert_in_file "$T15A/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+assert_dirty "$T15A"                 # el update del destino registró el SHA nuevo
+
+t "T15c cache sucio: rechazo, trabajo intacto"
+H15C="$TESTS_TMP/home15c"
+git clone -q -- "$R15" "$H15C"
+echo "trabajo humano" >> "$H15C/README.md"
+T15C="$(mk_target t15c)"
+boot_reject "$H15C" "$R15" "$T15C"
+assert_out "cambios sin commitear"
+assert_in_file "$H15C/README.md" "trabajo humano"
+
+t "T15d cache ahead (commit local, árbol limpio): el caso que pull --ff-only no ve"
+H15D="$TESTS_TMP/home15d"
+git clone -q -- "$R15" "$H15D"
+echo "no publicado" > "$H15D/local.txt"
+tcommit "$H15D" "commit local"
+ahead_sha="$(git -C "$H15D" rev-parse HEAD)"
+T15D="$(mk_target t15d)"
+boot_reject "$H15D" "$R15" "$T15D"
+assert_out "commits que el remoto no conoce"
+[ "$(git -C "$H15D" rev-parse HEAD)" = "$ahead_sha" ] && ok || ko "el commit local fue movido"
+
+t "T15e cache divergido"
+H15E="$TESTS_TMP/home15e"
+git clone -q -- "$R15" "$H15E"
+echo "rama local" > "$H15E/local.txt"; tcommit "$H15E" "local"
+echo "el remoto avanza" >> "$R15/README.md"; tcommit "$R15" "remoto avanza"
+T15E="$(mk_target t15e)"
+boot_reject "$H15E" "$R15" "$T15E"
+assert_out "commits que el remoto no conoce"
+
+t "T15f cache detached"
+H15F="$TESTS_TMP/home15f"
+git clone -q -- "$R15" "$H15F"
+git -C "$H15F" checkout -q --detach
+T15F="$(mk_target t15f)"
+boot_reject "$H15F" "$R15" "$T15F"
+assert_out "detached HEAD"
+
+t "T15g cache en otro branch"
+H15G="$TESTS_TMP/home15g"
+git clone -q -- "$R15" "$H15G"
+git -C "$H15G" checkout -q -b feature
+T15G="$(mk_target t15g)"
+boot_reject "$H15G" "$R15" "$T15G"
+assert_out "default real del remoto"
+
+t "T15h cache con otro origin"
+H15H="$TESTS_TMP/home15h"
+git clone -q -- "$R15" "$H15H"
+git -C "$H15H" remote set-url origin "$TESTS_TMP/otro-lado"
+T15H="$(mk_target t15h)"
+boot_reject "$H15H" "$R15" "$T15H"
+assert_out "apunta a otro origin"
+
+t "T15i AXEL_HOME archivo regular / directorio no-repo"
+H15I="$TESTS_TMP/home15i"; echo "propio" > "$H15I"
+T15I="$(mk_target t15i)"
+run_boot "$H15I" "$R15" "$T15I"
+assert_rc 2; assert_out "no es un directorio"; assert_in_file "$H15I" "propio"
+rm "$H15I"; mkdir -p "$H15I"; echo "propio" > "$H15I/cosa.txt"
+boot_reject "$H15I" "$R15" "$T15I"
+assert_out "no es un repo git"; assert_in_file "$H15I/cosa.txt" "propio"
+
+t "T15k1 metadata local adulterada: origin/HEAD + branch + upstream hacia 'feature' (repro r2)"
+H15K="$TESTS_TMP/home15k"
+git clone -q -- "$R15" "$H15K"
+git -C "$H15K" branch -q feature
+git -C "$H15K" checkout -q feature
+git -C "$H15K" update-ref refs/remotes/origin/feature "$(git -C "$H15K" rev-parse HEAD)"
+git -C "$H15K" symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/feature
+git -C "$H15K" config branch.feature.remote origin
+git -C "$H15K" config branch.feature.merge refs/heads/feature
+T15K="$(mk_target t15k)"
+boot_reject "$H15K" "$R15" "$T15K"
+assert_out "default real del remoto"
+
+t "T15k2 remote.origin.fetch adulterado: inocuo (fetch por URL con refspec explícito)"
+H15K2="$TESTS_TMP/home15k2"
+git clone -q -- "$R15" "$H15K2"
+git -C "$H15K2" config remote.origin.fetch '+refs/heads/nonexistent:refs/remotes/origin/main'
+echo "otro avance" >> "$R15/README.md"; tcommit "$R15" "avance 2"
+T15K2="$(mk_target t15k2)"
+run_boot "$H15K2" "$R15" "$T15K2"
+assert_rc 0
+assert_in_file "$T15K2/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
+t "T15k3 remoto que no informa symref de HEAD (bare detached): fail-closed"
+BARE15="$TESTS_TMP/bare15"
+git clone -q --bare -- "$R15" "$BARE15"
+git --git-dir="$BARE15" update-ref --no-deref HEAD "$(git --git-dir="$BARE15" rev-parse refs/heads/main)"
+H15K3="$TESTS_TMP/home15k3"
+T15K3="$(mk_target t15k3)"
+before="$(fs_digest "$T15K3")"
+run_boot "$H15K3" "$BARE15" "$T15K3"
+assert_rc 2
+assert_out "no informa su branch default"
+[ "$before" = "$(fs_digest "$T15K3")" ] && ok || ko "mutaciones en el destino"
+assert_no "$H15K3"                   # ni siquiera se clonó
+
+t "T15l1 disjunción: AXEL_HOME == destino"
+T15L1="$(mk_target t15l1)"
+boot_reject "$T15L1" "$R15" "$T15L1"
+assert_out "no son disjuntos"
+
+t "T15l2 disjunción: AXEL_HOME adentro del destino con padres inexistentes (pre-mkdir)"
+T15L2="$(mk_target t15l2)"
+boot_reject "$T15L2/a/b/axel" "$R15" "$T15L2"
+assert_out "no son disjuntos"
+assert_no "$T15L2/a"
+
+t "T15l3 disjunción: destino adentro del cache"
+H15L3="$TESTS_TMP/home15l3"
+git clone -q -- "$R15" "$H15L3"
+mkdir -p "$H15L3/subdestino"
+run_boot "$H15L3" "$R15" "$H15L3/subdestino"
+assert_rc 2; assert_out "no son disjuntos"
+
+t "T15l4 disjunción: el lock coincide con el destino"
+P15L4="$TESTS_TMP/l4"; mkdir -p "$P15L4/x.lock"
+run_boot "$P15L4/x" "$R15" "$P15L4/x.lock"
+assert_rc 2; assert_out "lock del cache y el destino no son disjuntos"
+
+t "T15m URL option-like: rechazada antes de invocar git"
+H15M="$TESTS_TMP/home15m"
+T15M="$(mk_target t15m)"
+run_boot "$H15M" "--upload-pack=/bin/true" "$T15M"
+assert_rc 2; assert_out "no puede empezar con '-'"; assert_no "$H15M"
+
+t "T15n1 remoto malformado: sin scripts/install.sh"
+RN15="$TESTS_TMP/rn15"; mkdir -p "$RN15"
+echo "no soy axel" > "$RN15/README.md"
+git -C "$RN15" init -q -b main; tcommit "$RN15" "no axel"
+H15N="$TESTS_TMP/home15n"
+T15N="$(mk_target t15n)"
+run_boot "$H15N" "$RN15" "$T15N"
+assert_rc 2; assert_out "no parece axel"
+
+t "T15n2 remoto con install.sh sin bit de ejecución"
+RN15B="$TESTS_TMP/rn15b"; mkdir -p "$RN15B/scripts"
+echo "#!/usr/bin/env bash" > "$RN15B/scripts/install.sh"   # sin chmod +x
+git -C "$RN15B" init -q -b main; tcommit "$RN15B" "sin bit x"
+H15NB="$TESTS_TMP/home15nb"
+T15NB="$(mk_target t15nb)"
+run_boot "$H15NB" "$RN15B" "$T15NB"
+assert_rc 2; assert_out "no parece axel"
+
+t "T15o red rota: remoto inexistente (fresco) y remoto desaparecido (cache existente)"
+H15O="$TESTS_TMP/home15o"
+T15O="$(mk_target t15o)"
+run_boot "$H15O" "$TESTS_TMP/no-existe-remoto" "$T15O"
+assert_rc 2; assert_out "no pude consultar el remoto"; assert_no "$H15O"
+R15GONE="$TESTS_TMP/r15gone"
+git clone -q -- "$R15" "$R15GONE"
+git clone -q -- "$R15GONE" "$H15O"
+rm -rf "$R15GONE"
+boot_reject "$H15O" "$R15GONE" "$T15O"
+assert_out "no pude consultar el remoto"
+
+t "T15p1 lock de pid vivo: espera y timeout, sin borrar"
+H15P="$TESTS_TMP/home15p"
+git clone -q -- "$R15" "$H15P"
+ln -s "axel-bootstrap pid=$$ host=$(hostname)" "$H15P.lock"
+T15P="$(mk_target t15p)"
+run_boot "$H15P" "$R15" "$T15P"
+assert_rc 2; assert_out "en poder del pid $$"
+assert_link "$H15P.lock" "axel-bootstrap pid=$$ host=$(hostname)"
+rm "$H15P.lock"
+
+t "T15p2 lock de pid muerto: rechazo inmediato sin borrar"
+sleep 0 & DEAD15=$!
+wait "$DEAD15" 2>/dev/null || true
+ln -s "axel-bootstrap pid=$DEAD15 host=$(hostname)" "$H15P.lock"
+run_boot "$H15P" "$R15" "$T15P"
+assert_rc 2; assert_out "ya no existe"
+assert_link "$H15P.lock" "axel-bootstrap pid=$DEAD15 host=$(hostname)"
+rm "$H15P.lock"
+
+t "T15p3 lock ajeno (directorio / archivo / symlink inválido): rechazo sin borrar"
+mkdir "$H15P.lock"
+run_boot "$H15P" "$R15" "$T15P"
+assert_rc 2; assert_out "no es un lock de axel"
+[ -d "$H15P.lock" ] && ok || ko "el directorio ajeno fue borrado"
+rmdir "$H15P.lock"
+echo "ajeno" > "$H15P.lock"
+run_boot "$H15P" "$R15" "$T15P"
+assert_rc 2; assert_out "no es un lock de axel"; assert_in_file "$H15P.lock" "ajeno"
+rm "$H15P.lock"
+ln -s "cualquier-cosa" "$H15P.lock"
+run_boot "$H15P" "$R15" "$T15P"
+assert_rc 2; assert_out "sin formato de lock"
+assert_link "$H15P.lock" "cualquier-cosa"
+rm "$H15P.lock"
+
+t "T15p4 señal al wrapper con delegado vivo: el lock persiste hasta la muerte del hijo"
+RSLOW="$(mk_stub_remote rslow '#!/usr/bin/env bash
+trap "" TERM
+echo started > "$1/.boot-started"
+sleep 3
+exit 0')"
+H15P4="$TESTS_TMP/home15p4"
+T15P4="$(mk_target t15p4)"
+AXEL_HOME="$H15P4" "$INSTALL" --from "$RSLOW" "$T15P4" > "$TESTS_TMP/p4.out" 2>&1 & WRAP15=$!
+p4_waited=0
+until [ -f "$T15P4/.boot-started" ] || [ "$p4_waited" -ge 50 ]; do sleep 0.1; p4_waited=$((p4_waited + 1)); done
+[ -f "$T15P4/.boot-started" ] && ok || ko "el delegado stub nunca arrancó"
+kill -TERM "$WRAP15"
+sleep 0.5
+[ -L "$H15P4.lock" ] && ok || ko "el lock se soltó con el delegado vivo"
+rc15p4=0; wait "$WRAP15" || rc15p4=$?
+[ "$rc15p4" -eq 2 ] && ok || ko "wrapper señalado: exit esperado 2, fue $rc15p4"
+assert_no "$H15P4.lock"              # liberado recién tras la muerte del hijo
+grep -qF "interrumpido por señal" "$TESTS_TMP/p4.out" && ok || ko "falta el aviso de interrupción"
+
+t "T15p5 smoke concurrente: dos bootstraps comparten cache, ambos exit 0"
+H15P5="$TESTS_TMP/home15p5"
+T15P5A="$(mk_target t15p5a)"; T15P5B="$(mk_target t15p5b)"
+AXEL_HOME="$H15P5" "$INSTALL" --from "$R15" "$T15P5A" > "$TESTS_TMP/p5a.out" 2>&1 & P5A=$!
+AXEL_HOME="$H15P5" "$INSTALL" --from "$R15" "$T15P5B" > "$TESTS_TMP/p5b.out" 2>&1 & P5B=$!
+rc5a=0; wait "$P5A" || rc5a=$?
+rc5b=0; wait "$P5B" || rc5b=$?
+[ "$rc5a" -eq 0 ] && ok || ko "bootstrap concurrente A: exit $rc5a · $(tail -2 "$TESTS_TMP/p5a.out" | tr '\n' ' ')"
+[ "$rc5b" -eq 0 ] && ok || ko "bootstrap concurrente B: exit $rc5b · $(tail -2 "$TESTS_TMP/p5b.out" | tr '\n' ' ')"
+sha5a="$(sed -n '2p' "$T15P5A/.claude/axel-install")"
+sha5b="$(sed -n '2p' "$T15P5B/.claude/axel-install")"
+{ [ -n "$sha5a" ] && [ "$sha5a" = "$sha5b" ]; } && ok || ko "markers con SHA distinto: '$sha5a' vs '$sha5b'"
+assert_no "$H15P5.lock"
+
+t "T15q1 passthrough exit 1: adopción a través del bootstrap"
+H15Q="$TESTS_TMP/home15q"
+T15Q="$(mk_target t15q)"
+echo "# notas del proyecto" > "$T15Q/NOTAS.md"
+tcommit "$T15Q" "doc propio"
+run_boot "$H15Q" "$R15" "$T15Q"
+assert_rc 1
+assert_file "$T15Q/docs/ADOPTION.md"
+assert_in_file "$T15Q/docs/ADOPTION.md" "NOTAS.md"
+
+t "T15q2 passthrough exit 2 del delegado: destino sucio"
+T15Q2="$(mk_target t15q2)"
+echo "pendiente" > "$T15Q2/pendiente.txt"
+run_boot "$H15Q" "$R15" "$T15Q2"
+assert_rc 2; assert_out "no está limpio"
+
+t "T15r1 delegado con RC no contractual: normalizado a 2 con aviso, lock liberado"
+RNC15="$(mk_stub_remote rnc15 '#!/usr/bin/env bash
+exit 7')"
+H15R="$TESTS_TMP/home15r"
+T15R="$(mk_target t15r)"
+run_boot "$H15R" "$RNC15" "$T15R"
+assert_rc 2; assert_out "código anómalo (7)"; assert_no "$H15R.lock"
+
+t "T15r2 delegado que no lanza (bad interpreter): normalizado a 2"
+RBI15="$(mk_stub_remote rbi15 '#!/nonexistent-interp-xyz
+exit 0')"
+H15R2="$TESTS_TMP/home15r2"
+T15R2="$(mk_target t15r2)"
+run_boot "$H15R2" "$RBI15" "$T15R2"
+assert_rc 2; assert_out "código anómalo"; assert_no "$H15R2.lock"
+
+t "T15r3 delegado que muta el destino y muere por señal: 2 + aviso + diff parcial visible"
+RSK15="$(mk_stub_remote rsk15 '#!/usr/bin/env bash
+echo mutacion > "$1/parcial.txt"
+kill -KILL $$')"
+H15R3="$TESTS_TMP/home15r3"
+T15R3="$(mk_target t15r3)"
+run_boot "$H15R3" "$RSK15" "$T15R3"
+assert_rc 2; assert_out "código anómalo"; assert_out "revisá"
+assert_file "$T15R3/parcial.txt"     # el diff parcial queda visible para git status
+assert_dirty "$T15R3"
+assert_no "$H15R3.lock"
+
+t "T15s1 piped (bash -s por stdin) con cwd adentro de otro repo git"
+H15S="$TESTS_TMP/home15s"
+T15S="$(mk_target t15s)"
+OUT="$(cd "$T15S" && AXEL_HOME="$H15S" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" bash -s -- --from "$R15" "$T15S" < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_file "$T15S/AGENTS.md"
+assert_in_file "$T15S/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
+t "T15s2 piped sin --from: rechazo con mensaje que apunta a --from"
+T15S2="$(mk_target t15s2)"
+OUT="$(cd "$T15S2" && bash -s -- "$T15S2" < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_out "usá: install.sh --from"
+assert_clean "$T15S2"
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
 echo "── tests/install.sh: $PASS ok · $FAIL fail ──"
