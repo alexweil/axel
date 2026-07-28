@@ -4,7 +4,7 @@
 
 Este feature se aplicó a sí mismo (IMPLEMENTATION §05): la sesión que lo implementa abrió con el gate en modo manual, siguiendo la entrada del plan como instrucción — la skill todavía no lo traía.
 
-- **Presentación** (2026-07-28, commit `06c5e6c`): STATUS → «esperando confirmación de arranque»; resumen derivado de la entrada 05 de IMPLEMENTATION.md, presentado en sesión interactiva.
+- **Presentación** (2026-07-28, commit `06c5e6c`): STATUS pasó a esperar la confirmación con la formulación «Esperando: confirmación de arranque del humano» — **equivalente semántico** del estado, no la frase literal «esperando confirmación de arranque» que este feature fija como disparador: esa literalidad es requisito de la implementación de la skill, que en el modo manual todavía no existía. Resumen derivado de la entrada 05 de IMPLEMENTATION.md, presentado en sesión interactiva.
 - **Confirmación humana** (2026-07-28): «Confirmo, arrancá con la bajada fina» — **sin correcciones de alcance**. Este registro es la primera instancia viva del mecanismo que este feature implementa, con el mismo patrón (fecha + literal breve + correcciones) que la skill va a exigir.
 
 ## Alcance
@@ -62,9 +62,9 @@ Como el 04: delta chico y coherente de prosa interdependiente — un solo paso d
 ## Criterios de cierre
 
 1. **Gate completo en la skill `feature`**: derivación con fallback honesto, persistencia previa (STATUS con la frase literal + commit), presentación con fin de turno, registro de la confirmación (fecha + correcciones) en el doc del feature, camino de re-presentación para «esperando confirmación de arranque», y flujo post-confirmación idéntico al actual (el OK final de integración intacto).
-2. **Aviso sin restatement**: el gate (presentación y re-presentación) declara solo la procedencia y remite a `recap`; la lista interactiva del protocolo en `recap` incluye el gate; ningún resultado push/sin-push aparece fuera de `recap` (invariante del 04 preservada).
+2. **Aviso sin restatement**: el gate (presentación y re-presentación) declara solo la procedencia y remite a `recap`; la lista interactiva del protocolo en `recap` incluye el gate; el resultado push/sin-push no aparece en las **skills de fase** — el alcance real de la invariante del 04 (las skills declaran procedencia; solo `recap` deriva el resultado). Las superficies de referencia de alto nivel (AGENTS.md, DESIGN.md, los docs de implementación) pueden nombrar el resultado sin ser norma del protocolo y quedan fuera del criterio.
 3. **Superficies sincronizadas**: línea de `/feature` idéntica en `AGENTS.md` y `templates/AGENTS.md` (verificable por diff); línea "Cómo se trabaja un feature" con la misma formulación en `IMPLEMENTATION.md` y `templates/IMPLEMENTATION.md`; `DESIGN.md` con el gate en el diagrama y la fila de decisión nueva.
-4. **Bootstrap registrado**: la sección "Gate de arranque (bootstrap)" de este doc registra la instancia manual ya ejercitada (presentación + confirmación) con el mismo patrón que la skill exige.
+4. **Bootstrap registrado fielmente**: la sección "Gate de arranque (bootstrap)" de este doc registra la instancia manual tal como ocurrió — la presentación con su formulación real de STATUS (equivalente semántico, previa a la frase literal que la skill fija) y la confirmación con el patrón fecha + literal breve + correcciones. No se le atribuye al bootstrap la literalidad que recién introduce la implementación.
 5. **Verificación en verde**: `tests/lint.sh` y `tests/install.sh` pasan tras el delta (las skills son payload del instalador); IMPLEMENTATION/STATUS al día.
 
 ## Decisiones
@@ -81,4 +81,6 @@ Como el 04: delta chico y coherente de prosa interdependiente — un solo paso d
 
 ## Review log
 
-(vacío)
+- **Ronda 1: CHANGES_REQUESTED** (2 puntos, ambos aceptados; el reviewer verificó además el bookkeeping del cierre del plan, el rango solo-Markdown sin cambios fuera de los tres docs declarados, y corrió `git diff --check` + `tests/lint.sh` limpios, `tests/install.sh` 321/0 y `tests/loop.sh` 238/0 — smoke no contractual omitido por su sandbox, como documenta el proyecto). Resolución:
+  1. El bootstrap atribuía retroactivamente la frase literal «esperando confirmación de arranque» al commit `06c5e6c`, que en realidad escribió «Esperando: confirmación de arranque del humano» → corregido: el registro cita la formulación real como equivalente semántico del modo manual; la literalidad queda como requisito de la implementación de la skill, y el criterio 4 ya no se la atribuye al bootstrap.
+  2. El criterio 2 exigía "ningún resultado push/sin-push fuera de `recap`" — invariante más amplia que la aprobada en el ciclo 04, y que el propio rango viola (este doc, DESIGN y AGENTS nombran el resultado) → corregido: criterio acotado a las skills de fase (ellas declaran procedencia; solo `recap` deriva el resultado); las superficies de referencia de alto nivel quedan explícitamente fuera.
