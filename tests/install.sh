@@ -968,6 +968,10 @@ assert_clean "$T15T5"
 t "T15t6 gitlink primero + árbol grande: RC 2 contractual con diagnóstico, sin SIGPIPE (repro r6)"
 RBIG15="$TESTS_TMP/rbig15"; mkdir -p "$RBIG15/files"
 git -C "$RBIG15" init -q -b main
+# el commit de 2000 archivos dispararía gc/maintenance en background y el clone
+# inmediato competiría con el repack (flake real visto en review): se deshabilitan
+git -C "$RBIG15" config gc.auto 0
+git -C "$RBIG15" config maintenance.auto false
 git -C "$RBIG15" update-index --add --cacheinfo "160000,$(git -C "$R15" rev-parse HEAD),000sub"
 i=1; while [ "$i" -le 2000 ]; do echo "relleno $i" > "$RBIG15/files/f$i"; i=$((i + 1)); done
 git -C "$RBIG15" add files
