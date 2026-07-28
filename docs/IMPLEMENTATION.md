@@ -21,7 +21,7 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 | 02 | Instalación remota: one-liner desde GitHub | **Cerrado** — APPROVED de Codex (r10) + OK humano, 2026-07-27 | [implementation/02-remote-install.md](implementation/02-remote-install.md) |
 | 03 | Hardening del loop de review | **Cerrado** — APPROVED de Codex (r8) + OK humano, 2026-07-28 | [implementation/03-loop-hardening.md](implementation/03-loop-hardening.md) |
 | 04 | Notificaciones y continuidad entre sesiones | **Cerrado** — APPROVED de Codex (r5) + OK humano (terminal), 2026-07-28 | [implementation/04-notifications-continuity.md](implementation/04-notifications-continuity.md) |
-| 05 | Confirmación previa a la implementación en `/feature` | **Cerrado** — APPROVED de Codex (r4), 2026-07-28; OK humano pendiente (terminal) | [implementation/05-feature-gate.md](implementation/05-feature-gate.md) |
+| 05 | Confirmación previa a la implementación en `/feature` | **Cerrado** — APPROVED de Codex (r4) + OK humano (terminal), 2026-07-28 | [implementation/05-feature-gate.md](implementation/05-feature-gate.md) |
 
 **Orden acordado** entre generador y reviewer: APPROVED del ciclo de `/plan` en su ronda 5 (2026-07-27, base `5b1bc02`) — "queda acordado el plan: 01 instalador → 02 hardening con suite de regresión central → 03 notificaciones, derivado de los tres criterios documentados". OK humano del plan: recibido el 2026-07-27 (registrado en `860c80b`). **Nota de numeración**: esa cita usa la numeración original del plan; con el OK del 01 (2026-07-27) el humano insertó *instalación remota* como 02 (criterio 1), corriendo hardening a 03 y notificaciones a 04 — el orden relativo acordado entre agentes no cambió.
 
