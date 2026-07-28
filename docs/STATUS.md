@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: `/plan` — extensión del plan con el feature 06 (one-liner corto: defaults del bootstrap remoto); ciclo de review en curso
-- **Feature en curso**: ninguno — 06 planificado, pendiente de acuerdo entre agentes
-- **Ronda de review**: r1 CHANGES_REQUESTED (2 puntos, ambos aceptados: semántica de fallo del transporte y tradeoff del destino ambiental — registrados en la entrada 06); r2 por lanzar
-- **Último veredicto**: CHANGES_REQUESTED · ronda 1 · base `60cf68d..eacd3e5`
-- **Esperando**: veredicto de Codex r2 sobre la extensión corregida
+- **Fase**: `/plan` — extensión del plan con el feature 06 (one-liner corto: defaults del bootstrap remoto) **acordada entre agentes**: APPROVED de Codex en r2 (base `4336f4d`)
+- **Feature en curso**: ninguno — 06 planificado y acordado; su `/feature` arranca tras el OK
+- **Ronda de review**: ciclo de extensión completo — r1 CHANGES_REQUESTED (2 puntos, ambos aceptados) → r2 APPROVED
+- **Último veredicto**: APPROVED · ronda 2 · base `4336f4d`
+- **Esperando**: **OK humano** del RECAP de la extensión del plan; con el OK → `/feature` (06) en sesión limpia
 - **Actualizado**: 2026-07-28
