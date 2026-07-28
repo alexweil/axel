@@ -1,9 +1,9 @@
 # STATUS
 
-- **Fase**: feature 02 (instalación remota one-liner) **cerrado por Codex** — esperando OK humano
-- **Feature en curso**: 02 — [implementation/02-remote-install.md](implementation/02-remote-install.md): APPROVED de cierre en ronda 10; los seis criterios de cierre cumplidos (bootstrap `--from` + cache fail-closed + lock + piped, 321 asserts en verde, README para agentes, aceptación real contra GitHub reproducida también por el reviewer)
-- **Ronda de review**: — (ciclo 02 completo: 10 rondas, tres APPROVED — bajada r4, paso A r8, cierre r10; base `7c1fda3`)
+- **Fase**: feature 02 **cerrado con OK humano** (2026-07-27) — listo para arrancar el feature 03 en sesión limpia
+- **Feature en curso**: ninguno. El siguiente es el 03 — hardening del loop de review ([IMPLEMENTATION.md §03](IMPLEMENTATION.md)): sesión nueva + `/feature`
+- **Ronda de review**: — (ciclo 02 completo: 10 rondas, tres APPROVED — bajada r4, paso A r8, cierre r10)
 - **Último veredicto**: APPROVED · ronda 10 · `7c1fda3`
-- **Esperando**: **OK humano del RECAP del feature 02**. Con el OK, el siguiente es el 03 (hardening del loop) en sesión limpia (`/feature`)
-- **Nota para la ronda 1 del ciclo 03**: los commits de bookkeeping posteriores a la base `7c1fda3` (este cierre y el del OK) se verifican primero — regla del contrato
+- **Esperando**: nada — el próximo paso es abrir la sesión limpia del feature 03
+- **Nota para la ronda 1 del ciclo 03**: los commits de bookkeeping posteriores a la base `7c1fda3` (cierre `8e0bfeb` y este del OK) se verifican primero — regla del contrato
 - **Actualizado**: 2026-07-27
