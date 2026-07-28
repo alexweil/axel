@@ -46,6 +46,8 @@ Maquinaria reusable para desarrollar proyectos con dos agentes en loop — un **
 
 Dentro de un feature: cambio → commit → review → corregir o argumentar → commit → review… hasta `VERDICT: APPROVED`. Tope de 5 rondas sin convergencia → RECAP temprano para que desempate el humano.
 
+**Modo lote** (`/feature all` o `/feature NN..MM`): varios features pendientes en una sola corrida — gate de lote (N resúmenes → un OK global, con exclusiones puntuales) → un subagente por feature en secuencia, cada uno con su loop de review completo, supervisado por la sesión orquestadora → RECAP consolidado → OK humano. Detalle: [design/batch-features.md](design/batch-features.md).
+
 ## Decisiones
 
 | Fecha | Decisión | Elección | Por qué |
@@ -59,7 +61,9 @@ Dentro de un feature: cambio → commit → review → corregir o argumentar →
 | 2026-07-27 | Instalador | Payload sobreescribible vs. semillas intocables; modos por marker; adopción = script mecánico + `/adopt` semántico; git + preflight como red (fail-closed) | El re-run es la actualización sin pisar lo del proyecto; nada del instalador queda fuera del diff ni se decide adivinando. Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
 | 2026-07-28 | One-liner corto del instalador | Defaults **solo en el camino de bootstrap** (fuente ⇒ URL canónica cuando el script corre piped; destino ⇒ toplevel del cwd), anunciados antes de actuar, con guard del destino asumido que es la propia fuente; el modo local no cambia. Finalización verificable: único terminal `finish`, línea final `── axel · fin: rc=N` y RC no contractual para la incompletitud del delegado | Un `curl … \| bash` no puede llevar argumentos, y sin `pipefail` no distingue "falló" de "nunca corrió": los defaults declaran la ambigüedad en vez de exigirla y la línea final la hace detectable. Detalle: [implementation/06-oneliner-defaults.md](implementation/06-oneliner-defaults.md). |
 | 2026-07-28 | Gate de arranque de feature | `/feature` presenta un resumen derivado de los docs y espera la confirmación humana antes de la bajada fina; estado persistido en STATUS («esperando confirmación de arranque») con re-presentación al reabrir | Validar el rumbo cuando el humano está presente por construcción, antes de gastar bajada y rondas de review; el OK final de integración no se reemplaza. Detalle: [implementation/05-feature-gate.md](implementation/05-feature-gate.md). |
+| 2026-07-28 | Batch de features | `/feature all` y `/feature NN..MM` (el `/feature` solo no cambia): orquestador supervisor + un subagente por feature; gate de lote al inicio (N resúmenes, un OK global, exclusiones puntuales) y RECAP consolidado al final; el OK por feature se agrupa ahí — el APPROVED de Codex por feature no cambia | La frontera de contexto la resuelve el subagente fresco; el spike mostró que el subagente no se re-invoca al terminar su background → el padre supervisa por filesystem y lo empuja por mensaje, sin transportar feedback. Detalle: [design/batch-features.md](design/batch-features.md). |
 
 ## Profundizaciones
 
 - [design/review-contract.md](design/review-contract.md) — contrato generador↔reviewer: transporte, prompt, sesiones, veredictos, deadlock.
+- [design/batch-features.md](design/batch-features.md) — modo lote de `/feature`: gate de lote, contrato padre↔hijo, condiciones de corte, evidencia del spike.

@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: plan completo — feature 06 (one-liner corto) **cerrado** con APPROVED de Codex (r11) + **OK humano** (2026-07-28). No quedan features previstos
-- **Feature en curso**: ninguno — para seguir, `/plan` en sesión limpia extiende el plan
-- **Ronda de review**: — (ciclo del 06 completo: bajada 4→2→1→1→0, paso A 3→3→1→0, paso B 2→0)
-- **Último veredicto**: APPROVED · ronda 11 · base `a158a63`
-- **Esperando**: nada — pausa estable. Publicación: el `install.sh` vigente **está publicado** en `main` (`af0850a`); los dos commits posteriores son solo docs y evidencia, y quedan locales hasta que el humano pida subirlos
+- **Fase**: `/design` — batch de features (`/feature all` / rango). Rumbo validado con el humano (superficie y gate de lote confirmados, 2026-07-28); diseño consolidado en DESIGN.md + design/batch-features.md, respaldado por spike empírico del subagente
+- **Feature en curso**: ninguno — esto es diseño; la implementación entrará al plan vía `/plan` tras el OK
+- **Ronda de review**: entrando al loop — `review.sh new` con el diseño del batch
+- **Último veredicto**: — (ciclo nuevo; el anterior cerró el feature 06 con APPROVED r11)
+- **Esperando**: review de Codex sobre el diseño del batch
 - **Actualizado**: 2026-07-28
