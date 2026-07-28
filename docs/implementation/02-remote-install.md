@@ -113,6 +113,28 @@ Cierre con **aceptación real contra GitHub**: el **one-liner piped exacto del R
 - **Paso A** (2026-07-27): `install.sh --from` implementado (bootstrap completo: args/URL option-like, disjunción canónica con `canon_path` para paths inexistentes, lock symlink atómico con espera acotada y trap que espera al hijo, verdad remota vía `ls-remote --symref` + fetch por URL a `FETCH_HEAD`, ancestría explícita, sanity y delegación con normalización de RCs; modo local endurecido con `BASH_SOURCE` + estructura esperada). Suite tras las correcciones de r5 y r6: **321 asserts, 0 fallas** — los 158 del feature 01 intactos (contrato local sin cambios) + 163 nuevos de la matriz T15 (bootstrap fresco y update, los ocho estados fail-closed del cache, metadata adulterada ×3, árbol no demostrable ×5 — skip-worktree, assume-unchanged, post-merge hook, delegado symlink, `--from ""` —, repros r6 ×3 — gitlink/SIGPIPE, caller SHA-256, hook de fetch con tag —, disjunción ×5 incluido `..` en sufijo inexistente, URL option-like, remoto malformado ×2, red rota ×2, lock ×5 incluida la señal al wrapper con delegado vivo y el smoke concurrente, passthrough 1/2, normalización de RCs ×3, piped ×2). `bash -n` limpio sobre `install.sh` y `tests/install.sh`. Estabilidad verificada tras r7: **tres corridas consecutivas completas en verde** (el único flake — gc en background del fixture grande — quedó eliminado por config).
 - Bug encontrado y corregido por la propia suite (T15p3): `ln -s` sobre un **directorio** existente no falla — crea el link adentro —, con lo que el lock se "tomaba" dentro de un directorio ajeno y la instalación seguía; corregido con pre-chequeo del caso directorio antes del `ln -s` más verificación de propiedad post-adquisición (y retiro del residuo propio si un directorio ajeno aparece en la ventana).
 
+## Aceptación real contra GitHub (paso B, 2026-07-27)
+
+Corrida en esta máquina, con red real (curl → raw.githubusercontent.com; git → github.com), cache **fresco y aislado** vía el override documentado `AXEL_HOME` (el resto del comando es byte a byte el one-liner del README). Fixture: `$ACC` = `mktemp -d`; destino `$ACC/demo` = repo git recién inicializado (`git init -b main` + commit vacío).
+
+**Corrida 1 — instalación desde cero:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | AXEL_HOME="$ACC/axel-cache" bash -s -- --from https://github.com/alexweil/axel "$ACC/demo"
+```
+
+- RC: **0**. Salida (íntegra en estructura; paths abreviados a `$ACC`): línea de bootstrap `── axel bootstrap · remoto: https://github.com/alexweil/axel · cache: $ACC/axel-cache (main @ 1fa8566) ──`, seguida del reporte del instalador delegado `modo: initial` con los 10 payloads, las 5 semillas, `CLAUDE.md → AGENTS.md (symlink)`, `.gitignore (entrada .claude/state/)` y `.claude/axel-install` bajo "instalado".
+- Cache resultante: `origin` = `https://github.com/alexweil/axel`, branch `main`, HEAD `1fa85667901ef4524a3543fa2944c1c068919317`.
+- Marker del destino: `axel-install-format: 1` / `axel-sha: 1fa85667901ef4524a3543fa2944c1c068919317` — **idéntico al HEAD del cache** (criterio: lo instalado es el clon).
+- `$ACC/axel-cache.lock`: no existe tras la corrida (lock liberado).
+
+**Corrida 2 — mismo one-liner, cache existente, destino commiteado:**
+
+- RC: **0**, `modo: update`, bootstrap reusó el cache (`main @ 1fa8566`, ff no-op); los 10 payloads + marker bajo "sin cambios", las 5 semillas "preexistente, intacto".
+- `git status --porcelain` del destino tras la corrida: **vacío** — update no-op sin diff alguno, marker incluido, a través del camino remoto completo.
+
+Reproducibilidad: los SHAs corresponden a `origin/main` = `1fa8566` al momento de la corrida; una re-corrida futura instalará el tip vigente y el marker acompañará.
+
 ## Review log
 
 - **Ronda 1: CHANGES_REQUESTED** (6 puntos, todos aceptados; bookkeeping del cierre del 01 verificado sin observaciones). Resolución:
