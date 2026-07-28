@@ -23,17 +23,27 @@ Todo el delta es prosa: skills (`recap`, `feature`, `design`, `plan`), `AGENTS.m
 
 El criterio que decide el aviso es **cómo se llegó a la espera**, no dónde: si el turno que termina esperando es la **respuesta inmediata a un mensaje que el humano acaba de mandar**, el humano está presente por construcción y el push es ruido; si el turno venía de **trabajo autónomo** (rondas de review en background, implementación larga), el humano puede llevar horas afuera y el aviso es exactamente lo que falta. Esto reemplaza la condición actual "si el humano no está activo en la sesión", que pedía adivinar presencia; el criterio nuevo se decide mirando el propio turno. Borde resuelto: si el humano mandó un mensaje a mitad del loop y después hubo rondas autónomas antes del RECAP, va aviso; en la duda, va aviso — el costo de un push redundante es trivial, el de un loop estancado se mide en horas.
 
-| Camino | Dónde | Aviso |
-|---|---|---|
-| RECAP de cierre de feature (APPROVED de cierre) | skill `feature`, paso 5 | **Sí** |
-| RECAP terminal (sin feature siguiente) | skill `feature`, paso 6 | **Sí** |
-| RECAP de diseño (tras el loop de review) | skill `design`, paso 4 | **Sí** |
-| RECAP de plan (tras el loop de review) | skill `plan`, paso 3 | **Sí** |
-| RECAP temprano: deadlock (racha 5) | reglas de `feature`/`design`/`plan` | **Sí** |
-| RECAP temprano: tope de rondas, cambio de scope, sorpresa, exit 2 persistente, veredicto inválido repetido | reglas de `feature`/`design`/`plan` | **Sí** |
-| `/recap` a demanda | skill `recap` | No — pedido directo |
-| Reapertura con STATUS "esperando OK" (re-presentar el RECAP) | skill `feature`, camino esperando-OK | No — el humano acaba de escribir |
-| `/status`, `/adopt` | consulta / sesión interactiva | No — pedido directo |
+El universo del inventario son los **turnos que terminan esperando una respuesta del humano** — de cualquier tipo: OK de un RECAP, desempate, o respuesta en conversación interactiva. `/status` queda fuera del universo, no clasificado como "sin aviso": responde y termina, no queda esperando nada.
+
+**Esperas alcanzadas por trabajo autónomo** — con aviso:
+
+| Camino | Dónde |
+|---|---|
+| RECAP de cierre de feature (APPROVED de cierre) | skill `feature`, paso 5 |
+| RECAP terminal (sin feature siguiente) | skill `feature`, paso 6 |
+| RECAP de diseño (tras el loop de review) | skill `design`, paso 4 |
+| RECAP de plan (tras el loop de review) | skill `plan`, paso 3 |
+| RECAP temprano: deadlock (racha 5) | reglas de `feature`/`design`/`plan` |
+| RECAP temprano: tope de rondas, cambio de scope, sorpresa, exit 2 persistente, veredicto inválido repetido | reglas de `feature`/`design`/`plan` |
+
+**Esperas interactivas** — respuesta directa a un mensaje recién mandado, sin aviso:
+
+| Camino | Dónde |
+|---|---|
+| Ping-pong de `/design` (preguntas de rumbo al humano) | skill `design`, paso 1 |
+| Decisiones de `/adopt` (mapeo doc por doc, pendientes mecánicos, confirmaciones) | skill `adopt` |
+| `/recap` a demanda | skill `recap` |
+| Reapertura con STATUS "esperando OK" (re-presentar el RECAP) | skill `feature`, camino esperando-OK |
 
 ### Protocolo de aviso (centralizado en la skill `recap`)
 
@@ -56,28 +66,32 @@ Cruces de frontera de contexto y su paso siguiente:
 Protocolo, tras registrar el OK (STATUS.md actualizado + commit):
 
 - **Con herramienta de spawn de sesión** (hoy: el chip de spawn del desktop, `spawn_task`): crear el chip — título "Feature NN: <nombre> — sesión limpia" (o "/plan — sesión limpia"), prompt **solo el comando de la skill** (`/feature`, `/plan`), tldr de una línea. El prompt es autocontenido por el principio 1: el estado vive en los docs, la sesión nueva reconstruye todo leyéndolos — el chip no necesita (ni debe) llevar contexto del chat.
-- **Sin herramienta**: instrucción única en el chat — "sesión nueva en este repo + `/feature`" (desde terminal: `claude "/feature"`).
+- **Sin herramienta, o con la invocación fallando**: instrucción única en el chat, parametrizada por el comando del cruce — "sesión nueva en este repo + `<comando>`" (desde terminal: `claude "/plan"` o `claude "/feature"` según el cruce). Un fallo al crear el chip degrada a la misma instrucción, mencionándolo en el chat sin tratarlo como error del loop.
 - En ningún caso se implementa el siguiente feature en la sesión vieja (regla existente del método; el chip/instrucción la refuerza, no la reemplaza).
 
 ### Docs afectados
 
-`recap` (protocolo completo), `feature`/`design`/`plan` (referencias + chip en sus caminos de OK), `AGENTS.md` y `templates/AGENTS.md` (una línea en Convenciones: aviso en RECAPs autónomos y chip/instrucción única tras el OK — misma línea en ambos, regla de duplicación), `DESIGN.md` (fila de decisión: criterio de autonomía + continuidad; la fila RECAP de 2026-07-27 queda como antecedente). `review-contract.md` no se toca. Las skills `status` y `adopt` tampoco (inventariadas arriba como sin-aviso, sin cambio de texto).
+`recap` (protocolo completo), `feature`/`design`/`plan` (referencias + chip en sus caminos de OK), `AGENTS.md` y `templates/AGENTS.md` (una línea en Convenciones que **referencia** el protocolo — "aviso en esperas autónomas y chip/instrucción única tras el OK, según la skill `recap` y las skills de fase" — misma línea en ambos por la regla de duplicación; referencia de alto nivel, no una segunda formulación normativa que pueda divergir), `DESIGN.md` (la fila de decisión RECAP de 2026-07-27 se **actualiza en su lugar**: queda marcada como refinada el 2026-07-28 por el criterio de autonomía y remite a la skill `recap` como fuente del protocolo — no se agrega una fila paralela que deje viva la formulación vieja "push si está disponible"). `review-contract.md` no se toca. Las skills `status` y `adopt` tampoco cambian de texto (`/status` está fuera del universo; las esperas de `/adopt` son interactivas y ya operan así).
 
 ### Implementación en un paso
 
-El delta es chico y coherente (prosa interdependiente): un solo paso de implementación tras el APPROVED de la bajada — skills + AGENTS + plantilla + DESIGN en un commit — y luego el cierre. La aceptación real del protocolo es este mismo ciclo: el RECAP de cierre del 04 se alcanza por trabajo autónomo ⇒ ejercita el push real (resultado al Review log). El cierre del 04 es **terminal** (no hay 05 en IMPLEMENTATION): sigue el camino terminal del contrato — el RECAP lista los commits de cierre como no-revisados-por-Codex — y demuestra la rama terminal de la tabla de continuidad (sin chip por default, ofrecimiento de `/plan`).
+El delta es chico y coherente (prosa interdependiente): un solo paso de implementación tras el APPROVED de la bajada — skills + AGENTS + plantilla + DESIGN en un commit — y luego el cierre. La aceptación tiene dos planos con frontera explícita:
+
+- **Dentro del rango que revisa Codex**: en el paso de implementación se ejercita la herramienta real de push desde esta sesión con un aviso de prueba de una línea, y el resultado (disponibilidad, carga, envío, respuesta de la herramienta) queda registrado en este doc — evidencia verificable en la review.
+- **Post-APPROVED**: el ejercicio vivo del protocolo completo (push del RECAP de cierre + rama terminal de continuidad) ocurre necesariamente después del APPROVED de cierre, así que no puede entrar en su rango: queda cubierto por el **OK humano terminal**, y el RECAP lo registra explícitamente junto a los commits de cierre no-revisados — camino terminal del contrato (no hay 05 en IMPLEMENTATION que barra el cierre del 04). La rama terminal de la continuidad se demuestra ahí mismo (sin chip por default, ofrecimiento de `/plan`).
 
 ## Criterios de cierre
 
-1. **Inventario completo y aplicado**: la tabla de caminos de espera cubre todos los finales de turno en espera de OK de las skills, cada camino clasificado por el criterio de autonomía; las skills quedan tales que cada camino con aviso alcanza la regla (directamente o por referencia a `recap`).
+1. **Inventario completo y aplicado**: el inventario cubre todos los turnos de las skills que terminan esperando respuesta del humano (autónomos e interactivos), cada uno clasificado por el criterio de autonomía; las skills quedan tales que cada espera con aviso alcanza la regla (directamente o por referencia a `recap`).
 2. **Protocolo en un solo lugar**: formato, criterio y degradación viven solo en la skill `recap`; `feature`/`design`/`plan` referencian sin restatement; la condición ambigua actual ("si el humano no está activo") y la mención suelta del paso 5 de `feature` eliminadas.
-3. **Continuidad documentada en los cuatro cruces**: diseño→plan, plan→feature, feature→siguiente y terminal, cada uno en su skill con chip + fallback de instrucción única; el prompt del chip es solo el comando de la skill.
-4. **Docs sincronizados**: `AGENTS.md` y `templates/AGENTS.md` con la misma convención nueva (duplicación raíz↔plantilla verificable por diff de la sección); `DESIGN.md` con la decisión registrada; IMPLEMENTATION/STATUS al día.
-5. **Aceptación real en este ciclo**: el RECAP de cierre del 04 ejercita el protocolo de punta a punta — push enviado si la herramienta está disponible en esta sesión (resultado registrado en el Review log) — y sigue el camino terminal del contrato (commits de cierre listados como no-revisados).
+3. **Continuidad documentada**: las **tres transiciones con spawn** (diseño→`/plan`, plan→`/feature`, feature→`/feature` siguiente), cada una en su skill con chip + fallback de instrucción única parametrizada por el comando del cruce, **más la rama terminal sin spawn por default** (ofrecimiento de `/plan` en el texto del RECAP); el prompt del chip es solo el comando de la skill; la degradación cubre tanto ausencia de la herramienta como fallo de su invocación.
+4. **Docs sincronizados**: `AGENTS.md` y `templates/AGENTS.md` con la misma convención nueva (duplicación raíz↔plantilla verificable por diff de la sección); `DESIGN.md` con la fila RECAP actualizada en su lugar (sin formulación vieja residual); IMPLEMENTATION/STATUS al día.
+5. **Aceptación en dos planos con frontera explícita**: dentro del rango revisado, la prueba real de la herramienta de push desde esta sesión con su resultado registrado en este doc; el ejercicio vivo del protocolo completo (push del RECAP de cierre + rama terminal de continuidad) queda como aceptación **post-APPROVED cubierta por el OK humano terminal**, registrada en el RECAP junto a los commits de cierre no-revisados — camino terminal del contrato.
 
 ## Decisiones
 
 - 2026-07-28 (bajada): **Criterio de autonomía** para el aviso — push si la espera se alcanzó por trabajo autónomo, no si responde a un pedido directo del humano; reemplaza la condición de presencia ("humano no activo") que pedía adivinar, por una que se decide mirando el turno; en la duda, aviso. **Protocolo centralizado en `recap`** con referencias desde las otras skills — lección del r7 del ciclo 03: los restatements divergen. **Chip con prompt autocontenido** (solo `/feature` o `/plan`): el estado vive en los docs (principio 1), llevar contexto de chat en el chip lo violaría. **Sin cambios en scripts ni contrato**: las herramientas son del harness; el loop mecánico no cambia. **Sin tests automatizados**: el delta es lenguaje natural en skills; un grep sobre prosa sería frágil y falso — la verificación es el inventario de este doc contra las skills, en la review. **Caso terminal sin chip por default**: sin siguiente feature no hay comando obvio que spawnear; se ofrece `/plan` en el texto del RECAP.
+- 2026-07-28 (ronda 1): **el universo del inventario son las esperas de respuesta, de cualquier tipo** — incluye las interactivas (ping-pong de `/design`, decisiones de `/adopt`) clasificadas sin aviso por respuesta directa; `/status` sale del inventario porque no espera nada. **La fila RECAP de DESIGN se actualiza en su lugar** (refinada + remisión a `recap`), no se deja como antecedente con la formulación vieja viva; la línea de AGENTS/plantilla es referencia de alto nivel, no norma paralela. **Instrucción única parametrizada por el comando del cruce** y degradación que cubre también el fallo de invocación del chip. **Aceptación en dos planos**: prueba real del push dentro del rango revisado (paso de implementación, resultado en este doc) + ejercicio vivo post-APPROVED cubierto por el OK humano terminal — el criterio original era circular: el push del RECAP de cierre ocurre después del APPROVED que debía verificarlo.
 
 ## Riesgos
 
@@ -87,3 +101,10 @@ El delta es chico y coherente (prosa interdependiente): un solo paso de implemen
 - **El criterio de autonomía tiene bordes** (mensaje humano a mitad de loop): resuelto en la bajada — media ronda autónoma entre el mensaje y el RECAP ⇒ aviso; en la duda, aviso (asimetría de costos documentada).
 
 ## Review log
+
+- **Ronda 1: CHANGES_REQUESTED** (5 puntos, todos aceptados; el reviewer verificó además el bookkeeping del cierre del 03 contra su APPROVED de r8, que el rango es solo Markdown con scripts/skills/contrato intactos, y `git diff --check` + `tests/lint.sh` limpios). Resolución:
+  1. IMPLEMENTATION desactualizada (fila 03 aún "esperando OK humano" pese a `3c0e410`; fila 04 en Backlog sin link pese a STATUS y la bajada ya existente — y la evidencia del pedido afirmaba un link que no estaba) → corregido: ambas filas al día (03 cerrado con OK; 04 en curso con link).
+  2. El inventario no cumplía su propia promesa ("turnos que terminan esperando al humano"): faltaba el ping-pong de `/design`, y `/adopt` estaba mal agrupado con `/status` (que no espera nada) → corregido: universo definido explícitamente como esperas de respuesta de cualquier tipo, en dos grupos (autónomas con aviso / interactivas sin aviso, incluidas `/design` paso 1 y `/adopt`); `/status` fuera del universo con la razón.
+  3. Contradicción residual en DESIGN ("push si está disponible" seguía vivo como "antecedente") → corregido: la fila RECAP se actualiza en su lugar (refinada por el criterio de autonomía, remite a `recap`); la línea de AGENTS/plantilla queda como referencia de alto nivel, no segunda norma.
+  4. Continuidad internamente inconsistente (fallback fijado a `/feature` que no cubría diseño→`/plan`; criterio 3 exigía chip en "los cuatro cruces" contra el terminal-sin-chip del enfoque; degradación sin cubrir fallo de invocación) → corregido: instrucción única parametrizada por comando, criterio reformulado como tres transiciones con spawn + rama terminal sin spawn, degradación por ausencia y por fallo.
+  5. Criterio de cierre 5 circular (el push del RECAP de cierre ocurre después del APPROVED que debía verificarlo, en commits terminales que Codex no revisa) → corregido: aceptación en dos planos — prueba real del push dentro del rango revisado (implementación, resultado en este doc) y ejercicio vivo post-APPROVED cubierto por el OK humano terminal, registrado en el RECAP.
