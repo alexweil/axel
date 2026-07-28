@@ -168,3 +168,8 @@ Reproducibilidad: los SHAs corresponden a `origin/main` = `1fa8566` al momento d
   1. El README afirmaba sin excepción "exit 2 = rechazo sin tocar el destino" → corregido con la misma salvedad de la guía de agentes (instalador interrumpido con aviso ⇒ revisar `git status`).
   2. El camino auditable en dos pasos, seguido desde el toplevel del destino, clonaba axel adentro y ensuciaba el árbol → corregido: el comando clona a un temporal fuera del destino y pasa el toplevel como argumento.
   3. La invocación ilustrativa de `templates/AGENTS.md` omitía el `<repo-destino>` obligatorio → firma completa y puntero al comando del README.
+- **Ronda 10: APPROVED (cierre)** — las tres correcciones de r9 verificadas; el reviewer ejecutó literalmente el comando auditable desde un destino (RC 0, clon afuera, plantilla corregida instalada) y dio los criterios 1–6 por cumplidos. Base: `7c1fda3`. Convergencia del ciclo: bajada 6→3→2→0 (r1–r4), paso A 4→3→1→0 (r5–r8), paso B 3→0 (r9–r10).
+
+## Cierre
+
+Feature cerrado el 2026-07-27 con el APPROVED de Codex en la ronda 10. Este commit de cierre es bookkeeping (solo docs): por contrato no mueve la base y lo verifica la ronda 1 del ciclo siguiente (feature 03).

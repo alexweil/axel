@@ -1,8 +1,9 @@
 # STATUS
 
-- **Fase**: feature 02 (instalación remota one-liner) — paso B corregido tras r9, en review
-- **Feature en curso**: 02 — [implementation/02-remote-install.md](implementation/02-remote-install.md): paso A APPROVED (r8); paso B con los 3 puntos de docs de r9 corregidos (salvedad de exit 2 en README, camino auditable clona fuera del destino, firma completa en templates/AGENTS.md)
-- **Ronda de review**: 10 del ciclo 02 — lanzándose; en r9 el reviewer además reprodujo por su cuenta el camino real contra GitHub (initial/update RC 0, marker == HEAD, update sin diff)
-- **Último veredicto**: CHANGES_REQUESTED · ronda 9 del ciclo 02 · base `1fa8566` (racha 1)
-- **Esperando**: veredicto de Codex; si aprueba, commit de cierre → RECAP → OK humano
+- **Fase**: feature 02 (instalación remota one-liner) **cerrado por Codex** — esperando OK humano
+- **Feature en curso**: 02 — [implementation/02-remote-install.md](implementation/02-remote-install.md): APPROVED de cierre en ronda 10; los seis criterios de cierre cumplidos (bootstrap `--from` + cache fail-closed + lock + piped, 321 asserts en verde, README para agentes, aceptación real contra GitHub reproducida también por el reviewer)
+- **Ronda de review**: — (ciclo 02 completo: 10 rondas, tres APPROVED — bajada r4, paso A r8, cierre r10; base `7c1fda3`)
+- **Último veredicto**: APPROVED · ronda 10 · `7c1fda3`
+- **Esperando**: **OK humano del RECAP del feature 02**. Con el OK, el siguiente es el 03 (hardening del loop) en sesión limpia (`/feature`)
+- **Nota para la ronda 1 del ciclo 03**: los commits de bookkeeping posteriores a la base `7c1fda3` (este cierre y el del OK) se verifican primero — regla del contrato
 - **Actualizado**: 2026-07-27
