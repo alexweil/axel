@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: plan — extensión con el feature 07 (batch de features) **acordada** entre agentes: APPROVED de Codex (r2). RECAP presentado
-- **Feature en curso**: ninguno (fase de plan)
-- **Ronda de review**: ciclo de la extensión completo: r1 3→0 · r2 APPROVED
+- **Fase**: plan **cerrado** — extensión con el feature 07 (batch de features): APPROVED de Codex (r2) + **OK humano** (2026-07-28)
+- **Feature en curso**: ninguno — el siguiente es el 07 (batch de features)
+- **Ronda de review**: — (ciclo de la extensión completo: r1 3→0 · r2 APPROVED)
 - **Último veredicto**: APPROVED · ronda 2 · base `0c2ee58`
-- **Esperando**: **OK humano** del RECAP de la extensión del plan; con el OK → `/feature` (07) en sesión limpia
+- **Esperando**: arranque de `/feature` (07) en **sesión limpia** — abre con su gate de confirmación
 - **Actualizado**: 2026-07-28
