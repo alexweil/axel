@@ -24,7 +24,7 @@ Maquinaria reusable para desarrollar proyectos con dos agentes en loop — un **
 | `docs/STATUS.md` | La posición actual en ~10 líneas; se actualiza en cada commit. |
 | `.claude/skills/` | Las fases del método como comandos: `/design`, `/plan`, `/feature`, `/status`, `/recap`. |
 | `scripts/review.sh` | Wrapper del reviewer: config de modelo, ciclo de vida de sesiones (new/resume), rango de commits, contrato de veredicto. Detalle: [design/review-contract.md](design/review-contract.md). |
-| `.claude/state/` | Estado local no versionado: session id de Codex, SHA del último APPROVED, contador de ronda. |
+| `.claude/state/` | Estado local no versionado: session id de Codex, SHA del último APPROVED, contador de ronda, racha y el registro de métricas `rounds-log`. |
 | `.claude/settings.json` | Permisos preaprobados para que el loop no se frene en confirmaciones mientras el humano no está. |
 | `scripts/install.sh` + `templates/` | Instalador: lleva la maquinaria a otro repo (instalación, adopción de proyectos con proceso manual previo, actualización con axel como fuente de verdad). Detalle: [implementation/01-installer.md](implementation/01-installer.md). |
 | `/adopt` + `docs/ADOPTION.md` | Cierre de adopción en el destino: el instalador deja el handoff persistente con los hallazgos y la skill lo consume con el humano (mapear docs, derivar el STATUS real). |

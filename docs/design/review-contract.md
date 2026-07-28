@@ -32,7 +32,8 @@
 - Si el proceso de Codex termina con error (exit ≠ 0), **no se toma veredicto** aunque haya quedado un mensaje escrito: exit 2.
 - La review queda **clavada al `REVIEW_HEAD`** capturado al armar el pedido, en dos planos: el rango/aprobación se refieren a ese SHA, y la **observación también** (el reviewer lee y ejecuta sobre el worktree snapshot de ese SHA, no sobre el árbol vivo). Commits que aparezcan durante una review larga no afectan lo que el reviewer ve ni quedan aprobados — `review.sh` avisa y entran en el próximo rango. Se eligió esto en vez de invalidar la corrida: la review de un SHA es válida para ese SHA, y con la observación congelada ya no existe el riesgo de aprobar un SHA viejo mirando archivos nuevos.
 - `APPROVED` mueve la base a `REVIEW_HEAD` (`.claude/state/last-approved-sha`) y resetea la racha. Un APPROVED intermedio (p. ej. de la bajada fina) no cierra el feature; el APPROVED de cierre es contra los criterios de cierre del doc del feature.
-- Sin veredicto válido → exit 2: el generador reintenta una vez y, si persiste, corta a RECAP.
+- **Fallas de proceso** (codex termina con RC≠0, o no deja mensaje final): `review.sh` las **reintenta una vez automáticamente, dentro de la misma ronda**, preservando los eventos del intento fallido en `last-review-events.failed.jsonl`. La frontera de contexto se respeta: un `new` fallido que alcanzó a emitir `thread.started` se reanuda con ese id exacto; sin id se relanza un `exec` nuevo — jamás `resume --last`, que podría retomar la sesión del feature anterior; un `round` fallido reintenta el resume del id vigente. `AXEL_REVIEW_RETRIES=0` lo desactiva. Si el exit 2 persiste, el generador diagnostica con los eventos y corta a RECAP.
+- Un mensaje bien entregado cuya última línea no es un veredicto válido **no se reintenta** (no es transitorio: es incumplimiento del contrato): exit 2 directo.
 - Exit codes de `review.sh`: 0 = APPROVED, 1 = CHANGES_REQUESTED, 2 = error / sin veredicto / deadlock.
 - `status` muestra únicamente el **último resultado validado** (`.claude/state/last-verdict`, escrito solo cuando una corrida fue aceptada con veredicto estricto); jamás parsea el mensaje crudo del reviewer, así una corrida rechazada no puede aparentar un APPROVED.
 
@@ -46,9 +47,13 @@ Tras el APPROVED final de un feature, el generador hace commits de cierre (solo 
 
 **Camino terminal** (no hay ciclo siguiente: fin del proyecto o pausa larga): los commits de cierre quedan cubiertos por el **OK humano del RECAP final**, que debe listarlos explícitamente como no-revisados-por-Codex; si el generador considera que el cierre tuvo sustancia más allá de bookkeeping, pide antes una mini-review (`round`) sobre esos commits.
 
+## Observabilidad local (métricas)
+
+`review.sh` registra cada evento del loop en `.claude/state/rounds-log` (no versionado), con esquema fijo `fecha · modo · ronda · intento · resultado · SHA corto · racha`. Resultados con invocación (intento numérico): `APPROVED`, `CHANGES_REQUESTED`, `NO_VERDICT` (mensaje entregado con última línea inválida), `PROC_FAIL` (una línea por intento fallido de proceso). Eventos **pre-invocación** (ronda/intento/SHA en `-`): `DEADLOCK` e `INPUT_ERROR` (stdin vacío) — todo rechazo deja línea, así la frontera de ciclo (la **primera línea de modo `new`, falle o no**) siempre existe. Denominadores: eventos = líneas; intentos = líneas con intento numérico; rondas = números distintos — un fallo de proceso seguido de éxito son dos intentos de la misma ronda. `status` resume el ciclo actual con esos denominadores. Es observabilidad local: la memoria oficial por feature sigue siendo el Review log de los docs.
+
 ## Ciclo de vida de sesiones
 
-- `new` borra el session id guardado, corre `codex exec` y captura el id nuevo de los eventos JSONL (fallback: `resume --last`).
+- `new` borra el session id guardado, corre `codex exec` y captura el id nuevo como el **`thread_id` del evento `thread.started`** de los eventos JSONL — nunca "el primer UUID del archivo", que mezcla el stderr de codex y podría contener uno espurio (fallback sin `thread.started`: aviso y `resume --last`).
 - `round` usa el id guardado en `.claude/state/codex-session-id`. Cambio de feature ⇒ siempre `new`.
 - Config del reviewer: variables al tope de `review.sh`; overrides puntuales por env `AXEL_REVIEW_MODEL/EFFORT/SANDBOX` (p. ej. smoke tests con esfuerzo `low`).
 - Reviews con esfuerzo xhigh pueden tardar >10 minutos: el generador corre `review.sh` en background y continúa cuando termina, sin duplicar la corrida.

@@ -11,6 +11,9 @@
 # El reviewer corre sobre un worktree snapshot clavado al commit bajo review, que se resetea en
 # cada ronda: su observación queda congelada y el repo canónico fuera de su alcance de escritura.
 # Salida: la review completa por stdout. Exit: 0=APPROVED, 1=CHANGES_REQUESTED, 2=error/sin veredicto/deadlock.
+# Fallas de proceso de codex (RC≠0 o sin mensaje final) se reintentan una vez en la misma
+# ronda (AXEL_REVIEW_RETRIES=0 desactiva); un veredicto inválido no se reintenta.
+# Métricas locales por evento en .claude/state/rounds-log (resumen en `status`).
 set -euo pipefail
 
 # ── Config del reviewer — tunear SOLO acá cuando cambie el modelo ─────────────
@@ -37,6 +40,8 @@ STREAK_FILE="$STATE_DIR/changes-streak"
 VERDICT_FILE="$STATE_DIR/last-verdict"
 MSG_FILE="$STATE_DIR/last-review.md"
 EVENTS_FILE="$STATE_DIR/last-review-events.jsonl"
+FAILED_EVENTS_FILE="$STATE_DIR/last-review-events.failed.jsonl"
+ROUNDS_LOG="$STATE_DIR/rounds-log"
 WT_DIR="$STATE_DIR/review-worktree"
 
 mkdir -p "$STATE_DIR"
@@ -50,6 +55,30 @@ case "$MODE" in
     echo "ronda           : $(cat "$ROUND_FILE" 2>/dev/null || echo 0)"
     echo "racha sin converger : $(cat "$STREAK_FILE" 2>/dev/null || echo 0)"
     echo "últ. resultado validado: $(cat "$VERDICT_FILE" 2>/dev/null || echo '—')"
+    # Resumen del ciclo actual (desde la última línea de modo `new`, falle o no):
+    # eventos = líneas · intentos = líneas con intento numérico · rondas = números distintos
+    if [ -s "$ROUNDS_LOG" ]; then
+      awk -F'\t' '
+        $2 == "new" { start = NR }
+        { line[NR] = $0 }
+        END {
+          if (NR == 0) exit
+          if (!start) start = 1
+          ev = 0; att = 0; nr = 0
+          for (i = start; i <= NR; i++) {
+            split(line[i], f, "\t"); ev++
+            if (f[4] ~ /^[0-9]+$/) att++
+            if (f[3] ~ /^[0-9]+$/ && !(f[3] in seen)) { seen[f[3]] = 1; nr++ }
+            cnt[f[5]]++
+          }
+          printf "ciclo actual    : %d ronda(s) · %d intento(s) · %d evento(s)\n", nr, att, ev
+          s = ""
+          for (k in cnt) s = s k "=" cnt[k] " "
+          printf "por resultado   : %s\n", s
+        }' "$ROUNDS_LOG"
+      echo "últimos eventos :"
+      tail -5 "$ROUNDS_LOG" | sed 's/^/  /'
+    fi
     exit 0 ;;
   reset-deadlock)
     echo 0 > "$STREAK_FILE"
@@ -59,6 +88,15 @@ case "$MODE" in
   *) echo "uso: $0 {new|round|status|reset-deadlock}  (pedido del generador por stdin)" >&2; exit 2 ;;
 esac
 
+# Métricas locales (rounds-log): una línea por evento del loop, con esquema fijo
+# fecha·modo·ronda·intento·resultado·sha·racha. Los eventos pre-invocación (DEADLOCK,
+# INPUT_ERROR) llevan ronda/intento/sha en "-" y quedan fuera del denominador de intentos.
+# Observabilidad local: la memoria oficial por feature es el Review log de los docs.
+log_event() { # log_event <resultado> <ronda> <intento> <sha> <racha>
+  printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    "$(date '+%F %T')" "$MODE" "$2" "$3" "$1" "$4" "$5" >> "$ROUNDS_LOG"
+}
+
 # Regla de deadlock: 5 rondas consecutivas sin convergencia bloquean el loop ANTES de gastar otra ronda.
 STREAK="$(cat "$STREAK_FILE" 2>/dev/null || echo 0)"
 if [ "$MODE" = "new" ]; then
@@ -66,12 +104,16 @@ if [ "$MODE" = "new" ]; then
   echo 0 > "$STREAK_FILE"
 fi
 if [ "$STREAK" -ge 5 ]; then
+  log_event DEADLOCK - - - "$STREAK"
   echo "DEADLOCK: $STREAK rondas consecutivas sin convergencia. Armar RECAP con ambas posturas para el humano; tras su desempate, correr: scripts/review.sh reset-deadlock" >&2
   exit 2
 fi
 
 PEDIDO="$(cat || true)"
 if [ -z "$PEDIDO" ]; then
+  # Deja rastro en el log aunque no haya invocación: un `new` con stdin vacío ya abrió el
+  # ciclo (racha rearmada) y sin línea propia `status` resumiría el ciclo anterior.
+  log_event INPUT_ERROR - - - "$STREAK"
   echo "error: falta el pedido del generador por stdin" >&2
   exit 2
 fi
@@ -161,33 +203,72 @@ COMMON_ARGS=( -m "$REVIEW_MODEL"
   -o "$MSG_FILE" )
 NEW_ARGS=( "${COMMON_ARGS[@]}" --cd "$WT_DIR" )
 
-echo "── review ronda $ROUND · modelo $REVIEW_MODEL · esfuerzo $REVIEW_EFFORT · rango $RANGE ──"
-rm -f "$MSG_FILE"
-RC=0
-if [ "$MODE" = "new" ]; then
-  rm -f "$SESSION_FILE"
-  run_codex exec "${NEW_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1 || RC=$?
-  SID="$(grep -m1 -oE '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' "$EVENTS_FILE" || true)"
+invoke_new() {
+  run_codex exec "${NEW_ARGS[@]}" - <<<"$PROMPT" > "$EVENTS_FILE" 2>&1
+}
+invoke_resume() { # $1 = session id, o --last como último recurso
+  (cd "$WT_DIR" && run_codex exec resume "$1" "${COMMON_ARGS[@]}" - <<<"$PROMPT") > "$EVENTS_FILE" 2>&1
+}
+# El session id es el thread_id del evento thread.started — nunca "el primer UUID del
+# archivo": los eventos mezclan el stderr de codex, y un UUID espurio en una línea de
+# error capturaría una sesión falsa. Sin thread.started no hay id (aviso; resume --last).
+capture_sid() {
+  SID="$(awk -F'"thread_id":"' '/"type":"thread.started"/ && NF > 1 { split($2, a, "\""); print a[1]; exit }' "$EVENTS_FILE" 2>/dev/null || true)"
   if [ -n "$SID" ]; then
     echo "$SID" > "$SESSION_FILE"
   else
     echo "aviso: no pude capturar el session id; 'round' usará resume --last" >&2
   fi
+}
+proc_ok() { [ "$RC" -eq 0 ] && [ -s "$MSG_FILE" ]; }
+
+echo "── review ronda $ROUND · modelo $REVIEW_MODEL · esfuerzo $REVIEW_EFFORT · rango $RANGE ──"
+rm -f "$MSG_FILE"
+RC=0
+ATTEMPT=1
+if [ "$MODE" = "new" ]; then
+  rm -f "$SESSION_FILE"
+  invoke_new || RC=$?
+  capture_sid   # también tras un intento fallido: si alcanzó a emitir thread.started, la sesión existe
 else
   SID="$(cat "$SESSION_FILE" 2>/dev/null || true)"
-  if [ -n "$SID" ]; then
-    (cd "$WT_DIR" && run_codex exec resume "$SID" "${COMMON_ARGS[@]}" - <<<"$PROMPT") > "$EVENTS_FILE" 2>&1 || RC=$?
+  invoke_resume "${SID:---last}" || RC=$?
+fi
+
+# Reintento único ante FALLA DE PROCESO (RC≠0, o mensaje final ausente/vacío), en la misma
+# ronda. Un mensaje bien entregado con veredicto inválido NO es transitorio: no se reintenta.
+RETRIES="${AXEL_REVIEW_RETRIES:-1}"
+if ! proc_ok && [ "$RETRIES" -ge 1 ]; then
+  echo "aviso: falla de proceso de codex (exit $RC$([ -s "$MSG_FILE" ] || echo ', sin mensaje final')); reintento único en la misma ronda — eventos del intento fallido en $FAILED_EVENTS_FILE" >&2
+  log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
+  mv -f "$EVENTS_FILE" "$FAILED_EVENTS_FILE" 2>/dev/null || true
+  rm -f "$MSG_FILE"
+  RC=0
+  ATTEMPT=2
+  if [ "$MODE" = "new" ]; then
+    # Frontera de contexto: con thread_id capturado se reanuda ESA sesión exacta; sin él
+    # se lanza un exec nuevo — jamás resume --last, que podría retomar la sesión del
+    # feature anterior.
+    SID="$(cat "$SESSION_FILE" 2>/dev/null || true)"
+    if [ -n "$SID" ]; then
+      invoke_resume "$SID" || RC=$?
+    else
+      invoke_new || RC=$?
+      capture_sid
+    fi
   else
-    (cd "$WT_DIR" && run_codex exec resume --last "${COMMON_ARGS[@]}" - <<<"$PROMPT") > "$EVENTS_FILE" 2>&1 || RC=$?
+    invoke_resume "${SID:---last}" || RC=$?
   fi
 fi
 
 # Un error de codex invalida la corrida aunque haya quedado un mensaje escrito: no se toma veredicto.
 if [ "$RC" -ne 0 ]; then
+  log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
   echo "error: codex terminó con exit $RC; no se toma veredicto. Ver $EVENTS_FILE" >&2
   exit 2
 fi
 if [ ! -s "$MSG_FILE" ]; then
+  log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
   echo "error: codex no produjo mensaje final; ver $EVENTS_FILE" >&2
   exit 2
 fi
@@ -204,6 +285,7 @@ case "$VERDICT" in
     echo "$REVIEW_HEAD" > "$BASE_FILE"
     echo 0 > "$STREAK_FILE"
     echo "APPROVED · ronda $ROUND · $REVIEW_HEAD_SHORT · $(date +%F)" > "$VERDICT_FILE"
+    log_event APPROVED "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" 0
     echo "── resultado: APPROVED (base movida a $REVIEW_HEAD_SHORT) ──"
     if [ "$(git rev-parse HEAD)" != "$REVIEW_HEAD" ]; then
       echo "AVISO: hay commits posteriores a $REVIEW_HEAD_SHORT hechos durante la review — NO están aprobados; entran en el próximo rango" >&2
@@ -212,9 +294,11 @@ case "$VERDICT" in
   "VERDICT: CHANGES_REQUESTED")
     echo "$((STREAK + 1))" > "$STREAK_FILE"
     echo "CHANGES_REQUESTED · ronda $ROUND · racha $((STREAK + 1)) · $(date +%F)" > "$VERDICT_FILE"
+    log_event CHANGES_REQUESTED "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$((STREAK + 1))"
     echo "── resultado: CHANGES_REQUESTED (ronda $ROUND, racha $((STREAK + 1))) ──"
     exit 1 ;;
   *)
+    log_event NO_VERDICT "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
     echo "error: la última línea del mensaje no es un veredicto válido (\"$VERDICT\"); ver $MSG_FILE" >&2
     exit 2 ;;
 esac

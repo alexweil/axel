@@ -58,6 +58,6 @@ cambio → commit → `scripts/review.sh` → si `CHANGES_REQUESTED`: corregir o
 
 - Docs, commits y comunicación en español. Código, nombres de archivos e identificadores en inglés.
 - Modelo/esfuerzo del reviewer se tunean SOLO en `scripts/review.sh` (overrides puntuales por env `AXEL_REVIEW_*`).
-- Estado local no versionado (session id de Codex, SHA del último APPROVED, ronda) en `.claude/state/`.
+- Estado local no versionado (session id de Codex, SHA del último APPROVED, ronda/racha y el registro de métricas `rounds-log`) en `.claude/state/`.
 - Reviews con esfuerzo xhigh pueden tardar >10 minutos: el generador las corre en background y continúa cuando terminan.
 - **La máquina no debe dormirse mientras el loop trabaja** — ni generando ni revisando. Al entrar a un loop, el generador corre `scripts/awake.sh start` (ventana renovable de 12h como backstop) y la deja corriendo durante la espera de OK; además `review.sh` envuelve cada invocación de Codex en `caffeinate`. Límite físico: tapa cerrada duerme igual, salvo con corriente y display externo.

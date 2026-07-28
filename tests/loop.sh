@@ -624,6 +624,137 @@ assert_rc 0
 assert_eq "$(cat "$OBS7.residue")" "AUSENTE" "residuo limpiado"
 assert_eq "$(cat "$OBS7.status")" "" "worktree limpio al arrancar la ronda"
 
+# ── L8 · session id por thread.started + retry transitorio (paso B) ──────────
+t "L8 UUID espurio en stderr antes de thread.started: se captura el thread_id"
+R8="$(mk_repo l8)"
+codex_reset
+SPUR=$'2026-07-28T01:15:19Z ERROR request 99999999-9999-4999-8999-999999999999 fallo transitorio\n{"type":"thread.started","thread_id":"cccccccc-3333-4333-8333-333333333333"}\n{"type":"turn.started"}'
+FAKE_CODEX_EVENTS="$SPUR" run_review "$R8" new p
+assert_rc 0
+assert_eq "$(st "$R8" codex-session-id)" "cccccccc-3333-4333-8333-333333333333" "thread_id correcto, no el UUID espurio"
+
+t "L8 retry de new con SID: resume exacto de la sesión del intento fallido"
+codex_reset
+PLAN8="$TESTS_TMP/plan-l8a"; rm -rf "$PLAN8"; mkdir -p "$PLAN8"
+echo 9 > "$PLAN8/1.rc"
+FAKE_CODEX_PLAN="$PLAN8" FAKE_CODEX_SID="dddddddd-4444-4444-8444-444444444444" run_review "$R8" new p
+assert_rc 0
+assert_eq "$(codex_calls)" "2" "dos intentos"
+assert_out "reintento único"
+codex_argv 2 | grep -q 'exec resume dddddddd-4444-4444-8444-444444444444' && ok || ko "el retry no resumió la sesión exacta: $(codex_argv 2)"
+assert_eq "$(st "$R8" round)" "1" "misma ronda"
+assert_eq "$(st "$R8" last-approved-sha)" "$(git -C "$R8" rev-parse HEAD)" "el veredicto del intento 2 escribió estado"
+assert_file "$R8/.claude/state/last-review-events.failed.jsonl"
+grep -q '"type":"thread.started"' "$R8/.claude/state/last-review-events.failed.jsonl" && ok || ko "los eventos del intento fallido no se preservaron"
+
+t "L8 retry de new sin SID: exec nuevo, jamás resume --last"
+codex_reset
+PLAN8="$TESTS_TMP/plan-l8b"; rm -rf "$PLAN8"; mkdir -p "$PLAN8"
+echo 9 > "$PLAN8/1.rc"
+printf '%s\n' '{"type":"error","message":"murió antes de abrir sesión"}' > "$PLAN8/1.events"
+FAKE_CODEX_PLAN="$PLAN8" FAKE_CODEX_SID="eeeeeeee-5555-4555-8555-555555555555" run_review "$R8" new p
+assert_rc 0
+assert_eq "$(codex_calls)" "2" "dos intentos"
+codex_argv 2 | grep -q ' resume ' && ko "el retry sin SID no debe resumir: $(codex_argv 2)" || ok
+codex_argv 2 | grep -q -- '--cd' && ok || ko "el retry sin SID debe ser un exec nuevo (con --cd)"
+assert_eq "$(st "$R8" codex-session-id)" "eeeeeeee-5555-4555-8555-555555555555" "SID capturado del intento 2"
+
+t "L8 retry de round: mismo SID, misma ronda, veredicto del intento 2"
+codex_reset
+PLAN8="$TESTS_TMP/plan-l8c"; rm -rf "$PLAN8"; mkdir -p "$PLAN8"
+echo 9 > "$PLAN8/1.rc"
+printf 'VERDICT: CHANGES_REQUESTED' > "$PLAN8/2.msg"
+ROUND_L8="$(st "$R8" round)"
+SID_L8="$(st "$R8" codex-session-id)"
+FAKE_CODEX_PLAN="$PLAN8" run_review "$R8" round p
+assert_rc 1
+assert_eq "$(codex_calls)" "2" "dos intentos"
+codex_argv 1 | grep -q "exec resume $SID_L8" && ok || ko "intento 1 sin resume del SID vigente"
+codex_argv 2 | grep -q "exec resume $SID_L8" && ok || ko "intento 2 sin resume del mismo SID"
+assert_eq "$(st "$R8" round)" "$((ROUND_L8 + 1))" "una sola ronda consumida"
+assert_eq "$(st "$R8" changes-streak)" "1" "racha del veredicto del intento 2"
+
+t "L8 dos fallas consecutivas: exit 2 y resultado intacto"
+codex_reset
+PLAN8="$TESTS_TMP/plan-l8d"; rm -rf "$PLAN8"; mkdir -p "$PLAN8"
+echo 9 > "$PLAN8/1.rc"; echo 9 > "$PLAN8/2.rc"
+RS_L8="$(result_state "$R8")"
+FAKE_CODEX_PLAN="$PLAN8" run_review "$R8" round p
+assert_rc 2
+assert_eq "$(codex_calls)" "2" "dos intentos y no más"
+assert_eq "$(result_state "$R8")" "$RS_L8" "estado de resultado intacto"
+
+t "L8 mensaje vacío con RC 0 también se reintenta"
+codex_reset
+PLAN8="$TESTS_TMP/plan-l8e"; rm -rf "$PLAN8"; mkdir -p "$PLAN8"
+printf '@none' > "$PLAN8/1.msg"
+printf 'VERDICT: CHANGES_REQUESTED' > "$PLAN8/2.msg"
+FAKE_CODEX_PLAN="$PLAN8" run_review "$R8" round p
+assert_rc 1
+assert_eq "$(codex_calls)" "2" "reintentado tras mensaje ausente"
+assert_out "sin mensaje final"
+
+t "L8 veredicto inválido NO se reintenta"
+codex_reset
+FAKE_CODEX_MSG='una review entregada sin línea de veredicto' run_review "$R8" round p
+assert_rc 2
+assert_eq "$(codex_calls)" "1" "sin retry ante veredicto inválido"
+
+t "L8 AXEL_REVIEW_RETRIES=0 desactiva el retry"
+codex_reset
+AXEL_REVIEW_RETRIES=0 FAKE_CODEX_RC=9 run_review "$R8" round p
+assert_rc 2
+assert_eq "$(codex_calls)" "1" "sin retry con retries=0"
+
+# ── L9 · métricas: rounds-log y resumen de status (paso B) ────────────────────
+t "L9 esquema: new + fallo→éxito comparten número de ronda (una ronda, dos intentos)"
+R9="$(mk_repo l9)"
+codex_reset
+run_review "$R9" new p
+assert_rc 0
+PLAN9="$TESTS_TMP/plan-l9"; rm -rf "$PLAN9"; mkdir -p "$PLAN9"
+echo 9 > "$PLAN9/1.rc"
+printf 'VERDICT: CHANGES_REQUESTED' > "$PLAN9/2.msg"
+codex_reset   # el contador del doble es global: el plan numera desde esta invocación
+FAKE_CODEX_PLAN="$PLAN9" run_review "$R9" round p
+assert_rc 1
+RL9="$R9/.claude/state/rounds-log"
+assert_file "$RL9"
+assert_eq "$(wc -l < "$RL9" | tr -d ' ')" "3" "tres eventos"
+awk -F'\t' 'NR==1 { exit !($2=="new" && $3=="1" && $4=="1" && $5=="APPROVED" && $7=="0") }' "$RL9" && ok || ko "línea 1 inesperada: $(sed -n 1p "$RL9")"
+awk -F'\t' 'NR==2 { exit !($2=="round" && $3=="2" && $4=="1" && $5=="PROC_FAIL") }' "$RL9" && ok || ko "línea 2 inesperada: $(sed -n 2p "$RL9")"
+awk -F'\t' 'NR==3 { exit !($2=="round" && $3=="2" && $4=="2" && $5=="CHANGES_REQUESTED" && $7=="1") }' "$RL9" && ok || ko "línea 3 inesperada: $(sed -n 3p "$RL9")"
+
+t "L9 NO_VERDICT, DEADLOCK e INPUT_ERROR quedan en el log"
+FAKE_CODEX_MSG='sin veredicto' run_review "$R9" round p
+assert_rc 2
+awk -F'\t' 'END { exit !($5=="NO_VERDICT" && $4=="1") }' "$RL9" && ok || ko "NO_VERDICT no quedó: $(tail -1 "$RL9")"
+echo 5 > "$R9/.claude/state/changes-streak"
+run_review "$R9" round p
+assert_rc 2
+awk -F'\t' 'END { exit !($5=="DEADLOCK" && $3=="-" && $4=="-" && $6=="-" && $7=="5") }' "$RL9" && ok || ko "DEADLOCK no quedó: $(tail -1 "$RL9")"
+run_review "$R9" new ""
+assert_rc 2
+awk -F'\t' 'END { exit !($2=="new" && $5=="INPUT_ERROR" && $3=="-" && $4=="-" && $7=="0") }' "$RL9" && ok || ko "INPUT_ERROR no quedó: $(tail -1 "$RL9")"
+
+t "L9 status: el new fallido delimita el ciclo y los pre-invocación no cuentan como intentos"
+run_review "$R9" status
+assert_rc 0
+assert_out "0 ronda(s) · 0 intento(s) · 1 evento(s)"
+assert_out "INPUT_ERROR=1"
+
+t "L9 status tras ciclo nuevo con retry: denominadores correctos"
+run_review "$R9" new p
+assert_rc 0
+codex_reset
+FAKE_CODEX_PLAN="$PLAN9" run_review "$R9" round p
+assert_rc 1
+run_review "$R9" status
+assert_rc 0
+assert_out "2 ronda(s) · 3 intento(s) · 3 evento(s)"
+assert_out "PROC_FAIL=1"
+assert_out "CHANGES_REQUESTED=1"
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
 echo "── loop.sh: $PASS ok · $FAIL fail ──"
