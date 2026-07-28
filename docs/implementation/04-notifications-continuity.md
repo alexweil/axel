@@ -135,3 +135,5 @@ El ejercicio vivo del protocolo completo — el push del RECAP de cierre del 04 
 ## Cierre
 
 Feature cerrado el 2026-07-28 con el APPROVED de Codex en la ronda 5. **Cierre terminal**: no queda feature siguiente en IMPLEMENTATION.md, así que no hay ciclo que barra este commit de cierre — queda cubierto por el OK humano del RECAP terminal, que lo lista como no-revisado-por-Codex (camino terminal del contrato). El cierre es bookkeeping puro (solo docs: esta sección, Review log r5, IMPLEMENTATION, STATUS). La aceptación terminal (push del RECAP de cierre y rama terminal de la continuidad: sin chip, ofrecimiento de `/plan`) se ejercita en el RECAP y su resultado queda registrado ahí, bajo el OK humano.
+
+**OK humano recibido el 2026-07-28**: cubre el commit de cierre `a5b44ae` (y este registro). Aceptación terminal ejercitada en el RECAP: push del cierre aceptado por el harness ("Mobile push requested."), rama terminal sin chip con ofrecimiento de `/plan`. Con este OK el plan 00–04 queda completo.
