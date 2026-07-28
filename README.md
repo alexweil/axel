@@ -31,7 +31,7 @@ Sin argumentos, el instalador **asume dos cosas y las anuncia antes de tocar nad
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash -s -- --from https://github.com/alexweil/axel <repo-destino>
 ```
 
-**Cómo saber que corrió**: toda corrida termina con una línea `── axel · fin: rc=N · …`. Si no la ves, el instalador **no completó** — típicamente `curl` falló y `bash` recibió entrada vacía, que retorna 0 sin haber ejecutado nada (el pipe no propaga el fallo de `curl`). Para uso scripteado, esta variante sí lo propaga:
+**Cómo saber que corrió**: toda corrida termina con una línea `── axel · fin: rc=N · …`. Si no la ves, lo único que podés concluir es que **no hay finalización confirmada**: lo más común es que `curl` haya fallado y `bash` recibido entrada vacía, que retorna 0 sin ejecutar nada (el pipe no propaga el fallo de `curl`), pero también puede ser una corrida interrumpida **después** de empezar a escribir — así que revisá `git status` del destino antes de reintentar. Para uso scripteado, esta variante sí propaga el fallo del transporte:
 
 ```bash
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash'
@@ -55,7 +55,7 @@ Si te pidieron "instalá axel siguiendo esta URL", este es tu procedimiento comp
 
 1. **Precondiciones**: el destino es un repo git con **árbol limpio** (commiteá o stasheá antes); `git`, `curl` y `python3` disponibles. El destino es el **toplevel** del repo: `git rev-parse --show-toplevel`.
 2. **Corré el one-liner** de arriba. Si tenés certeza de estar parado en el repo destino, la forma corta sin argumentos alcanza (asume ese toplevel y lo anuncia); **si no estás seguro, pasá el destino explícito** con `bash -s -- --from https://github.com/alexweil/axel <toplevel>` — el destino asumido es la única parte del comando que depende de dónde estés parado. No necesitás clonar axel: el comando baja y cachea todo en `~/.axel`.
-3. **Chequeá primero la línea final**: la salida de una corrida real termina en `── axel · fin: rc=N · …`. Si esa línea no está, el instalador **no completó** (típicamente falló la descarga y `bash` recibió entrada vacía, que retorna 0): no interpretes el exit code como resultado de la instalación — reintentá o usá `bash -o pipefail -c '…'`.
+3. **Chequeá primero la línea final**: la salida de una corrida real termina en `── axel · fin: rc=N · …`. Si esa línea no está, no hay **finalización confirmada** y el exit code no dice nada sobre la instalación: lo más común es que fallara la descarga y `bash` recibiera entrada vacía (retorna 0 sin ejecutar nada), pero una corrida interrumpida después de escribir deja diff parcial — **revisá `git status` del destino antes de reintentar**, y usá `bash -o pipefail -c '…'` si querés que el fallo del transporte se propague.
 4. **Reaccioná según el exit code**:
    - `0` — instalado sin pendientes: revisá el diff (`git status`), commitealo con el proceso del proyecto y corré `/status` para ubicarte (`/design` si el proyecto arranca de cero).
    - `1` — instalado con pendientes: revisá y commiteá el diff igual, y cerrá la adopción con `/adopt` (los hallazgos están en `docs/ADOPTION.md`).

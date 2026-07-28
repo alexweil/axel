@@ -2,7 +2,19 @@
 
 {{PROJECT}} se desarrolla con **axel**, una maquinaria de dos agentes en loop: **Claude Code genera, Codex revisa**, iterando hasta acuerdo, con la documentación como memoria persistente y checkpoints de OK humano.
 
-> **Maquinaria instalada desde axel.** Las skills (`.claude/skills/`), los scripts del loop (`scripts/review.sh`, `scripts/awake.sh`), la política del loop (`.claude/axel-policy.json`) y el contrato de review (`docs/design/review-contract.md`) son archivos de la maquinaria: se actualizan re-corriendo el instalador de axel y **no se editan acá** — los cambios de maquinaria se hacen en axel. Sin un clon local de axel, la actualización es el mismo one-liner remoto de la instalación, corrido **desde el toplevel de este proyecto** (`curl -fsSL <raw>/scripts/install.sh | bash`, comando completo en el README de axel): asume como destino el repo git donde estás parado —lo anuncia antes de tocar nada— clona/actualiza el cache `~/.axel` y re-corre la instalación acá. Si no estás seguro de dónde estás parado, usá la forma explícita `bash -s -- --from <url> <repo-destino>`. Toda corrida termina con una línea `── axel · fin: rc=N`: si falta, la descarga falló y no se instaló nada. (Si tocás el método en axel, actualizá también su `templates/AGENTS.md`.)
+> **Maquinaria instalada desde axel.** Las skills (`.claude/skills/`), los scripts del loop (`scripts/review.sh`, `scripts/awake.sh`), la política del loop (`.claude/axel-policy.json`) y el contrato de review (`docs/design/review-contract.md`) son archivos de la maquinaria: se actualizan re-corriendo el instalador de axel y **no se editan acá** — los cambios de maquinaria se hacen en axel. Sin un clon local de axel, la actualización es el mismo one-liner remoto de la instalación, corrido **desde el toplevel de este proyecto**: asume como destino el repo git donde estás parado —lo anuncia antes de tocar nada—, clona/actualiza el cache `~/.axel` y re-corre la instalación acá.
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
+> ```
+>
+> Si no estás seguro de dónde estás parado, pasá el destino explícito:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash -s -- --from https://github.com/alexweil/axel <repo-destino>
+> ```
+>
+> Toda corrida termina con una línea `── axel · fin: rc=N`. Si falta, lo único que podés concluir es que **no hay finalización confirmada** —descarga fallida o parcial, o corrida interrumpida—: revisá `git status` antes de reintentar, porque una caída posterior a las escrituras puede haber dejado diff parcial. (Si tocás el método en axel, actualizá también su `templates/AGENTS.md`.)
 
 ## Sobre este proyecto
 

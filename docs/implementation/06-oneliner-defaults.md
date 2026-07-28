@@ -174,12 +174,21 @@ prueba (`git init -b main` + commit vacío). Detalle importante: el delegado que
 
 **Control — mismo comando parado fuera de un repo git**: RC **2** con el diagnóstico esperado ("sin `<target-dir>` el destino es el repo git donde estás parado, y … no está dentro del árbol de trabajo de ninguno") y su línea final `rc=2`.
 
-**Gap declarado**: lo que estas corridas **no** cubren es `curl` bajando el script **nuevo** de
-`raw.githubusercontent`, porque `main` publicado está 46 commits atrás (sirve todavía el instalador
-del feature 02). El one-liner exacto del README solo puede verificarse **después de publicar**; hasta
-entonces, lo verificado es todo el resto del camino real: stdin sin argumentos, default de fuente
+**Gap — y por qué bloquea el criterio 7** (punto 1 de la r10): lo que estas corridas **no** cubren es
+`curl` bajando el script **nuevo** desde `raw.githubusercontent`, porque `main` publicado está 46
+commits atrás (sirve todavía el instalador del feature 02). El reviewer lo verificó ejecutando el
+one-liner exacto del README en un repo temporal limpio: **RC 2**, `uso: bash [--from <url>] <target-dir>`
+y cero líneas finales — es decir, **hoy el camino principal documentado no funciona para un tercero**.
+Lo verificado hasta acá es todo el resto del camino real (stdin sin argumentos, default de fuente
 contra la URL canónica, consulta y clone reales contra github.com, default de destino, lock,
-delegación y línea final. Queda anotado para el RECAP: es una acción de publicación que decide el humano.
+delegación, línea final y skew con el delegado publicado), pero el criterio 7 pide el comando exacto y
+ese exige **publicar primero**.
+
+Publicar es una acción del humano, no del loop: el feature queda **frenado en checkpoint** hasta esa
+decisión. Con la publicación, el camino es correr el one-liner exacto en los tres escenarios
+(inicial, update, fuera de repo git), registrar la evidencia acá y volver a review para el APPROVED de
+cierre. La alternativa —cerrar antes de publicar— exige que el humano modifique explícitamente el
+criterio 7; el contrato actual no permite darlo por cumplido.
 
 ## Review log
 
@@ -206,3 +215,6 @@ delegación y línea final. Queda anotado para el RECAP: es una acción de publi
   3. T16n verificaba solo la última línea, así que dos líneas finales habrían pasado → helper nuevo `assert_one_final_rc` que exige **exactamente una** permitiendo el diagnóstico de incompletitud previo (el estricto `assert_final_rc` lo sigue prohibiendo), y el comentario residual "antes de cualquier git" del encabezado de T16 quedó corregido a "operación de red".
 - **Ronda 8 (paso A): CHANGES_REQUESTED** (1 punto documental, aceptado; convergiendo 3→3→1. El reviewer no encontró problemas de código: verificó por su cuenta el repro `AXEL_INSTALL_INNER=$$`, el fallo real de `mktemp` con delegado nuevo, el lock liberado, la única línea final, y suite/`bash -n`/`git diff --check`/shellcheck). Resolución:
   1. Tres afirmaciones quedaron atrás del RC interno 3 → corregidas: el caso "no armado" ahora dice **top-level** y remite a la excepción del delegado; la nota de aditividad ya no afirma que el único RC alterado sea el 0 ni que no exista en la matriz (T16n induce justamente un 1 del delegado que sale como 3); y la evidencia del paso A pasa a **459 asserts**, señalando que los 425 eran la primera versión, previa a los casos de r6 y r7.
+- **Ronda 10 (paso B): CHANGES_REQUESTED** (2 puntos, ambos bloqueantes y ambos aceptados; el reviewer verificó suite —459 ok—, lint, `bash -n` y `git diff --check`). Resolución:
+  1. **Criterio 7 no cumplido**: la aceptación corrió el wrapper local por stdin, no el comando exacto del README; el reviewer ejecutó el one-liner publicado en un repo limpio y obtuvo **RC 2 con el uso del instalador viejo y sin línea final** — el camino principal documentado no funciona para un tercero hasta que se publique. **No corregible por el loop**: publicar es decisión del humano → el feature queda frenado en checkpoint, con la evidencia y las dos salidas (publicar y re-verificar, o modificar explícitamente el criterio) registradas arriba y llevadas al RECAP.
+  2. **Garantía falsa en la plantilla**: `templates/AGENTS.md` afirmaba que la ausencia de línea final significa "la descarga falló y no se instaló nada", cuando el contrato solo habilita "no hay finalización confirmada" —una caída posterior a las escrituras deja diff parcial— → corregido ahí y en el paso 3 de la guía del README, ambos con la instrucción de revisar `git status` antes de reintentar; la plantilla incluye además los dos pipelines completos y ejecutables (corto y explícito), porque `bash -s -- --from …` suelto no es un comando que se pueda correr.
