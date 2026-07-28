@@ -31,7 +31,7 @@ El script piped solo parsea argumentos, clona (o actualiza por fast-forward) un 
 scripts/install.sh /path/al/repo-destino
 ```
 
-Instala la maquinaria (skills, scripts del loop, contrato, política de permisos) y siembra lo que falte (AGENTS.md + symlink CLAUDE.md, docs, settings). Tres modos, sin flags: instalación desde cero; **adopción** si el repo ya tiene docs propios — los docs y semillas preexistentes quedan intactos, los hallazgos van a `docs/ADOPTION.md` y el cierre se hace con `/adopt` en el destino —; y **actualización** al re-correrlo, con axel como fuente de verdad: los archivos de **maquinaria** (skills, scripts, contrato, política) se sobreescriben aunque los hayas tocado, los docs y settings del proyecto no se tocan nunca, y a `.gitignore` solo se le agrega la entrada `.claude/state/` si falta. Exige repo git con árbol limpio y python3; no commitea: el diff queda para tu proceso. Exit 0 = sin pendientes, 1 = pendientes en `docs/ADOPTION.md`, 2 = rechazo sin tocar el destino. Tests: `tests/install.sh`.
+Instala la maquinaria (skills, scripts del loop, contrato, política de permisos) y siembra lo que falte (AGENTS.md + symlink CLAUDE.md, docs, settings). Tres modos, sin flags: instalación desde cero; **adopción** si el repo ya tiene docs propios — los docs y semillas preexistentes quedan intactos, los hallazgos van a `docs/ADOPTION.md` y el cierre se hace con `/adopt` en el destino —; y **actualización** al re-correrlo, con axel como fuente de verdad: los archivos de **maquinaria** (skills, scripts, contrato, política) se sobreescriben aunque los hayas tocado, los docs y settings del proyecto no se tocan nunca, y a `.gitignore` solo se le agrega la entrada `.claude/state/` si falta. Exige repo git con árbol limpio y python3; no commitea: el diff queda para tu proceso. Exit 0 = sin pendientes, 1 = pendientes en `docs/ADOPTION.md`, 2 = rechazo sin tocar el destino — salvo el caso, señalado con aviso explícito, de un instalador interrumpido a mitad de escritura (revisar `git status`). Tests: `tests/install.sh`.
 
 ### Para agentes (Claude Code)
 
@@ -45,4 +45,8 @@ Si te pidieron "instalá axel siguiendo esta URL", este es tu procedimiento comp
    - `2` — leé el reporte: si es un **rechazo** (precondiciones, preflight, cache), no se escribió nada en el destino (el cache `~/.axel` sí pudo crearse o actualizarse) — resolvé la causa y reintentá; si el aviso dice que el instalador fue **interrumpido** (RC anómalo o señal), revisá `git status` del destino antes de seguir: puede haber diff parcial.
 4. **Desde adentro de una sesión de Claude Code**: las skills instaladas (`/status`, `/design`, `/adopt`, …) se cargan en caliente y podés usarlas ya; los permisos del `.claude/settings.json` sembrado rigen plenos recién en la **sesión siguiente** — hasta entonces puede haber prompts de confirmación. El instalador nunca commitea: el commit es tuyo, con el proceso del destino.
 
-Para auditar antes de ejecutar: el camino en dos pasos (`git clone https://github.com/alexweil/axel && axel/scripts/install.sh <repo-destino>`) hace exactamente lo mismo, con el instalador a la vista.
+Para auditar antes de ejecutar: el camino en dos pasos hace exactamente lo mismo, con el instalador a la vista. Cloná axel **fuera del destino** (adentro ensuciaría el árbol que el instalador exige limpio) y pasale el toplevel:
+
+```bash
+AXEL_SRC="$(mktemp -d)/axel" && git clone https://github.com/alexweil/axel "$AXEL_SRC" && "$AXEL_SRC/scripts/install.sh" "$(git rev-parse --show-toplevel)"
+```
