@@ -57,7 +57,7 @@ Tras el APPROVED final de un feature, el generador hace commits de cierre (solo 
 
 `review.sh` publica, como **último acto de todo camino de salida** de `new|round`, un registro terminal en `.claude/state/review-terminal` — **atómico** (tmp + `mv` en el mismo filesystem: ningún lector ve un terminal a medias) y con la identidad de la invocación, una `clave=valor` por línea: `ts` (ISO-8601 UTC), `id` (env `AXEL_REVIEW_ID`, `-` si no vino), `mode` (`new|round`), `round` y `review_head` (`-` en los rechazos pre-invocación), `result` (`APPROVED | CHANGES_REQUESTED | NO_VERDICT | PROC_FAIL | DEADLOCK | INPUT_ERROR | ABORTED`) y `rc` (el exit code real). Reglas:
 
-- `id` es la **identidad de invocación** del modo lote ([design/batch-features.md](batch-features.md)): el invocador la pasa por env con unicidad real por invocación (`<NN>:r<M>:<nonce>`). Fuera del lote no se setea y nada del flujo cambia.
+- `id` es la **identidad de invocación** del modo lote de `/feature` (protocolo operativo: skill `feature`; el diseño de fondo vive en el repo axel como `design/batch-features.md`, fuera del payload instalado): el invocador la pasa por env con unicidad real por invocación (`<NN>:r<M>:<nonce>`). Fuera del lote no se setea y nada del flujo cambia.
 - `ABORTED` es el default para una salida no clasificada (p. ej. un fallo de `set -e` a mitad de corrida), con lo capturado hasta ahí.
 - `status`, `reset-deadlock` y el uso inválido **no** son invocaciones de review: no escriben terminal.
 - Para un consumidor externo (el padre del lote), el terminal es el **desenlace autoritativo**: `last-verdict` y `last-review.md` solo son vigentes cuando `result` es `APPROVED` o `CHANGES_REQUESTED` — ante cualquier otro resultado quedaron deliberadamente viejos.

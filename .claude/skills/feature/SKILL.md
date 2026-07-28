@@ -18,7 +18,7 @@ El gate de arranque quedó presentado sin confirmación registrada: no avances t
 
 ## Si STATUS dice «esperando autorización de lote»
 
-El gate de lote quedó presentado sin autorización registrada: no avances trabajo nuevo. Re-derivá los N resúmenes de los docs y re-presentá el gate de lote completo (resúmenes + pedido de autorización). Procedencia: respuesta directa — aviso según skill `recap`. Con la autorización, seguí desde el paso 2 del modo lote.
+El gate de lote quedó presentado sin autorización registrada: no avances trabajo nuevo. Re-derivá los N resúmenes de los docs y re-presentá el gate de lote completo (resúmenes + pedido de autorización). Procedencia: respuesta directa — aviso según skill `recap`. Con la autorización, seguí desde el bloque **«Con la autorización»** del paso 2 del modo lote — no re-presentes ni pidas una segunda autorización.
 
 ## Feature nuevo (STATUS no apunta a ninguno en curso)
 
@@ -33,7 +33,7 @@ El gate de lote quedó presentado sin autorización registrada: no avances traba
 
 ## Modo lote (`/feature all` · `/feature NN..MM`)
 
-Varios features pendientes en una sola corrida: gate de lote al inicio, un **subagente fresco por feature** (vos sos el padre orquestador), RECAP consolidado al final cuyo OK cierra. Diseño: `docs/design/batch-features.md`; la señal terminal es contrato de `review.sh` (`docs/design/review-contract.md`).
+Varios features pendientes en una sola corrida: gate de lote al inicio, un **subagente fresco por feature** (vos sos el padre orquestador), RECAP consolidado al final cuyo OK cierra. El protocolo operativo completo vive en esta skill; la señal terminal es contrato de `review.sh` (`docs/design/review-contract.md`, instalado con la maquinaria). El diseño de fondo es un doc del repo axel (`docs/design/batch-features.md` allá), no parte del payload instalado.
 
 **Requisito de harness**: subagentes en background reanudables por mensaje (hoy: la herramienta de agentes + SendMessage). Si la sesión no los tiene, decilo y ofrecé el flujo individual — no degrades a un lote sin fronteras de contexto.
 
@@ -57,7 +57,7 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
      done; echo "TIMEOUT: sin terminal id=ID_ESPERADO"; exit 1
      ```
    - `FEATURE NN APROBADO` ⇒ verificá el estado (IMPLEMENTATION con «APPROVED — pendiente OK de lote», STATUS al día, commits presentes, `batch-expected` borrada) ⇒ ledger (estado, SHAs frontera, evento con ronda final) + commit ⇒ siguiente feature.
-   - `CORTE: <motivo>` del hijo, o corte propio (condiciones: las del loop actual + timeout de terminal; cambio de scope; divergencia; fuentes insuficientes) ⇒ registralo en el ledger + commit ⇒ RECAP con el estado encontrado (posturas de ambos agentes si hubo desacuerdo) + **push de una línea** + fin de turno. Los features ya aprobados quedan intactos.
+   - `CORTE: <motivo>` del hijo, o corte propio (condiciones: las del loop actual + timeout de terminal; cambio de scope; divergencia; fuentes insuficientes) ⇒ **verificá el árbol antes de commitear**: si el hijo dejó cambios sin commitear, no los absorbas — commiteá **solo el ledger** (add explícito del archivo, jamás `-A`) y registrá la suciedad en el RECAP. Registrá el corte en el ledger + commit ⇒ RECAP con el estado encontrado (posturas de ambos agentes si hubo desacuerdo) + **push de una línea** + fin de turno. Los features ya aprobados quedan intactos.
    - **Mensajes del humano a mitad de lote**: prioridad absoluta. Respondé; si afecta al feature en curso, bajalo **de inmediato** por mensaje al hijo (lo despierta aunque espere una review; lo atiende antes de seguir); si invalida el feature o el lote ⇒ corte.
 4. **Fin del lote**: ledger con todos los estados finales + STATUS «esperando OK» + commit → **RECAP consolidado** (skill `recap`: base `gate_base`, estructura por feature, no-revisados listados) → push de una línea → **fin de turno**.
 5. **OK del RECAP consolidado** ⇒ el camino "esperando OK humano" de arriba (cierre consolidado en el commit de registro + facilitar la sesión siguiente).
@@ -68,13 +68,13 @@ Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGEN
 
 1. **Gate**: no pidas confirmación — el gate de lote ya autorizó. Registrá en el doc del feature la autorización (fecha, comando del lote, path del ledger) en lugar del literal individual; las correcciones de alcance del gate que toquen tu feature mandan.
 2. **Reviews**: generá un id único `<NN>:r<M>:<nonce>` (`uuidgen`; fallback `$(date +%s)-$$-$RANDOM`). Escribí `.claude/state/batch-expected` **atómica** (tmp + `mv -f`; contenido: `id=`, `head=`, `feature=NN`, `phase=launched`) — si no puede escribirse, **no lances**: es corte. Lanzá `AXEL_REVIEW_ID=<id> scripts/review.sh {new|round}` en background y **terminá el turno** con última línea exacta: `REVIEW LANZADA id=<id> head=<sha de tu HEAD>`. Al despertar por el empujón: validá la identidad del terminal (id, y head si ≠ `-`), marcá `phase=consumed` en el ancla (reescritura atómica) **antes de actuar**, y actuá según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` están vigentes — seguí el loop normal; cualquier otro resultado ⇒ esos archivos quedaron viejos — camino de fallas del loop vigente (diagnóstico, relanzamiento único si es claramente transitorio; deadlock o falla persistente ⇒ `CORTE:`).
-3. **Cierre**: con el APPROVED de cierre dejá IMPLEMENTATION en «**APPROVED — pendiente OK de lote**» (no "Cerrado": ese estado exige el OK humano), doc del feature y STATUS al día, borrá `batch-expected`, commit, y terminá con última línea `FEATURE NN APROBADO`. **Sin RECAP individual, sin push, sin chip.** Ante condición de corte: detalle en el doc de tu feature (el ledger lo registra el padre) y última línea `CORTE: <motivo breve>`.
+3. **Cierre**: con el APPROVED de cierre dejá IMPLEMENTATION en «**APPROVED — pendiente OK de lote**» (no "Cerrado": ese estado exige el OK humano), doc del feature y STATUS al día, borrá `batch-expected`, commit, y terminá con última línea `FEATURE NN APROBADO`. **Sin RECAP individual, sin push, sin chip.** Ante condición de corte: registrá el detalle en el doc de tu feature, **commiteá y dejá el árbol limpio** — el handshake exige frontera limpia: nada tuyo sin commitear — y terminá con última línea `CORTE: <motivo breve>` (el ledger lo registra el padre).
 
 Mensajes bajados por el padre a mitad de feature: prioridad absoluta — atendelos antes de seguir.
 
 ### Reentrada del lote
 
-STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + git y decidí **fail-closed** con `.claude/state/batch-expected` como ancla:
+STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + git y decidí **fail-closed**. **Primero el ledger**: si registra un corte sin resolución humana posterior, el corte es **absorbente** — no relances nada aunque el ancla y el terminal matcheen (el ancla se conserva como evidencia justamente en ese caso): re-presentá el RECAP del corte (respuesta directa — sin push) y esperá al humano. Solo sin corte pendiente aplica la máquina de estados de `.claude/state/batch-expected`:
 
 - `phase=launched` + terminal con identidad completa coincidente ⇒ la review terminó sin consumirse: relanzá un hijo fresco para ese feature — retoma leyendo el terminal.
 - `phase=launched` + terminal ausente o de otra identidad ⇒ review posiblemente en vuelo: **no relances** — RECAP con lo encontrado.
