@@ -27,7 +27,7 @@ Cada checkpoint cumple una función distinta; ninguno se solapa:
 - El **gate de lote** es la **autorización de ejecución**: habilita encadenar los features autorizados sin frenar entre ellos. No cierra nada.
 - El **APPROVED de Codex por feature no cambia**: sigue siendo el gate de calidad, con su loop completo de rondas.
 - Dentro del lote, un feature con APPROVED queda en estado **«APPROVED — pendiente OK de lote»** — no "cerrado": el contrato vigente reserva "cerrado" para APPROVED + OK humano, y ese OK todavía no llegó. Su RECAP queda registrado en docs (es el registro), pero no bloquea.
-- El **OK del RECAP consolidado** es el que **cierra**: con él, todos los features del lote pasan a "Cerrado" en IMPLEMENTATION (commit de cierre consolidado del padre).
+- El **OK del RECAP consolidado** es el que **cierra**: con él, todos los features del lote pasan a "Cerrado" en IMPLEMENTATION (commit de cierre consolidado del padre — post-OK y bookkeeping puro, ver "Commits no revisados" abajo).
 
 Esto **redefine la regla dura** "nunca continuar a otro feature sin OK humano": la autorización del gate de lote es lo que habilita continuar dentro del lote, y el principio 4 del diseño se ajusta en consecuencia (la validación se agrupa; la frontera de contexto la aporta la maquinaria). La implementación debe reflejar la nueva redacción en `AGENTS.md` y `templates/AGENTS.md` (regla de sincronía).
 
@@ -98,7 +98,9 @@ Un error del feature N se propaga a N+1 y N+2 antes del ojo humano, y la auditor
 - **Avisos** (protocolo del feature 04, skill `recap`): el gate de lote es respuesta directa (el humano acaba de invocar `/feature all`) → sin push; el RECAP consolidado y todo corte llegan por trabajo autónomo → push de una línea.
 - **awake.sh**: ventana renovable de 12h — el padre la renueva al arrancar cada feature del lote (un lote largo puede excederla).
 - **Métricas**: `rounds-log` por feature, como hoy.
-- **Commits de estado no revisados**: dentro del lote los barre la ronda 1 del feature siguiente (regla vigente del contrato); los del último feature y el cierre consolidado quedan cubiertos por el camino terminal de siempre (listados en el RECAP consolidado).
+- **Commits no revisados y el cierre consolidado** (r2 de este ciclo — los dos momentos son distintos y se cubren distinto):
+  - **Pre-OK**: los commits de estado de cada feature los barre la ronda 1 del feature siguiente del lote (regla vigente); los del último feature, el ledger y el STATUS «esperando OK» quedan listados en el RECAP consolidado como no-revisados — el OK los cubre (camino terminal vigente).
+  - **Post-OK**: el commit de cierre consolidado (pasa los features a "Cerrado", cierra el ledger, registra el OK) **no existe al presentar el RECAP** y por eso no puede viajar listado en él. Por contrato es **bookkeeping puro** — solo toca los estados en IMPLEMENTATION, STATUS y el cierre del ledger; nada con sustancia viaja ahí — y se cubre igual que hoy se cubre el commit que registra cualquier OK: lo barre la ronda 1 del ciclo siguiente (feature, plan o diseño). No es un hueco nuevo del lote — es el mecanismo vigente del método para los commits de registro de OK; si el cierre necesitara sustancia más allá del bookkeeping, no va en ese commit: es trabajo nuevo y pasa por el loop.
 
 ## Decisiones que quedan para la bajada (no exhaustivo)
 
