@@ -174,21 +174,28 @@ prueba (`git init -b main` + commit vacío). Detalle importante: el delegado que
 
 **Control — mismo comando parado fuera de un repo git**: RC **2** con el diagnóstico esperado ("sin `<target-dir>` el destino es el repo git donde estás parado, y … no está dentro del árbol de trabajo de ninguno") y su línea final `rc=2`.
 
-**Gap — y por qué bloquea el criterio 7** (punto 1 de la r10): lo que estas corridas **no** cubren es
-`curl` bajando el script **nuevo** desde `raw.githubusercontent`, porque `main` publicado está 46
-commits atrás (sirve todavía el instalador del feature 02). El reviewer lo verificó ejecutando el
-one-liner exacto del README en un repo temporal limpio: **RC 2**, `uso: bash [--from <url>] <target-dir>`
-y cero líneas finales — es decir, **hoy el camino principal documentado no funciona para un tercero**.
-Lo verificado hasta acá es todo el resto del camino real (stdin sin argumentos, default de fuente
-contra la URL canónica, consulta y clone reales contra github.com, default de destino, lock,
-delegación, línea final y skew con el delegado publicado), pero el criterio 7 pide el comando exacto y
-ese exige **publicar primero**.
+**Publicación y aceptación con el comando exacto** (2026-07-28, autorizada por el humano al recibir el
+RECAP del checkpoint: *"dale, publicá vos y corré el one-liner exacto"*). `main` se publicó en
+`af0850a` (46 commits, desde el cierre del feature 02) y `raw.githubusercontent` pasó a servir el
+instalador nuevo. Los cuatro escenarios corrieron con el **comando byte a byte del README**
+—`curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash`—, con
+`AXEL_HOME` exportado aparte (el override documentado) para aislar el cache:
 
-Publicar es una acción del humano, no del loop: el feature queda **frenado en checkpoint** hasta esa
-decisión. Con la publicación, el camino es correr el one-liner exacto en los tres escenarios
-(inicial, update, fuera de repo git), registrar la evidencia acá y volver a review para el APPROVED de
-cierre. La alternativa —cerrar antes de publicar— exige que el humano modifique explícitamente el
-criterio 7; el contrato actual no permite darlo por cumplido.
+| escenario | RC | resultado |
+|---|---|---|
+| **1 · inicial**, cwd = repo de prueba limpio | **0** | anuncio con los **dos** defaults marcados; `modo: initial` con los 10 payloads, 5 semillas, symlink, `.gitignore` y marker; cache en `origin` canónico, `main @ af0850a`; **marker del destino idéntico al HEAD del cache**; lock liberado; **una** línea final `rc=0` |
+| **2 · update**, mismo comando, destino commiteado | **0** | `modo: update`, `git status --porcelain` del destino **vacío** (no-op sin diff), una línea final `rc=0` |
+| **3 · control**, mismo comando fuera de un repo git | **2** | rechazo con el diagnóstico esperado ("sin `<target-dir>` el destino es el repo git donde estás parado…") y su línea final `rc=2` |
+| **4 · transporte roto real** (URL 404) | **56** con `bash -o pipefail -c '…'` · **0** sin él | la variante documentada **sí** propaga el fallo; el pipe crudo devuelve 0 con **cero líneas finales**, que es exactamente lo que el chequeo publicado detecta |
+
+El escenario 4 cierra el contrato de transporte con una descarga fallida de verdad, no simulada: las
+dos capas —la variante `pipefail` y el chequeo de ausencia de línea— quedan verificadas contra la red.
+
+Nota de historia: la primera aceptación (previa a publicar) corrió el wrapper local por stdin y
+delegó en el `install.sh` publicado de entonces (`2e0b5b7`), lo que la convirtió en un caso **real** de
+skew wrapper-nuevo / delegado-viejo, con una sola línea final. El reviewer marcó en r10 que eso no
+satisfacía el criterio 7 —el comando exacto devolvía RC 2 con el instalador viejo— y tenía razón: el
+criterio se cumple recién con las corridas de esta sección.
 
 ## Review log
 
