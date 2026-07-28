@@ -15,7 +15,8 @@
 #
 # Exit: 0 = instalado/actualizado sin pendientes
 #       1 = instalado/actualizado con pendientes (handoff en docs/ADOPTION.md; siguiente paso: /adopt)
-#       2 = rechazo sin mutaciones del destino (precondiciones, preflight o bootstrap)
+#       2 = rechazo sin mutaciones del destino — o, señalado con aviso explícito, un
+#           delegado interrumpido con RC anómalo (posible diff parcial: revisar git status)
 set -euo pipefail
 
 die() { echo "rechazo: $*" >&2; exit 2; }
@@ -25,15 +26,19 @@ usage() { echo "uso: $0 [--from <url>] <target-dir>" >&2; exit 2; }
 # ── Bootstrap remoto (--from): corre ANTES de toda resolución de AXEL_ROOT ────
 # En modo piped no hay $0 en disco: nada de este bloque depende del entorno del
 # script que corre — la fuente que instala es siempre el clon del cache.
+FROM_MODE=""
 FROM_URL=""
 if [ "${1:-}" = "--from" ]; then
   [ $# -eq 3 ] || usage
+  FROM_MODE=1
   FROM_URL="$2"
   shift 2
 fi
 [ $# -eq 1 ] || usage
 
-if [ -n "$FROM_URL" ]; then
+if [ -n "$FROM_MODE" ]; then
+  # el flag de modo es independiente del contenido: --from "" jamás cae al modo local
+  [ -n "$FROM_URL" ] || die "--from: la URL no puede ser vacía"
   case "$FROM_URL" in
     -*) die "--from: la URL no puede empezar con '-' (se confundiría con una opción de git): $FROM_URL" ;;
   esac
@@ -49,7 +54,20 @@ if [ -n "$FROM_URL" ]; then
       p="$(dirname "$p")"
     done
     [ "$d" = "/" ] && d=""
-    printf '%s%s' "$d" "$rest"
+    # normalización léxica de . y .. en el sufijo inexistente (el ancestro ya es
+    # canónico): sin esto un ../ en el sufijo esquiva la disjunción y el clone
+    # aterriza en otro lado (p. ej. adentro del destino)
+    local out="$d" comp oldIFS="$IFS"
+    set -f; IFS='/'
+    for comp in $rest; do
+      case "$comp" in
+        '' | '.') ;;
+        '..') out="${out%/*}" ;;
+        *) out="$out/$comp" ;;
+      esac
+    done
+    set +f; IFS="$oldIFS"
+    printf '%s' "$out"
   }
   path_overlaps() {  # iguales o uno dentro del otro
     case "$1" in "$2" | "$2"/*) return 0 ;; esac
@@ -137,7 +155,7 @@ if [ -n "$FROM_URL" ]; then
     [ -z "$(git -C "$BOOT_CACHE" status --porcelain)" ] \
       || die "AXEL_HOME tiene cambios sin commitear ($BOOT_CACHE); no piso trabajo que podría ser tuyo — resolvelo a mano"
   else
-    git clone --quiet -- "$FROM_URL" "$BOOT_CACHE" >/dev/null 2>&1 \
+    git -c core.hooksPath=/dev/null clone --quiet --template= -- "$FROM_URL" "$BOOT_CACHE" >/dev/null 2>&1 \
       || die "git clone falló: $FROM_URL → $BOOT_CACHE (¿URL o red?)"
   fi
 
@@ -153,13 +171,50 @@ if [ -n "$FROM_URL" ]; then
     # Ancestría explícita: pull --ff-only devuelve 0 con commits locales ahead
     git -C "$BOOT_CACHE" merge-base --is-ancestor HEAD "$remote_tip" \
       || die "AXEL_HOME tiene commits que el remoto no conoce (ahead o divergido); no instalo código no publicado — resolvelo a mano: $BOOT_CACHE"
-    git -C "$BOOT_CACHE" merge --ff-only --quiet "$remote_tip" >/dev/null 2>&1 \
+    git -C "$BOOT_CACHE" -c core.hooksPath=/dev/null merge --ff-only --quiet "$remote_tip" >/dev/null 2>&1 \
       || die "fast-forward del cache falló; resolvelo a mano: $BOOT_CACHE"
   fi
 
+  # El árbol real debe ser el del commit remoto, demostrado SIN pasar por el index:
+  # skip-worktree/assume-unchanged (sparse incluido) ocultan reemplazos a git status,
+  # así que los flags rechazan, y cada entrada del commit se compara contra el archivo
+  # real por hash y modo. Corre DESPUÉS del merge (con hooks deshabilitados): también
+  # ataja lo que un hook hubiera logrado modificar.
+  bad_flags="$(git -C "$BOOT_CACHE" ls-files -v | grep -v '^H ' || true)"
+  [ -z "$bad_flags" ] \
+    || die "AXEL_HOME tiene paths con flags que ocultan cambios del árbol (skip-worktree/assume-unchanged); resolvelo a mano: $BOOT_CACHE"
+  verify_tree() {  # $1=commit — imprime la primera discrepancia; salida vacía = árbol idéntico
+    local TAB line meta mode sha path
+    TAB="$(printf '\t')"
+    git -C "$BOOT_CACHE" ls-tree -r "$1" | while IFS= read -r line; do
+      meta="${line%%"$TAB"*}"; path="${line#*"$TAB"}"
+      mode="${meta%% *}"; sha="${meta##* }"
+      case "$mode" in
+        120000)
+          if [ ! -L "$BOOT_CACHE/$path" ] \
+             || [ "$(printf '%s' "$(readlink "$BOOT_CACHE/$path")" | git hash-object --stdin)" != "$sha" ]; then
+            echo "$path (symlink distinto al commit)"; exit 0
+          fi ;;
+        100644 | 100755)
+          if [ -L "$BOOT_CACHE/$path" ] || [ ! -f "$BOOT_CACHE/$path" ] \
+             || [ "$(git hash-object -- "$BOOT_CACHE/$path")" != "$sha" ]; then
+            echo "$path (contenido distinto al commit)"; exit 0
+          fi
+          case "$mode" in
+            100755) [ -x "$BOOT_CACHE/$path" ] || { echo "$path (perdió el bit de ejecución)"; exit 0; } ;;
+            *) [ ! -x "$BOOT_CACHE/$path" ] || { echo "$path (bit de ejecución inesperado)"; exit 0; } ;;
+          esac ;;
+        *) echo "$path (tipo $mode inesperado en axel)"; exit 0 ;;
+      esac
+    done
+  }
+  tree_err="$(verify_tree "$remote_tip")"
+  [ -z "$tree_err" ] \
+    || die "el árbol del cache no coincide con el commit remoto — $tree_err; resolvelo a mano: $BOOT_CACHE"
+
   BOOT_DELEGATE="$BOOT_CACHE/scripts/install.sh"
-  { [ -f "$BOOT_DELEGATE" ] && [ -r "$BOOT_DELEGATE" ] && [ -x "$BOOT_DELEGATE" ]; } \
-    || die "el remoto no parece axel: falta scripts/install.sh ejecutable en $BOOT_CACHE"
+  { [ ! -L "$BOOT_DELEGATE" ] && [ -f "$BOOT_DELEGATE" ] && [ -r "$BOOT_DELEGATE" ] && [ -x "$BOOT_DELEGATE" ]; } \
+    || die "el remoto no parece axel: falta scripts/install.sh regular y ejecutable (un symlink no cuenta) en $BOOT_CACHE"
 
   echo "── axel bootstrap · remoto: $FROM_URL · cache: $BOOT_CACHE ($DEFAULT_BRANCH @ $(git -C "$BOOT_CACHE" rev-parse --short HEAD)) ──"
   # Delegación en background + wait: una señal al wrapper interrumpe el wait y el

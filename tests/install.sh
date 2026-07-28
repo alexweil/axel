@@ -740,6 +740,12 @@ P15L4="$TESTS_TMP/l4"; mkdir -p "$P15L4/x.lock"
 run_boot "$P15L4/x" "$R15" "$P15L4/x.lock"
 assert_rc 2; assert_out "lock del cache y el destino no son disjuntos"
 
+t "T15l5 disjunción: '..' en el sufijo inexistente de AXEL_HOME no la esquiva (repro r5)"
+T15L5="$(mk_target t15l5)"
+boot_reject "$TESTS_TMP/missing15/../t15l5/cache" "$R15" "$T15L5"
+assert_out "no son disjuntos"
+assert_no "$T15L5/cache"
+
 t "T15m URL option-like: rechazada antes de invocar git"
 H15M="$TESTS_TMP/home15m"
 T15M="$(mk_target t15m)"
@@ -903,6 +909,61 @@ OUT="$(cd "$T15S2" && bash -s -- "$T15S2" < "$INSTALL" 2>&1)" && RC=0 || RC=$?
 assert_rc 2
 assert_out "usá: install.sh --from"
 assert_clean "$T15S2"
+
+t "T15t1 skip-worktree oculta un reemplazo del delegado: rechazo (repro r5)"
+H15T1="$TESTS_TMP/home15t1"
+git clone -q -- "$R15" "$H15T1"
+git -C "$H15T1" update-index --skip-worktree scripts/install.sh
+printf '#!/usr/bin/env bash\necho pwned > "$1/COMPROMISED"\nexit 0\n' > "$H15T1/scripts/install.sh"
+[ -z "$(git -C "$H15T1" status --porcelain)" ] && ok || ko "precondición: el reemplazo debía ser invisible para git status"
+T15T1="$(mk_target t15t1)"
+boot_reject "$H15T1" "$R15" "$T15T1"
+assert_out "ocultan cambios"
+assert_no "$T15T1/COMPROMISED"
+
+t "T15t2 assume-unchanged oculta un reemplazo: rechazo"
+H15T2="$TESTS_TMP/home15t2"
+git clone -q -- "$R15" "$H15T2"
+git -C "$H15T2" update-index --assume-unchanged scripts/install.sh
+printf '#!/usr/bin/env bash\nexit 0\n' > "$H15T2/scripts/install.sh"
+T15T2="$(mk_target t15t2)"
+boot_reject "$H15T2" "$R15" "$T15T2"
+assert_out "ocultan cambios"
+
+t "T15t3 post-merge hook del cache: deshabilitado durante el ff-update"
+H15T3="$TESTS_TMP/home15t3"
+git clone -q -- "$R15" "$H15T3"
+mkdir -p "$H15T3/.git/hooks"
+printf '#!/bin/sh\necho pwned > "$(git rev-parse --show-toplevel)/HOOKED"\n' > "$H15T3/.git/hooks/post-merge"
+chmod +x "$H15T3/.git/hooks/post-merge"
+echo "avance 3" >> "$R15/README.md"; tcommit "$R15" "avance 3"   # deja el cache behind: el ff-merge sucede
+T15T3="$(mk_target t15t3)"
+run_boot "$H15T3" "$R15" "$T15T3"
+assert_rc 0
+assert_no "$H15T3/HOOKED"            # el hook no corrió
+assert_in_file "$T15T3/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
+t "T15t4 delegado symlink en el remoto (apunta fuera del clon): rechazo sin ejecutar (repro r5)"
+EVIL15="$TESTS_TMP/evil15.sh"
+printf '#!/bin/sh\necho pwned > "$1/SYMLINK_EXECUTED"\nexit 0\n' > "$EVIL15"
+chmod +x "$EVIL15"
+REXT15="$TESTS_TMP/rext15"; mkdir -p "$REXT15/scripts"
+ln -s "$EVIL15" "$REXT15/scripts/install.sh"
+git -C "$REXT15" init -q -b main; tcommit "$REXT15" "delegado symlink"
+H15T4="$TESTS_TMP/home15t4"
+T15T4="$(mk_target t15t4)"
+run_boot "$H15T4" "$REXT15" "$T15T4"
+assert_rc 2
+assert_out "no parece axel"
+assert_no "$T15T4/SYMLINK_EXECUTED"
+
+t "T15t5 --from con URL vacía: rechazo, jamás cae al modo local (repro r5)"
+T15T5="$(mk_target t15t5)"
+OUT="$("$INSTALL" --from "" "$T15T5" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_out "no puede ser vacía"
+assert_no "$T15T5/AGENTS.md"
+assert_clean "$T15T5"
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
