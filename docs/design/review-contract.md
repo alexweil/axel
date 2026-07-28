@@ -53,6 +53,19 @@ Tras el APPROVED final de un feature, el generador hace commits de cierre (solo 
 
 `review.sh` registra cada evento del loop en `.claude/state/rounds-log` (no versionado), con esquema fijo `fecha · modo · ronda · intento · resultado · SHA corto · racha`. Resultados con invocación (intento numérico): `APPROVED`, `CHANGES_REQUESTED`, `NO_VERDICT` (mensaje entregado con última línea inválida), `PROC_FAIL` (una línea por intento fallido de proceso). Eventos **pre-invocación** (ronda/intento/SHA en `-`): `DEADLOCK` e `INPUT_ERROR` (stdin vacío) — todo rechazo deja línea, así la frontera de ciclo siempre existe. La frontera es la línea que **abre** el último ciclo: el **intento 1 (o el `INPUT_ERROR`) de un `new`, falle o no** — el intento 2 de un retry de `new` pertenece al mismo ciclo, no abre otro. Denominadores: eventos = líneas; intentos = líneas con intento numérico; rondas = números distintos — un fallo de proceso seguido de éxito son dos intentos de la misma ronda. `status` resume el ciclo actual con esos denominadores. Es observabilidad local **no autoritativa y best-effort**: si el log no puede escribirse, `review.sh` avisa por stderr y nada más cambia — jamás altera veredicto, estado ni exit code; la memoria oficial por feature sigue siendo el Review log de los docs.
 
+## Señal terminal
+
+`review.sh` publica, como **último acto de todo camino de salida** de `new|round`, un registro terminal en `.claude/state/review-terminal` — **atómico** (tmp + `mv` en el mismo filesystem: ningún lector ve un terminal a medias) y con la identidad de la invocación, una `clave=valor` por línea: `ts` (ISO-8601 UTC), `id` (env `AXEL_REVIEW_ID`, `-` si no vino), `mode` (`new|round`), `round` y `review_head` (`-` en los rechazos pre-invocación), `result` (`APPROVED | CHANGES_REQUESTED | NO_VERDICT | PROC_FAIL | DEADLOCK | INPUT_ERROR | ABORTED`) y `rc` (el exit code real). Reglas:
+
+- `id` es la **identidad de invocación** del modo lote ([design/batch-features.md](batch-features.md)): el invocador la pasa por env con unicidad real por invocación (`<NN>:r<M>:<nonce>`). Fuera del lote no se setea y nada del flujo cambia.
+- `ABORTED` es el default para una salida no clasificada (p. ej. un fallo de `set -e` a mitad de corrida), con lo capturado hasta ahí.
+- `status`, `reset-deadlock` y el uso inválido **no** son invocaciones de review: no escriben terminal.
+- Para un consumidor externo (el padre del lote), el terminal es el **desenlace autoritativo**: `last-verdict` y `last-review.md` solo son vigentes cuando `result` es `APPROVED` o `CHANGES_REQUESTED` — ante cualquier otro resultado quedaron deliberadamente viejos.
+- El consumidor solo reacciona a un terminal cuya **identidad completa** coincide con la invocación que espera (`id` exacto y, cuando `review_head` ≠ `-`, también el SHA); un residuo de otra invocación se ignora — la ausencia de terminal se resuelve por timeout del lado del lector, jamás adivinando.
+- La escritura es blindada y best-effort: si el terminal no puede publicarse, la corrida no cambia en nada (veredicto, estado y exit code intactos).
+
+Regresión: clase L10 de `tests/loop.sh`.
+
 ## Ciclo de vida de sesiones
 
 - `new` borra el session id guardado, corre `codex exec` y captura el id nuevo como el **`thread_id` del evento `thread.started`** de los eventos JSONL — nunca "el primer UUID del archivo", que mezcla el stderr de codex y podría contener uno espurio (fallback sin `thread.started`: aviso y `resume --last`).

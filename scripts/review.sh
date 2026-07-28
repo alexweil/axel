@@ -43,6 +43,7 @@ EVENTS_FILE="$STATE_DIR/last-review-events.jsonl"
 FAILED_EVENTS_FILE="$STATE_DIR/last-review-events.failed.jsonl"
 ROUNDS_LOG="$STATE_DIR/rounds-log"
 WT_DIR="$STATE_DIR/review-worktree"
+TERMINAL_FILE="$STATE_DIR/review-terminal"
 
 mkdir -p "$STATE_DIR"
 cd "$REPO_ROOT"
@@ -90,6 +91,33 @@ case "$MODE" in
   *) echo "uso: $0 {new|round|status|reset-deadlock}  (pedido del generador por stdin)" >&2; exit 2 ;;
 esac
 
+# ── Señal terminal (contrato del modo lote — docs/design/review-contract.md) ──
+# Todo camino de salida de new|round publica, como último acto, un registro terminal
+# atómico (tmp + mv en el mismo filesystem) con la identidad de la invocación:
+# id (env AXEL_REVIEW_ID, "-" si no vino), modo, ronda, REVIEW_HEAD, resultado y rc.
+# Los rechazos pre-invocación (DEADLOCK, INPUT_ERROR) llevan ronda/head en "-";
+# una salida no clasificada de set -e queda como ABORTED. status/reset-deadlock y el
+# uso inválido no son invocaciones de review: no escriben terminal. Si el terminal no
+# puede escribirse, nada más cambia (el lector corta por timeout): jamás altera
+# veredicto, estado ni exit code.
+TERMINAL_RESULT="ABORTED"
+TERMINAL_ROUND="-"
+TERMINAL_HEAD="-"
+write_terminal() { # $1 = exit code real de la corrida
+  local tmp="$STATE_DIR/.review-terminal.tmp.$$"
+  {
+    printf 'ts=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo -)"
+    printf 'id=%s\n' "${AXEL_REVIEW_ID:--}"
+    printf 'mode=%s\n' "$MODE"
+    printf 'round=%s\n' "$TERMINAL_ROUND"
+    printf 'review_head=%s\n' "$TERMINAL_HEAD"
+    printf 'result=%s\n' "$TERMINAL_RESULT"
+    printf 'rc=%s\n' "$1"
+  } > "$tmp" 2>/dev/null && mv -f "$tmp" "$TERMINAL_FILE" 2>/dev/null || rm -f "$tmp" 2>/dev/null
+  return 0
+}
+trap 'write_terminal $?' EXIT
+
 # Métricas locales (rounds-log): una línea por evento del loop, con esquema fijo
 # fecha·modo·ronda·intento·resultado·sha·racha. Los eventos pre-invocación (DEADLOCK,
 # INPUT_ERROR) llevan ronda/intento/sha en "-" y quedan fuera del denominador de intentos.
@@ -109,6 +137,7 @@ if [ "$MODE" = "new" ]; then
 fi
 if [ "$STREAK" -ge 5 ]; then
   log_event DEADLOCK - - - "$STREAK"
+  TERMINAL_RESULT="DEADLOCK"
   echo "DEADLOCK: $STREAK rondas consecutivas sin convergencia. Armar RECAP con ambas posturas para el humano; tras su desempate, correr: scripts/review.sh reset-deadlock" >&2
   exit 2
 fi
@@ -118,6 +147,7 @@ if [ -z "$PEDIDO" ]; then
   # Deja rastro en el log aunque no haya invocación: un `new` con stdin vacío ya abrió el
   # ciclo (racha rearmada) y sin línea propia `status` resumiría el ciclo anterior.
   log_event INPUT_ERROR - - - "$STREAK"
+  TERMINAL_RESULT="INPUT_ERROR"
   echo "error: falta el pedido del generador por stdin" >&2
   exit 2
 fi
@@ -127,6 +157,7 @@ fi
 # afectan lo que ve ni quedan aprobados — entran en el próximo rango.
 REVIEW_HEAD="$(git rev-parse HEAD)"
 REVIEW_HEAD_SHORT="$(git rev-parse --short HEAD)"
+TERMINAL_HEAD="$REVIEW_HEAD"
 
 # Worktree snapshot: se crea una vez y se re-clava (reset --hard + clean) en cada ronda,
 # lo que además deshace cualquier suciedad que el reviewer haya dejado en la ronda anterior.
@@ -175,6 +206,7 @@ else
   ROUND=$(( $(cat "$ROUND_FILE" 2>/dev/null || echo 0) + 1 ))
 fi
 echo "$ROUND" > "$ROUND_FILE"
+TERMINAL_ROUND="$ROUND"
 if [ "$STREAK" -ge 4 ]; then
   echo "AVISO: racha de $STREAK sin converger — si esta ronda no converge, se dispara la regla de deadlock" >&2
 fi
@@ -268,11 +300,13 @@ fi
 # Un error de codex invalida la corrida aunque haya quedado un mensaje escrito: no se toma veredicto.
 if [ "$RC" -ne 0 ]; then
   log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
+  TERMINAL_RESULT="PROC_FAIL"
   echo "error: codex terminó con exit $RC; no se toma veredicto. Ver $EVENTS_FILE" >&2
   exit 2
 fi
 if [ ! -s "$MSG_FILE" ]; then
   log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
+  TERMINAL_RESULT="PROC_FAIL"
   echo "error: codex no produjo mensaje final; ver $EVENTS_FILE" >&2
   exit 2
 fi
@@ -290,6 +324,7 @@ case "$VERDICT" in
     echo 0 > "$STREAK_FILE"
     echo "APPROVED · ronda $ROUND · $REVIEW_HEAD_SHORT · $(date +%F)" > "$VERDICT_FILE"
     log_event APPROVED "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" 0
+    TERMINAL_RESULT="APPROVED"
     echo "── resultado: APPROVED (base movida a $REVIEW_HEAD_SHORT) ──"
     if [ "$(git rev-parse HEAD)" != "$REVIEW_HEAD" ]; then
       echo "AVISO: hay commits posteriores a $REVIEW_HEAD_SHORT hechos durante la review — NO están aprobados; entran en el próximo rango" >&2
@@ -299,10 +334,12 @@ case "$VERDICT" in
     echo "$((STREAK + 1))" > "$STREAK_FILE"
     echo "CHANGES_REQUESTED · ronda $ROUND · racha $((STREAK + 1)) · $(date +%F)" > "$VERDICT_FILE"
     log_event CHANGES_REQUESTED "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$((STREAK + 1))"
+    TERMINAL_RESULT="CHANGES_REQUESTED"
     echo "── resultado: CHANGES_REQUESTED (ronda $ROUND, racha $((STREAK + 1))) ──"
     exit 1 ;;
   *)
     log_event NO_VERDICT "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT" "$STREAK"
+    TERMINAL_RESULT="NO_VERDICT"
     echo "error: la última línea del mensaje no es un veredicto válido (\"$VERDICT\"); ver $MSG_FILE" >&2
     exit 2 ;;
 esac

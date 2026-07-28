@@ -783,6 +783,102 @@ assert_rc 2
 assert_out "DEADLOCK"
 rmdir "$RL9"
 
+# ── L10 · señal terminal (feature 07): todo camino de new|round publica identidad ──
+term_get() { # term_get <repo> <clave>
+  grep "^$2=" "$1/.claude/state/review-terminal" 2>/dev/null | cut -d= -f2- || true
+}
+assert_no_tmp() { # la publicación es atómica: jamás queda tmp residual
+  find "$1/.claude/state" -maxdepth 1 -name '.review-terminal.tmp.*' 2>/dev/null | grep -q . \
+    && ko "tmp residual del terminal" || ok
+}
+
+t "L10 APPROVED publica terminal completo con id propagado"
+RT="$(mk_repo l10)"
+codex_reset
+AXEL_REVIEW_ID="07:r1:nonce-a" run_review "$RT" new p
+assert_rc 0
+assert_eq "$(term_get "$RT" id)" "07:r1:nonce-a" "id"
+assert_eq "$(term_get "$RT" mode)" "new" "mode"
+assert_eq "$(term_get "$RT" round)" "1" "round"
+assert_eq "$(term_get "$RT" review_head)" "$(git -C "$RT" rev-parse HEAD)" "review_head"
+assert_eq "$(term_get "$RT" result)" "APPROVED" "result"
+assert_eq "$(term_get "$RT" rc)" "0" "rc"
+assert_no_tmp "$RT"
+
+t "L10 sin AXEL_REVIEW_ID: id=- y flujo intacto"
+echo l10b >> "$RT/docs/README.md"; tcommit "$RT"
+FAKE_CODEX_MSG=$'VERDICT: CHANGES_REQUESTED' run_review "$RT" round p
+assert_rc 1
+assert_eq "$(term_get "$RT" id)" "-" "id ausente"
+assert_eq "$(term_get "$RT" result)" "CHANGES_REQUESTED" "result"
+assert_eq "$(term_get "$RT" rc)" "1" "rc"
+assert_eq "$(term_get "$RT" round)" "2" "round"
+
+t "L10 NO_VERDICT: terminal con head del pedido y rc=2"
+AXEL_REVIEW_ID="07:r3:nonce-b" FAKE_CODEX_MSG='mensaje sin veredicto' run_review "$RT" round p
+assert_rc 2
+assert_eq "$(term_get "$RT" id)" "07:r3:nonce-b" "id"
+assert_eq "$(term_get "$RT" result)" "NO_VERDICT" "result"
+assert_eq "$(term_get "$RT" rc)" "2" "rc"
+assert_eq "$(term_get "$RT" review_head)" "$(git -C "$RT" rev-parse HEAD)" "review_head"
+
+t "L10 PROC_FAIL persistente (doble falla): terminal con la falla"
+FAKE_CODEX_RC=9 run_review "$RT" round p
+assert_rc 2
+assert_eq "$(term_get "$RT" result)" "PROC_FAIL" "result"
+assert_eq "$(term_get "$RT" rc)" "2" "rc"
+
+t "L10 DEADLOCK pre-invocación: round y head en «-», id presente"
+echo 5 > "$RT/.claude/state/changes-streak"
+AXEL_REVIEW_ID="07:r9:nonce-dead" run_review "$RT" round p
+assert_rc 2
+assert_eq "$(term_get "$RT" id)" "07:r9:nonce-dead" "id en pre-invocación"
+assert_eq "$(term_get "$RT" result)" "DEADLOCK" "result"
+assert_eq "$(term_get "$RT" round)" "-" "round pre-invocación"
+assert_eq "$(term_get "$RT" review_head)" "-" "head pre-invocación"
+assert_eq "$(term_get "$RT" rc)" "2" "rc"
+run_review "$RT" reset-deadlock
+assert_rc 0
+
+t "L10 INPUT_ERROR pre-invocación y sobreescritura por invocación"
+AXEL_REVIEW_ID="07:r4:nonce-c" run_review "$RT" round ""
+assert_rc 2
+assert_eq "$(term_get "$RT" id)" "07:r4:nonce-c" "id del último"
+assert_eq "$(term_get "$RT" result)" "INPUT_ERROR" "result"
+assert_eq "$(term_get "$RT" round)" "-" "round pre-invocación"
+AXEL_REVIEW_ID="07:r4:nonce-d" run_review "$RT" round p
+assert_rc 0
+assert_eq "$(term_get "$RT" id)" "07:r4:nonce-d" "el terminal viejo no sobrevive"
+assert_eq "$(term_get "$RT" result)" "APPROVED" "result nuevo"
+assert_no_tmp "$RT"
+
+t "L10 status y reset-deadlock no tocan el terminal"
+SNAP_T="$(cat "$RT/.claude/state/review-terminal")"
+run_review "$RT" status
+assert_rc 0
+run_review "$RT" reset-deadlock
+assert_rc 0
+assert_eq "$(cat "$RT/.claude/state/review-terminal")" "$SNAP_T" "terminal intacto"
+
+t "L10 salida no clasificada de set -e: ABORTED con head capturado"
+echo deadbeef > "$RT/.claude/state/last-approved-sha"   # base corrupta: git log revienta tras capturar REVIEW_HEAD
+AXEL_REVIEW_ID="07:r5:nonce-e" run_review "$RT" round p
+[ "$RC" -ne 0 ] && ok || ko "debía fallar con base corrupta"
+assert_eq "$(term_get "$RT" id)" "07:r5:nonce-e" "id"
+assert_eq "$(term_get "$RT" result)" "ABORTED" "result"
+assert_eq "$(term_get "$RT" review_head)" "$(git -C "$RT" rev-parse HEAD)" "head capturado antes del abort"
+assert_eq "$(term_get "$RT" round)" "-" "round aún no computada"
+[ "$(term_get "$RT" rc)" != "0" ] && ok || ko "rc del terminal no puede ser 0 en un abort"
+
+t "L10 uso inválido y consultas no escriben terminal"
+RTB="$(mk_repo l10b)"
+run_review "$RTB" badmode
+assert_rc 2
+assert_no "$RTB/.claude/state/review-terminal"
+run_review "$RTB" status
+assert_rc 0
+assert_no "$RTB/.claude/state/review-terminal"
+
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
 echo "── loop.sh: $PASS ok · $FAIL fail ──"
