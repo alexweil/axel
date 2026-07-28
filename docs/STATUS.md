@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: feature 06 (one-liner corto: defaults del bootstrap remoto) **cerrado** — APPROVED de Codex en r11, base `a158a63`
-- **Feature en curso**: ninguno — el 06 era el último previsto en el plan
-- **Ronda de review**: ciclo completo — bajada 4→2→1→1→0 (r1–r5), paso A 3→3→1→0 (r6–r9), paso B 2→0 (r10–r11)
+- **Fase**: plan completo — feature 06 (one-liner corto) **cerrado** con APPROVED de Codex (r11) + **OK humano** (2026-07-28). No quedan features previstos
+- **Feature en curso**: ninguno — para seguir, `/plan` en sesión limpia extiende el plan
+- **Ronda de review**: — (ciclo del 06 completo: bajada 4→2→1→1→0, paso A 3→3→1→0, paso B 2→0)
 - **Último veredicto**: APPROVED · ronda 11 · base `a158a63`
-- **Esperando**: **OK humano** del RECAP de cierre. Nota: `main` está publicado en `af0850a`; los commits posteriores (`a158a63` y este de cierre) son locales — publicarlos es decisión del humano
+- **Esperando**: nada — pausa estable. Publicación: el `install.sh` vigente **está publicado** en `main` (`af0850a`); los dos commits posteriores son solo docs y evidencia, y quedan locales hasta que el humano pida subirlos
 - **Actualizado**: 2026-07-28
