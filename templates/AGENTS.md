@@ -44,7 +44,7 @@ Fases, cada una con su skill:
 1. `/adopt` — solo si hay `docs/ADOPTION.md`: cerrar la adopción (mapear docs preexistentes, derivar el estado real) antes de todo lo demás.
 2. `/design` — ping-pong de ideas con el humano → consolidar `docs/DESIGN.md` → loop de review → RECAP → OK.
 3. `/plan` — `docs/IMPLEMENTATION.md` con features priorizados; el orden lo acuerdan generador y reviewer → RECAP → OK.
-4. `/feature` — el siguiente feature: gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación iterando con review → RECAP → OK. Se repite feature por feature, cada uno en sesión limpia.
+4. `/feature` — el siguiente feature: gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación iterando con review → RECAP → OK. Se repite feature por feature, cada uno en sesión limpia. **Modo lote**: `/feature all` o `/feature NN..MM` corre varios features pendientes en una sola corrida — gate de lote al inicio, un subagente fresco por feature, RECAP consolidado al final cuyo OK cierra (detalle en la skill `feature`; señal terminal en [docs/design/review-contract.md](docs/design/review-contract.md)).
 5. `/status` y `/recap` — consulta en cualquier momento, no cambian el trabajo.
 
 ### El loop dentro de un feature
@@ -56,7 +56,7 @@ cambio → commit → `scripts/review.sh` → si `CHANGES_REQUESTED`: corregir o
 - **Todo commit toca algún doc** (DESIGN/IMPLEMENTATION/STATUS o sus subdirectorios). Si hiciste algo, quedó registrado; el delta de docs es lo que el reviewer usa para saber qué verificar.
 - Historia lineal en `main`, un commit por paso del loop, sin amend: el reviewer ve los deltas por rango.
 - Contexto por feature: la misma sesión de Claude y la misma sesión de Codex durante todo un feature; sesiones frescas al arrancar otro.
-- Nunca continuar a otro feature sin OK humano. RECAP temprano ante cambio de scope, deadlock o sorpresa grande.
+- Nunca continuar a otro feature sin OK humano — salvo dentro de un **lote autorizado**: en `/feature all` / `NN..MM` la autorización del gate de lote habilita encadenar los features autorizados (cada uno queda «APPROVED — pendiente OK de lote») y el OK del RECAP consolidado es el que cierra. RECAP temprano ante cambio de scope, deadlock o sorpresa grande.
 - `docs/STATUS.md` se actualiza en cada commit.
 
 ## Si sos el reviewer (Codex leyendo esto durante una review)

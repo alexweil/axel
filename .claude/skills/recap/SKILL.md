@@ -15,11 +15,20 @@ Estructura:
 
 Cerrá pidiendo el OK explícitamente. Si STATUS.md no dice ya "esperando OK", actualizalo y commiteá. Aplicá el protocolo de aviso de abajo. Después del RECAP, terminá el turno: no sigas trabajando sin el OK.
 
+## RECAP consolidado (fin de un lote de `/feature all` / `NN..MM`)
+
+Cuando STATUS apunta a un **ledger de lote** esperando el OK consolidado, la estructura de arriba se ajusta así:
+
+- **La base del relato es `gate_base`** (registrado en el ledger: el HEAD al autorizarse el gate) — **no** `last-approved-sha`, que tras N APPROVED del lote ya avanzó hasta el último feature y dejaría el relato vacío. `git log <gate_base>..HEAD` es el lote entero, autorización incluida.
+- **«Qué se hizo» y «Decisiones y review» van por feature**, en el orden corrido: resultado, rondas y decisiones de cada uno (fuentes: el ledger, los docs de features con sus Review logs, y los commits). Sumá los cortes o exclusiones si los hubo.
+- Los **no revisados** se listan igual que siempre (`last-approved-sha..HEAD`): remanentes del último feature, el ledger y el STATUS «esperando OK» — el OK consolidado es lo que los cubre. El commit de registro del OK (cierre consolidado: features a "Cerrado", cierre del ledger, STATUS) no existe todavía y queda cubierto por la excepción del contrato.
+- **Qué viene con tu OK**: el cierre consolidado + el paso siguiente (próximo feature del plan, o `/plan` si el backlog quedó vacío).
+
 ## Aviso al humano (protocolo único — las demás skills refieren acá, no lo repiten)
 
 Al terminar un turno esperando respuesta del humano, el aviso depende de **cómo se llegó a la espera**, no de dónde:
 
-- **Espera alcanzada por trabajo autónomo** (el turno venía de rondas de review en background o implementación larga: los RECAP de cierre de feature, de diseño, de plan, y los tempranos que el loop produce solo — deadlock, tope de rondas, exit 2 persistente, sorpresa detectada por el loop) → mandá un push de una línea.
+- **Espera alcanzada por trabajo autónomo** (el turno venía de rondas de review en background o implementación larga: los RECAP de cierre de feature, de diseño, de plan, el RECAP consolidado de un lote y los cortes de lote, y los tempranos que el loop produce solo — deadlock, tope de rondas, exit 2 persistente, sorpresa detectada por el loop) → mandá un push de una línea.
 - **Respuesta directa a un mensaje que el humano acaba de mandar** (`/recap` a demanda, re-presentar el RECAP al reabrir una sesión en "esperando OK", la presentación o re-presentación del gate de arranque de `/feature`, un RECAP temprano disparado por lo que el humano acaba de decir, preguntas interactivas de `/design` o `/adopt`) → sin push: el humano está presente por construcción.
 - Borde: si entre el mensaje del humano y el RECAP mediaron rondas autónomas, va aviso. En la duda, aviso — un push redundante cuesta nada; un loop estancado se mide en horas.
 

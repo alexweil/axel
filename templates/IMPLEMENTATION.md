@@ -4,7 +4,7 @@
 
 ## Cómo se trabaja un feature
 
-Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación con loop de review → RECAP → OK humano. Reglas en [AGENTS.md](../AGENTS.md); contrato de review en [design/review-contract.md](design/review-contract.md).
+Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación con loop de review → RECAP → OK humano. Reglas en [AGENTS.md](../AGENTS.md); contrato de review en [design/review-contract.md](design/review-contract.md). **Modo lote**: `/feature all` o `/feature NN..MM` — gate de lote al inicio, subagente fresco por feature (quedan «APPROVED — pendiente OK de lote»), RECAP consolidado cuyo OK cierra (detalle en la skill `feature`).
 
 ## Criterio de orden
 
