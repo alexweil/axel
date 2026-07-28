@@ -2,39 +2,128 @@
 # axel · installer: lleva la maquinaria de axel a un repo destino
 #
 # Uso:
+#   curl -fsSL <raw>/scripts/install.sh | bash                       # one-liner corto (defaults)
+#   curl -fsSL <raw>/scripts/install.sh | bash -s -- --from <url> <target-dir>
 #   scripts/install.sh <target-dir>                    # modo local: desde un clon de axel
 #   scripts/install.sh --from <url> <target-dir>       # bootstrap remoto: sin clon previo
-#   curl -fsSL <raw>/scripts/install.sh | bash -s -- --from <url> <target-dir>
 #
 # Con --from clona/actualiza un cache de axel (AXEL_HOME, default ~/.axel) fail-closed
-# y delega en el install.sh de ese clon; el modo local no cambia de contrato.
+# y delega en el install.sh de ese clon. Los argumentos son opcionales SOLO en el camino
+# de bootstrap: sin --from y sin clon en disco (piped) la fuente es la URL canónica
+# (override: AXEL_DEFAULT_REMOTE) y sin <target-dir> el destino es el toplevel del cwd.
+# El modo local no cambia de contrato: su fuente es el clon del que sale este archivo y
+# el <target-dir> sigue siendo obligatorio.
 # Tres modos de instalación, clasificados por el marker .claude/axel-install del destino:
 #   - corrida inicial (sin marker): inventario, siembra, payload, handoff si hay pendientes
 #   - actualización (con marker): payload + re-verificación; nunca reabre una adopción cerrada
-# Detalle completo: docs/implementation/01-installer.md y 02-remote-install.md del repo axel.
+# Detalle completo: docs/implementation/{01-installer,02-remote-install,06-oneliner-defaults}.md.
 #
 # Exit: 0 = instalado/actualizado sin pendientes
 #       1 = instalado/actualizado con pendientes (handoff en docs/ADOPTION.md; siguiente paso: /adopt)
 #       2 = rechazo sin mutaciones del destino — o, señalado con aviso explícito, un
 #           delegado interrumpido con RC anómalo (posible diff parcial: revisar git status)
+# Toda salida controlada imprime una línea final "── axel · fin: rc=N · …": su ausencia
+# significa que la corrida no completó (típicamente `curl | bash` con la descarga fallada).
 set -euo pipefail
 
-die() { echo "rechazo: $*" >&2; exit 2; }
-canon_dir() { (cd "$1" 2>/dev/null && pwd -P); }
-usage() { echo "uso: $0 [--from <url>] <target-dir>" >&2; exit 2; }
+# ── Finalización verificable ──────────────────────────────────────────────────
+# `curl … | bash` no puede distinguir "el instalador falló" de "el instalador nunca
+# corrió": si curl falla, bash recibe entrada vacía —o un prefijo del script— y
+# retorna 0. Por eso el ÚNICO terminal es finish(), que arma la marca, imprime la
+# línea final y sale DENTRO del mismo cuerpo: un corte del script no puede separar
+# los pasos (cortar adentro del cuerpo deja sintaxis inválida y bash no ejecuta nada).
+# El trap EXIT es el único camino no armado: ahí la corrida quedó incompleta y un 0
+# engañoso se convierte en 2. No agregar ningún otro `exit` al script — hay un test
+# que lo verifica. Fronteras: docs/implementation/06-oneliner-defaults.md.
+AXEL_FINISHED=""
+FINAL_PREFIX="── axel · fin:"
+axel_rc=0   # RC observado que los traps compuestos capturan antes de limpiar
+finish() {  # $1=rc  $2=motivo · AXEL_INSTALL_INNER (reservado) suprime la línea del delegado
+  AXEL_FINISHED=1
+  if [ -z "${AXEL_INSTALL_INNER:-}" ]; then
+    printf '%s rc=%s · %s ──\n' "$FINAL_PREFIX" "$1" "$2"
+  fi
+  exit "$1"
+}
+axel_on_exit() {  # $1 = RC observado; no inventa errores: solo convierte el 0 engañoso
+  if [ -n "$AXEL_FINISHED" ]; then return 0; fi
+  echo "rechazo: la corrida terminó sin finalización confirmada (¿script truncado o descarga parcial?); no hay instalación demostrable" >&2
+  if [ "$1" -eq 0 ]; then exit 2; fi
+  return 0
+}
+trap 'axel_on_exit $?' EXIT
+rc_reason() {
+  case "$1" in
+    0) printf 'instalado/actualizado sin pendientes' ;;
+    1) printf 'instalado/actualizado con pendientes (ver docs/ADOPTION.md)' ;;
+    2) printf 'rechazo (ver el detalle arriba)' ;;
+    *) printf 'salida no contractual' ;;
+  esac
+}
 
-# ── Bootstrap remoto (--from): corre ANTES de toda resolución de AXEL_ROOT ────
-# En modo piped no hay $0 en disco: nada de este bloque depende del entorno del
-# script que corre — la fuente que instala es siempre el clon del cache.
-FROM_MODE=""
-FROM_URL=""
-if [ "${1:-}" = "--from" ]; then
-  [ $# -eq 3 ] || usage
+die() { echo "rechazo: $*" >&2; finish 2 "rechazo (ver el detalle arriba)"; }
+canon_dir() { (cd "$1" 2>/dev/null && pwd -P); }
+usage() {
+  echo "uso: install.sh [--from <url>] [<target-dir>]" >&2
+  echo "     los defaults (URL canónica / toplevel del cwd) son del camino de bootstrap;" >&2
+  echo "     el modo local, con un clon de axel en disco, exige <target-dir>." >&2
+  finish 2 "uso incorrecto"
+}
+# Identidad de remotos, con dos sesgos deliberadamente opuestos:
+#   url_norm  — ESTRICTA: decide si un cache existente sirve para la URL pedida (de más, rechaza)
+#   url_ident — AMPLIA: decide si el destino asumido es la propia fuente (de más, también rechaza)
+# Ninguna habilita nada por coincidir: las dos solo pueden cortar la corrida.
+url_norm() { local u="${1%/}"; printf '%s' "${u%.git}"; }
+url_ident() {
+  local u="$1"
+  case "$u" in
+    *://*)
+      u="${u#*://}"; u="${u#*@}"                                     # esquema + userinfo
+      u="$(printf '%s' "$u" | sed -E 's|^([^/:]+):[0-9]+/|\1/|')" ;; # puerto explícito
+    *@*:*) u="${u#*@}"; u="${u%%:*}/${u#*:}" ;;                      # scp-like: git@host:path
+  esac
+  u="${u%/}"; u="${u%.git}"; u="${u%/}"
+  printf '%s' "$u" | tr '[:upper:]' '[:lower:]'
+}
+
+# ── Argumentos ────────────────────────────────────────────────────────────────
+# Los dos son opcionales en el camino de bootstrap, así que un flag mal escrito no
+# puede caer en la posición del destino: se rechaza en vez de instalarse en "-x".
+FROM_MODE=""; FROM_URL=""; TARGET_ARG=""; TARGET_GIVEN=""; ENDOPTS=""
+while [ $# -gt 0 ]; do
+  if [ -z "$ENDOPTS" ]; then
+    case "$1" in
+      --from)
+        if [ -n "$FROM_MODE" ]; then usage; fi
+        if [ $# -lt 2 ]; then usage; fi
+        FROM_MODE=1; FROM_URL="$2"; shift 2; continue ;;
+      --) ENDOPTS=1; shift; continue ;;
+      -*) usage ;;
+    esac
+  fi
+  if [ -n "$TARGET_GIVEN" ]; then usage; fi
+  TARGET_GIVEN=1; TARGET_ARG="$1"; shift
+done
+
+# ── Modo: bootstrap remoto (--from o piped) vs local (clon en disco) ─────────
+# La prueba es de filesystem pura —BASH_SOURCE existe como archivo—, sin git ni cwd:
+# nada del branch de bootstrap depende del entorno del script que corre. Por stdin
+# BASH_SOURCE queda vacío, así que el piped sin --from cae en el default de fuente.
+# Si hay archivo pero su repo no es axel, se rechaza más abajo: una copia suelta de
+# install.sh jamás tira código de la red por su cuenta.
+AXEL_CANONICAL_URL="https://github.com/alexweil/axel"
+SCRIPT_PATH="${BASH_SOURCE[0]:-}"
+HAVE_LOCAL_SOURCE=""
+if [ -n "$SCRIPT_PATH" ] && [ -f "$SCRIPT_PATH" ]; then HAVE_LOCAL_SOURCE=1; fi
+FROM_DEFAULTED=""
+if [ -z "$FROM_MODE" ] && [ -z "$HAVE_LOCAL_SOURCE" ]; then
   FROM_MODE=1
-  FROM_URL="$2"
-  shift 2
+  FROM_URL="${AXEL_DEFAULT_REMOTE:-$AXEL_CANONICAL_URL}"
+  if [ -n "${AXEL_DEFAULT_REMOTE:-}" ]; then FROM_DEFAULTED="env"; else FROM_DEFAULTED="canon"; fi
 fi
-[ $# -eq 1 ] || usage
+
+# ── Bootstrap remoto: corre ANTES de toda resolución de AXEL_ROOT ─────────────
+# En modo piped no hay $0 en disco: la fuente que instala es siempre el clon del cache.
 
 if [ -n "$FROM_MODE" ]; then
   # el flag de modo es independiente del contenido: --from "" jamás cae al modo local
@@ -42,8 +131,45 @@ if [ -n "$FROM_MODE" ]; then
   case "$FROM_URL" in
     -*) die "--from: la URL no puede empezar con '-' (se confundiría con una opción de git): $FROM_URL" ;;
   esac
-  [ -d "$1" ] || die "el destino no existe o no es un directorio: $1"
-  BOOT_TARGET="$(canon_dir "$1")" || die "no pude resolver el path del destino: $1"
+
+  # Destino: el argumento, o el toplevel del repo git donde está parado el caller.
+  # El default entra intacto a toda la validación (disjunción acá, preflight en el
+  # delegado): solo completa un argumento ausente, no relaja nada.
+  TARGET_DEFAULTED=""
+  if [ -n "$TARGET_GIVEN" ]; then
+    BOOT_TARGET_IN="$TARGET_ARG"
+  else
+    BOOT_TARGET_IN="$(git rev-parse --show-toplevel 2>/dev/null)" \
+      || die "sin <target-dir> el destino es el repo git donde estás parado, y $PWD no está dentro del árbol de trabajo de ninguno; entrá al repo destino o pasá el path: install.sh [--from <url>] <target-dir>"
+    [ -n "$BOOT_TARGET_IN" ] \
+      || die "sin <target-dir> el destino es el repo git donde estás parado, y no pude resolver su toplevel desde $PWD"
+    TARGET_DEFAULTED=1
+  fi
+  [ -d "$BOOT_TARGET_IN" ] || die "el destino no existe o no es un directorio: $BOOT_TARGET_IN"
+  BOOT_TARGET="$(canon_dir "$BOOT_TARGET_IN")" || die "no pude resolver el path del destino: $BOOT_TARGET_IN"
+
+  # Anuncio ANTES de tocar nada (lock, clone, delegado): las marcas de "por defecto"
+  # aparecen solo sobre el valor efectivamente asumido, así el anuncio no puede mentir
+  # sobre de dónde salió cada cosa. No hay confirmación interactiva posible: en modo
+  # piped stdin ES el script.
+  src_note=""; dst_note=""
+  case "$FROM_DEFAULTED" in
+    canon) src_note=" (por defecto)" ;;
+    env)   src_note=" (por defecto vía AXEL_DEFAULT_REMOTE)" ;;
+  esac
+  if [ -n "$TARGET_DEFAULTED" ]; then dst_note=" (por defecto: toplevel del cwd)"; fi
+  echo "── axel bootstrap · fuente: $FROM_URL$src_note · destino: $BOOT_TARGET$dst_note ──"
+
+  # Guard del destino ambiental: correr el one-liner parado adentro de un clon de la
+  # propia fuente. El self-install del delegado no lo ve (compara el git-common-dir
+  # del cache, no el origen remoto). Solo aplica al destino ASUMIDO: con destino
+  # explícito el usuario declaró la intención.
+  if [ -n "$TARGET_DEFAULTED" ]; then
+    boot_tgt_origin="$(git -C "$BOOT_TARGET" remote get-url origin 2>/dev/null || true)"
+    if [ -n "$boot_tgt_origin" ] && [ "$(url_ident "$boot_tgt_origin")" = "$(url_ident "$FROM_URL")" ]; then
+      die "el destino asumido es un clon de la propia fuente ($BOOT_TARGET → $boot_tgt_origin): estás parado adentro de axel. Si de verdad querés instalar ahí, pasá el destino explícito."
+    fi
+  fi
 
   # Canonicaliza aunque el path no exista: ancestro existente más profundo + resto.
   # Así un cache/lock planeado adentro del destino con padres sin crear también se detecta.
@@ -99,7 +225,7 @@ if [ -n "$FROM_MODE" ]; then
   boot_on_signal() {
     boot_cleanup
     echo "rechazo: bootstrap interrumpido por señal" >&2
-    exit 2
+    finish 2 "interrumpido por señal"
   }
   lock_wait=0
   lock_timeout="${AXEL_BOOTSTRAP_LOCK_TIMEOUT:-60}"
@@ -131,7 +257,7 @@ if [ -n "$FROM_MODE" ]; then
     sleep 1
     lock_wait=$((lock_wait + 1))
   done
-  trap boot_cleanup EXIT
+  trap 'axel_rc=$?; boot_cleanup; axel_on_exit "$axel_rc"' EXIT
   trap boot_on_signal INT TERM
 
   # La verdad del branch default y de su tip viene del remoto, jamás de metadata
@@ -141,7 +267,6 @@ if [ -n "$FROM_MODE" ]; then
   DEFAULT_BRANCH="$(printf '%s\n' "$symref_out" | sed -n 's|^ref: refs/heads/\(..*\)[[:space:]]HEAD$|\1|p' | head -1)"
   [ -n "$DEFAULT_BRANCH" ] || die "el remoto no informa su branch default (symref de HEAD); la fuente no es demostrable — fail-closed"
 
-  url_norm() { local u="${1%/}"; printf '%s' "${u%.git}"; }
   if [ -e "$BOOT_CACHE" ] || [ -L "$BOOT_CACHE" ]; then
     [ -d "$BOOT_CACHE" ] || die "AXEL_HOME existe y no es un directorio: $BOOT_CACHE; no lo piso — resolvelo a mano"
     git -C "$BOOT_CACHE" rev-parse --show-toplevel >/dev/null 2>&1 \
@@ -229,23 +354,26 @@ if [ -n "$FROM_MODE" ]; then
   # Delegación en background + wait: una señal al wrapper interrumpe el wait y el
   # trap reenvía TERM al delegado y espera su muerte antes de soltar el lock.
   set +e
-  "$BOOT_DELEGATE" "$BOOT_TARGET" &
+  AXEL_INSTALL_INNER=1 "$BOOT_DELEGATE" "$BOOT_TARGET" &
   BOOT_CHILD=$!
   wait "$BOOT_CHILD"
   boot_rc=$?
   set -e
   BOOT_CHILD=""
   case "$boot_rc" in
-    0 | 1 | 2) exit "$boot_rc" ;;
+    0 | 1 | 2) finish "$boot_rc" "$(rc_reason "$boot_rc")" ;;
     *)
       echo "aviso: el instalador delegado terminó con un código anómalo ($boot_rc) — pudo quedar interrumpido a mitad de escritura; revisá 'git -C $BOOT_TARGET status' antes de seguir" >&2
-      exit 2 ;;
+      finish 2 "delegado interrumpido (RC $boot_rc) — revisá git status en el destino" ;;
   esac
 fi
 
 # ── Modo local: exige correr desde un clon real de axel en disco ──────────────
-SCRIPT_PATH="${BASH_SOURCE[0]:-}"
-{ [ -n "$SCRIPT_PATH" ] && [ -f "$SCRIPT_PATH" ]; } \
+# Acá la fuente es el clon del que sale este archivo — nunca la URL canónica: defaultear
+# a la red instalaría algo distinto de lo que el usuario tiene a la vista. Por eso el
+# destino tampoco se asume: pasarlo es ergonómico y el error barato es preferible.
+if [ -z "$TARGET_GIVEN" ]; then usage; fi
+[ -n "$HAVE_LOCAL_SOURCE" ] \
   || die "no estoy corriendo desde un clon de axel en disco (¿piped por stdin?); usá: install.sh --from <url> <target-dir>"
 AXEL_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && git rev-parse --show-toplevel)" \
   || die "no pude resolver el repo de axel desde $SCRIPT_PATH"
@@ -304,8 +432,8 @@ HANDOFF_SIGNATURE="<!-- generated by axel installer -->"
 GITIGNORE_LINE=".claude/state/"
 
 # ── Destino ───────────────────────────────────────────────────────────────────
-[ -d "$1" ] || die "el destino no existe o no es un directorio: $1"
-TARGET="$(canon_dir "$1")" || die "no pude resolver el path del destino: $1"
+[ -d "$TARGET_ARG" ] || die "el destino no existe o no es un directorio: $TARGET_ARG"
+TARGET="$(canon_dir "$TARGET_ARG")" || die "no pude resolver el path del destino: $TARGET_ARG"
 
 # ── Precondiciones de identidad (nada se escribe si fallan) ───────────────────
 git -C "$TARGET" rev-parse --git-dir >/dev/null 2>&1 \
@@ -566,7 +694,7 @@ fi
 if [ "${#ERRORS[@]}" -gt 0 ]; then
   echo "── preflight: ${#ERRORS[@]} problema(s); no se escribió nada ──" >&2
   for e in "${ERRORS[@]}"; do echo "rechazo: $e" >&2; done
-  exit 2
+  finish 2 "rechazo del preflight (${#ERRORS[@]} problema(s), nada escrito)"
 fi
 
 # ── Verificación de settings (estructural, fail-closed) ───────────────────────
@@ -687,7 +815,7 @@ done
 # Plantillas: {{PROJECT}}, {{DATE}} y {{STATE_LINES}} (solo STATUS). El bloque multilínea
 # entra por archivo (sed r+d): BSD awk no acepta -v con newlines y así no hay escapes que cuidar.
 RENDER_TMP="$(mktemp -d "${TMPDIR:-/tmp}/axel-install.XXXXXX")"
-trap 'rm -rf "$RENDER_TMP"' EXIT
+trap 'axel_rc=$?; rm -rf "$RENDER_TMP"; axel_on_exit "$axel_rc"' EXIT
 if [ "$MODE" = "initial" ] && { [ "${#PREEXISTING[@]}" -gt 0 ] || [ "${#CANDIDATES[@]}" -gt 0 ] || [ "${#PENDING_MECH[@]}" -gt 0 ]; }; then
   STATE_LINES="- **Fase**: adopción — este proyecto tiene contenido previo a axel; correr \`/adopt\` para mapearlo y derivar el estado real
 - **Pendientes**: ver [ADOPTION.md](ADOPTION.md) — hallazgos e instrucciones del instalador
@@ -814,8 +942,8 @@ echo
 echo "próximos pasos: revisá el diff (git -C $TARGET status), commitealo con tu proceso,"
 if [ -n "$HAS_PENDING" ]; then
   echo "y abrí Claude Code en el destino: la adopción se cierra con /adopt (ver $HANDOFF_REL)."
-  exit 1
+  finish 1 "$(rc_reason 1)"
 else
   echo "y abrí Claude Code en el destino: /status para ubicarte, /design para arrancar."
-  exit 0
+  finish 0 "$(rc_reason 0)"
 fi

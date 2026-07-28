@@ -8,6 +8,13 @@ AXEL_REAL="$(cd "$(dirname "$0")/.." && git rev-parse --show-toplevel)"
 TESTS_TMP="$(mktemp -d "${TMPDIR:-/tmp}/axel-install-tests.XXXXXX")"
 trap 'rm -rf "$TESTS_TMP"' EXIT
 
+# Hermetismo (feature 06): con los defaults del bootstrap, un caso que omita los overrides
+# consultaría la URL canónica y el cache real ~/.axel — es decir, red y estado del usuario.
+# Ambos se apuntan a fixtures locales para TODA la suite (AXEL_DEFAULT_REMOTE se fija en la
+# sección T15, apenas existe el remoto de fixture). Los casos que necesitan el valor CABLEADO
+# lo piden con AXEL_DEFAULT_REMOTE="" y cortan antes de cualquier invocación de git.
+export AXEL_HOME="$TESTS_TMP/axel-home-fallback"
+
 # Fuente = copia del árbol actual de axel (sin .git ni estado local), con repo propio:
 # los tests jamás tocan el repo axel real, y "otro SHA de axel" es un commit en la copia.
 AXEL_SRC="$TESTS_TMP/axel-src"
@@ -571,6 +578,7 @@ printf '%s' "$OUT" | grep -qF "conflicto interno" && ok || ko "falta el motivo e
 # worktree (sin .git): la promesa es no pisar trabajo, no congelar refs internas.
 R15="$TESTS_TMP/r15"
 git clone -q -- "$AXEL_SRC" "$R15"
+export AXEL_DEFAULT_REMOTE="$R15"   # hermetismo: el default de fuente nunca sale a la red
 BOOT_TIMEOUT=3
 run_boot() {  # $1=AXEL_HOME $2=url $3=target
   OUT="$(AXEL_HOME="$1" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" "$INSTALL" --from "$2" "$3" 2>&1)" && RC=0 || RC=$?
@@ -903,12 +911,9 @@ assert_rc 0
 assert_file "$T15S/AGENTS.md"
 assert_in_file "$T15S/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
 
-t "T15s2 piped sin --from: rechazo con mensaje que apunta a --from"
-T15S2="$(mk_target t15s2)"
-OUT="$(cd "$T15S2" && bash -s -- "$T15S2" < "$INSTALL" 2>&1)" && RC=0 || RC=$?
-assert_rc 2
-assert_out "usá: install.sh --from"
-assert_clean "$T15S2"
+# T15s2 — "piped sin --from ⇒ rechazo que apunta a --from" quedó SUPERSEDED por el feature 06:
+# ese camino ahora defaultea la fuente a la URL canónica e instala. Su cobertura vive en la
+# sección T16 (T16a one-liner corto sin argumentos, T16d piped con destino explícito).
 
 t "T15t1 skip-worktree oculta un reemplazo del delegado: rechazo (repro r5)"
 H15T1="$TESTS_TMP/home15t1"
@@ -1008,6 +1013,251 @@ assert_rc 0
 [ ! -e "$TESTS_TMP/FETCH_HOOKED" ] && ok || ko "el hook reference-transaction corrió durante el fetch"
 [ -z "$(git -C "$H15T8" tag -l v-test15)" ] && ok || ko "el tag implícito entró al cache pese a --no-tags"
 assert_in_file "$T15T8/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+
+# ── T16 · defaults del bootstrap remoto y finalización verificable (feature 06) ─
+# Sin red: AXEL_DEFAULT_REMOTE ya apunta al remoto de fixture (hermetismo global). Los dos
+# casos que nombran la URL canónica real cortan antes de cualquier git.
+FINAL_PREFIX_T="── axel · fin:"
+assert_final_rc() {  # la salida TERMINA con la línea final, con ese rc, y aparece una sola vez
+  local want="$1" count last
+  count="$(printf '%s\n' "$OUT" | grep -cF "$FINAL_PREFIX_T" || true)"
+  count="$(printf '%s' "$count" | tr -d '[:space:]')"
+  last="$(printf '%s\n' "$OUT" | tail -1)"
+  [ "$count" = "1" ] && ok || ko "esperaba exactamente una línea final, hubo $count"
+  case "$last" in
+    "$FINAL_PREFIX_T rc=$want "*) ok ;;
+    *) ko "la última línea no es la final con rc=$want: [$last]" ;;
+  esac
+}
+assert_no_final() {
+  printf '%s\n' "$OUT" | grep -qF "$FINAL_PREFIX_T" && ko "no debería haber línea final" || ok
+}
+run_piped() {  # el one-liner: script por stdin · $1=AXEL_HOME $2=cwd, resto=argumentos
+  local home="$1" cwd="$2"; shift 2
+  OUT="$(cd "$cwd" && AXEL_HOME="$home" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" \
+         bash -s -- "$@" < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+}
+canon() { (cd "$1" && pwd -P); }
+
+t "T16a one-liner corto: piped sin argumentos instala en el toplevel del cwd"
+H16A="$TESTS_TMP/home16a"
+T16A="$(mk_target t16a)"
+run_piped "$H16A" "$T16A"
+assert_rc 0
+assert_file "$T16A/AGENTS.md"
+assert_link "$T16A/CLAUDE.md" "AGENTS.md"
+assert_file "$T16A/scripts/review.sh"
+assert_in_file "$T16A/.claude/axel-install" "axel-sha: $(git -C "$R15" rev-parse HEAD)"
+assert_out "fuente: $R15 (por defecto vía AXEL_DEFAULT_REMOTE)"
+assert_out "destino: $(canon "$T16A") (por defecto: toplevel del cwd)"
+assert_final_rc 0
+assert_no "$H16A.lock"
+
+t "T16b piped sin argumentos desde un subdirectorio: instala en el toplevel"
+T16B="$(mk_target t16b)"
+mkdir -p "$T16B/sub/dir"
+run_piped "$TESTS_TMP/home16b" "$T16B/sub/dir"
+assert_rc 0
+assert_file "$T16B/AGENTS.md"
+assert_no "$T16B/sub/dir/AGENTS.md"
+assert_final_rc 0
+
+t "T16c piped sin argumentos fuera de un repo git: rechazo sin escribir"
+NOREPO16="$TESTS_TMP/no-repo16"; mkdir -p "$NOREPO16"
+before="$(fs_digest "$NOREPO16")"
+run_piped "$TESTS_TMP/home16c" "$NOREPO16"
+assert_rc 2
+assert_out "no está dentro del árbol de trabajo de ninguno"
+[ "$before" = "$(fs_digest "$NOREPO16")" ] && ok || ko "mutaciones tras el rechazo"
+assert_final_rc 2
+
+t "T16d piped con destino explícito y sin --from: default de fuente solo"
+T16D="$(mk_target t16d)"
+run_piped "$TESTS_TMP/home16d" "$TESTS_TMP" "$T16D"   # cwd fuera de todo repo: el destino es el argumento
+assert_rc 0
+assert_file "$T16D/AGENTS.md"
+assert_out "(por defecto vía AXEL_DEFAULT_REMOTE)"
+printf '%s' "$OUT" | grep -qF "toplevel del cwd" && ko "el destino no debía marcarse por defecto" || ok
+assert_final_rc 0
+
+t "T16e --from sin destino (con clon en disco): default de destino solo"
+T16E="$(mk_target t16e)"
+OUT="$(cd "$T16E" && AXEL_HOME="$TESTS_TMP/home16e" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" \
+       "$INSTALL" --from "$R15" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_file "$T16E/AGENTS.md"
+assert_out "(por defecto: toplevel del cwd)"
+printf '%s' "$OUT" | grep -qF "fuente: $R15 (por defecto" && ko "la fuente no debía marcarse por defecto" || ok
+assert_final_rc 0
+
+t "T16f modo local sin argumentos: uso y exit 2 (contrato local intacto)"
+T16F="$(mk_target t16f)"
+before="$(fs_digest "$T16F")"
+OUT="$(cd "$T16F" && "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_out "uso: install.sh"
+[ "$before" = "$(fs_digest "$T16F")" ] && ok || ko "mutaciones tras el uso"
+assert_final_rc 2
+
+t "T16g guard del destino asumido: clon de la propia fuente (path local y forma SSH)"
+G16="$TESTS_TMP/clon-de-la-fuente"
+git clone -q -- "$R15" "$G16"
+before="$(fs_digest "$G16")"
+run_piped "$TESTS_TMP/home16g" "$G16"
+assert_rc 2
+assert_out "clon de la propia fuente"
+[ "$before" = "$(fs_digest "$G16")" ] && ok || ko "mutaciones en el clon de la fuente"
+assert_final_rc 2
+# forma SSH contra el default CABLEADO (env vacío ⇒ URL canónica): url_norm no las equipara
+G16B="$(mk_target t16g2)"
+git -C "$G16B" remote add origin "git@github.com:alexweil/axel.git"
+before="$(fs_digest "$G16B")"
+OUT="$(cd "$G16B" && AXEL_HOME="$TESTS_TMP/home16g2" AXEL_DEFAULT_REMOTE="" \
+       AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" bash -s -- < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_out "clon de la propia fuente"
+assert_out "fuente: https://github.com/alexweil/axel (por defecto)"   # el cableado, sin red
+[ "$before" = "$(fs_digest "$G16B")" ] && ok || ko "mutaciones con el guard SSH"
+
+t "T16h one-liner corto con cache de otro origin: rechazo (escenario fork)"
+H16H="$TESTS_TMP/home16h"
+git clone -q -- "$AXEL_SRC" "$H16H"          # cache clonado de OTRA fuente
+T16H="$(mk_target t16h)"
+before_c="$(fs_digest "$H16H")"
+run_piped "$H16H" "$T16H"
+assert_rc 2
+assert_out "apunta a otro origin"
+[ "$before_c" = "$(fs_digest "$H16H")" ] && ok || ko "mutaciones en el cache tras el rechazo"
+
+t "T16i parser: flags desconocidos, --from sin valor o repetido, posicionales de más"
+T16I="$(mk_target t16i)"
+run_install --froom "$T16I";                    assert_rc 2; assert_out "uso: install.sh"
+run_install -x "$T16I";                         assert_rc 2
+run_install --from;                             assert_rc 2
+run_install --from "$R15" --from "$R15" "$T16I"; assert_rc 2
+run_install "$T16I" "$T16I";                    assert_rc 2
+assert_clean "$T16I"
+OUT="$(AXEL_HOME="$TESTS_TMP/home16i" AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" \
+       "$INSTALL" --from "$R15" -- "$T16I" 2>&1)" && RC=0 || RC=$?
+assert_rc 0                                     # `--` cierra los flags: el destino se acepta
+assert_file "$T16I/AGENTS.md"
+
+t "T16j1 línea final en rc 1 (adopción) y rc 2 (delegado y preflight)"
+T16J="$(mk_target t16j)"
+echo "# notas propias" > "$T16J/NOTAS.md"; tcommit "$T16J" "doc propio"
+run_piped "$TESTS_TMP/home16j" "$T16J"
+assert_rc 1; assert_file "$T16J/docs/ADOPTION.md"; assert_final_rc 1
+T16J2="$(mk_target t16j2)"; echo sucio > "$T16J2/sucio.txt"
+run_piped "$TESTS_TMP/home16j" "$T16J2"
+assert_rc 2; assert_out "no está limpio"; assert_final_rc 2
+T16J3="$(mk_target t16j3)"                       # rechazo AGREGADO del preflight
+mkdir -p "$T16J3/.claude/skills/adopt"; ln -s /dev/null "$T16J3/.claude/skills/adopt/SKILL.md"
+tcommit "$T16J3" "payload como symlink"
+run_piped "$TESTS_TMP/home16j" "$T16J3"
+assert_rc 2; assert_out "preflight:"; assert_final_rc 2
+
+t "T16j2 skew de versiones: exactamente una línea final en ambas direcciones"
+RSTUB16="$(mk_stub_remote rstub16 '#!/usr/bin/env bash
+echo "delegado viejo: instalando en $1"
+exit 0')"                                        # delegado viejo: no conoce la línea final
+T16K1="$(mk_target t16k1)"
+run_piped "$TESTS_TMP/home16k1" "$T16K1"                       # (cwd = destino, sin argumentos)
+[ "$RC" -eq 0 ] && ok || ko "wrapper con delegado viejo: exit $RC"
+OUT="$(cd "$T16K1" && AXEL_HOME="$TESTS_TMP/home16k1b" AXEL_DEFAULT_REMOTE="$RSTUB16" \
+       AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" bash -s -- < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_out "delegado viejo"
+assert_final_rc 0                                # la imprime el wrapper: exactamente una
+printf '#!/usr/bin/env bash\nexec "$1" "$2"\n' > "$TESTS_TMP/old-wrapper.sh"   # no exporta el marcador
+T16K2="$(mk_target t16k2)"
+OUT="$(bash "$TESTS_TMP/old-wrapper.sh" "$INSTALL" "$T16K2" 2>&1)" && RC=0 || RC=$?
+assert_rc 0
+assert_final_rc 0                                # la imprime el delegado: sigue siendo una
+
+t "T16j3 señales: no capturada ⇒ sin línea; capturada por el wrapper ⇒ rc 2 con línea"
+printf '#!/bin/sh\ntouch "%s/py-started"\nsleep 5\n' "$TESTS_TMP" > "$TESTS_TMP/slow-python"
+chmod +x "$TESTS_TMP/slow-python"
+T16S="$(mk_target t16s)"
+before="$(fs_digest "$T16S")"
+AXEL_INSTALL_PYTHON="$TESTS_TMP/slow-python" "$INSTALL" "$T16S" > "$TESTS_TMP/s16.out" 2>&1 & SIG16=$!
+s16=0
+until [ -f "$TESTS_TMP/py-started" ] || [ "$s16" -ge 50 ]; do sleep 0.1; s16=$((s16 + 1)); done
+[ -f "$TESTS_TMP/py-started" ] && ok || ko "el instalador nunca llegó al chequeo de policy"
+kill -TERM "$SIG16"
+# el aviso "Terminated: 15" lo imprime bash al reapear el hijo muerto por señal: se silencia
+# para que la salida de la suite siga siendo solo fallas + resumen
+rc16s=0; { wait "$SIG16" || rc16s=$?; } 2>/dev/null
+[ "$rc16s" -ge 128 ] && ok || ko "muerte por señal no capturada: exit esperado ≥128, fue $rc16s"
+OUT="$(cat "$TESTS_TMP/s16.out")"; assert_no_final
+[ "$before" = "$(fs_digest "$T16S")" ] && ok || ko "la señal llegó después de escribir"
+RSLOW16="$(mk_stub_remote rslow16 '#!/usr/bin/env bash
+trap "" TERM
+echo started > "$1/.boot-started"
+sleep 3
+exit 0')"
+H16S="$TESTS_TMP/home16s"; T16S2="$(mk_target t16s2)"
+AXEL_HOME="$H16S" AXEL_DEFAULT_REMOTE="$RSLOW16" "$INSTALL" --from "$RSLOW16" "$T16S2" \
+  > "$TESTS_TMP/s16b.out" 2>&1 & WRAP16=$!
+w16=0
+until [ -f "$T16S2/.boot-started" ] || [ "$w16" -ge 50 ]; do sleep 0.1; w16=$((w16 + 1)); done
+[ -f "$T16S2/.boot-started" ] && ok || ko "el delegado stub nunca arrancó"
+kill -TERM "$WRAP16"
+rc16w=0; wait "$WRAP16" || rc16w=$?
+[ "$rc16w" -eq 2 ] && ok || ko "señal capturada por el wrapper: exit esperado 2, fue $rc16w"
+OUT="$(cat "$TESTS_TMP/s16b.out")"
+assert_out "interrumpido por señal"
+assert_final_rc 2                                # salida controlada: sí lleva línea final
+
+t "T16k transporte y completitud: descarga vacía, prefijos parciales, variante pipefail"
+OUT="$(printf '' | bash 2>&1)" && RC=0 || RC=$?
+assert_rc 0; assert_no_final                     # descarga vacía: bash retorna 0 y nada nuestro corre
+trap_line="$(grep -n "^trap 'axel_on_exit" "$INSTALL" | head -1 | cut -d: -f1)"
+onexit_line="$(grep -n "^axel_on_exit() {" "$INSTALL" | head -1 | cut -d: -f1)"
+sed -n "1,$((trap_line - 1))p" "$INSTALL" > "$TESTS_TMP/pre-trap.sh"       # válido, sin trap
+bash -n "$TESTS_TMP/pre-trap.sh" 2>/dev/null && ok || ko "el prefijo pre-trap debía ser válido"
+OUT="$(bash < "$TESTS_TMP/pre-trap.sh" 2>&1)" && RC=0 || RC=$?
+assert_rc 0; assert_no_final                     # frontera declarada: RC de bash, sin línea
+sed -n "1,${onexit_line}p" "$INSTALL" > "$TESTS_TMP/pre-trap-roto.sh"      # corta dentro de la función
+bash -n "$TESTS_TMP/pre-trap-roto.sh" 2>/dev/null && ko "el prefijo debía quedar inválido" || ok
+OUT="$(bash < "$TESTS_TMP/pre-trap-roto.sh" 2>&1)" && RC=0 || RC=$?
+assert_rc 2; assert_no_final                     # sintaxis incompleta: 2 de bash, tampoco firma
+sed -n "1,${trap_line}p" "$INSTALL" > "$TESTS_TMP/post-trap.sh"            # con trap, sin llegar a finish
+OUT="$(bash < "$TESTS_TMP/post-trap.sh" 2>&1)" && RC=0 || RC=$?
+assert_rc 2                                      # el 0 engañoso se fuerza a 2
+assert_out "sin finalización confirmada"; assert_no_final
+cp "$TESTS_TMP/post-trap.sh" "$TESTS_TMP/post-trap-nz.sh"; echo 'false' >> "$TESTS_TMP/post-trap-nz.sh"
+OUT="$(bash < "$TESTS_TMP/post-trap-nz.sh" 2>&1)" && RC=0 || RC=$?
+assert_rc 1                                      # RC no-cero real: se conserva, no se inventa un 2
+assert_out "sin finalización confirmada"
+OUT="$(bash -o pipefail -c 'sh -c "exit 22" | bash' 2>&1)" && RC=0 || RC=$?
+assert_rc 22                                     # la remediación documentada sí propaga
+
+t "T16l AXEL_DEFAULT_REMOTE option-like: rechazo por la validación de URL, sin invocar git"
+T16L="$(mk_target t16l)"
+before="$(fs_digest "$T16L")"
+OUT="$(cd "$T16L" && AXEL_HOME="$TESTS_TMP/home16l" AXEL_DEFAULT_REMOTE="--upload-pack=/bin/true" \
+       AXEL_BOOTSTRAP_LOCK_TIMEOUT="$BOOT_TIMEOUT" bash -s -- < "$INSTALL" 2>&1)" && RC=0 || RC=$?
+assert_rc 2
+assert_out "no puede empezar con '-'"
+[ "$before" = "$(fs_digest "$T16L")" ] && ok || ko "mutaciones tras el rechazo"
+
+t "T16m invariante: todo exit vive en finish o en el trap de salida"
+fn_range() {  # imprime "inicio fin" del cuerpo de una función que abre con '<name>() {'
+  awk -v open="$1() {" 'index($0, open) == 1 { s = NR } s && /^}$/ && NR >= s { print s, NR; exit }' "$2"
+}
+read -r fs fe <<< "$(fn_range finish "$INSTALL")"
+read -r as ae <<< "$(fn_range axel_on_exit "$INSTALL")"
+{ [ -n "$fs" ] && [ -n "$as" ]; } && ok || ko "no pude ubicar los primitivos en el script"
+bad_exits=""
+while IFS= read -r hit; do
+  [ -n "$hit" ] || continue
+  n="${hit%%:*}"
+  if { [ "$n" -ge "$fs" ] && [ "$n" -le "$fe" ]; } || { [ "$n" -ge "$as" ] && [ "$n" -le "$ae" ]; }; then continue; fi
+  bad_exits="$bad_exits $n"
+done <<< "$(grep -nE '(^|[;[:space:]])exit ([0-9]|"|\$)' "$INSTALL" || true)"
+[ -z "$bad_exits" ] && ok || ko "exit fuera de los primitivos, líneas:$bad_exits"
+n_arm="$(grep -cE '^[[:space:]]*AXEL_FINISHED=1[[:space:]]*$' "$INSTALL" | tr -d '[:space:]')"
+[ "$n_arm" = "1" ] && ok || ko "la marca de completitud se arma en $n_arm lugares (debe ser solo finish)"
 
 # ── Resumen ───────────────────────────────────────────────────────────────────
 echo
