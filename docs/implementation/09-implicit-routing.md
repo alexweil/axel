@@ -272,6 +272,8 @@ Como en el 08, el cambio es texto interdependiente —las descripciones, la secc
 
 Sin cambios en `scripts/`: el payload del instalador no incorpora archivos y su allowlist no se toca.
 
+**Verificación del espejo**: `diff` de la sección §Ruteo entre `AGENTS.md` y `templates/AGENTS.md` da **vacío**. El primer commit de implementación las dejó con la enumeración de comandos en orden distinto (misma semántica, pero la regla de sincronía se verifica por diff); se alineó en el commit siguiente. **Nota honesta**: ese commit de alineado tocó solo los dos `AGENTS.md` y **no** STATUS — incumple la regla dura «todo commit toca algún doc / STATUS se actualiza en cada commit». No se amenda (historia lineal sin amend); queda registrado acá y corregido en el commit siguiente, que sí actualiza STATUS y declara el token sobre el HEAD real.
+
 ## Review log
 
 - **r1** (2026-07-29, `CHANGES_REQUESTED`, rango `a2f673d..a6af7ab`): review de la bajada. Codex validó los commits de cierre del 08 y de arranque del 09, y corrió las tres suites (lint limpio, install 459/0, loop 287/0 tras neutralizar el entorno). **Cinco puntos, los cinco aceptados**:
