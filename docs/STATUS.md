@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: plan — extensión entrada implícita (features 08–10) **cerrada** (APPROVED de Codex r2 + OK humano, 2026-07-29)
-- **Feature en curso**: ninguno
+- **Fase**: feature — modo lote (`/feature all`: features 08, 09, 10)
+- **Feature en curso**: ninguno — gate de lote presentado
 - **Ronda de review**: —
-- **Último veredicto**: APPROVED · ronda 2 · base `91f0f00`
-- **Esperando**: `/feature` en **sesión limpia** — feature 08 (reentradas de fase y feature: inventario completo fail-closed)
+- **Último veredicto**: APPROVED · ronda 2 · base `91f0f00` (extensión de plan 08–10)
+- **Esperando**: esperando autorización de lote — 08 (reentradas fail-closed), 09 (ruteo implícito), 10 (pipeline `/build`)
 - **Actualizado**: 2026-07-29
