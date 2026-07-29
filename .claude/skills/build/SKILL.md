@@ -42,11 +42,37 @@ Orden fijo `design` → `plan` → features en el orden del plan (es la dependen
 3. **Con la autorización**: registrala en el bloque Gate (fecha, literal breve, ajustes de alcance) + STATUS → pipeline en curso + commit. `scripts/awake.sh start`.
 4. **Si el humano descarta**: registrá el descarte en `## Cierre`, STATUS vuelve a estable, sin puntero colgado. Si corrige el pedido, re-presentá el gate sobre el mismo ledger.
 
-**Modelos por unidad**: lanzá cada hijo con el modelo por defecto de la sesión. El esquema de modelo por fase es elección del humano, no regla de la maquinaria: si quiere otro para un tipo de unidad, lo dice en el gate, queda como ajuste de alcance en el ledger y lo aplicás al spawnear.
-
 ## Si STATUS dice «esperando autorización de pipeline»
 
 El gate quedó presentado sin autorización registrada: no avances trabajo nuevo. **Re-presentá la ruta registrada en el ledger** — no la re-derives: el pedido era chat y no es reconstruible — y esperá. Respuesta directa ⇒ sin push. Con la autorización, seguí desde el paso 3 de arriba; no pidas una segunda.
+
+## Modelos por unidad
+
+**Lo fija la maquinaria, no la sesión**: lanzá cada hijo con el modelo de **su tipo de unidad**, no con el de tu sesión. Es la tabla **canónica** de la maquinaria — el modo lote de `feature` repite en línea su única fila y apunta acá para todo lo demás.
+
+| Tipo de unidad | Skill del hijo | Modelo | Por qué |
+|---|---|---|---|
+| `design-delta` | `design` | `fable` | razonamiento largo y escritura de docs |
+| `plan-delta` | `plan` | `fable` | ídem: el delta de plan es juicio y redacción |
+| `feature` | `feature` | `opus` | implementación iterando con el loop de review |
+
+Los valores son **alias de familia** del harness, **no IDs de API con versión**: la maquinaria elige el **perfil de capacidad**, y qué versión concreta resuelve cada alias lo decide el harness. Por eso la tabla no envejece cuando sale una versión nueva — y por eso nunca se escribe acá un id versionado.
+
+**Precedencia**, de mayor a menor: (1) **ajuste de alcance registrado en el ledger** — el humano puede pedir otro modelo para un tipo de unidad al autorizar el gate o durante la corrida, y gana sobre la tabla (queda escrito en el bloque Gate, así que **sobrevive a la reentrada**: un padre que relanza lo lee y lo aplica); (2) esta tabla; (3) el modelo de la sesión, **solo** por la degradación de abajo.
+
+**Si el harness rechaza el modelo** (alias no reconocido —incluido el caso de que el harness los **renombre**—, o sin acceso en este destino): **no cortes la corrida**. Es un **rechazo definitivo** —la invocación falla y no queda ningún hijo lanzado— y se resuelve así, en este orden:
+
+1. **Registrá el rechazo y el modelo elegido en el ledger** (evento: «modelo `X` no disponible: unidad lanzada con el modelo de la sesión») **+ STATUS + commit**, **antes** del segundo spawn. Es lo que hace que la degradación sobreviva a una caída tuya: sin ese commit, un padre que cae después del fallback deja al hijo corriendo degradado **sin registro**, y el RECAP lo omitiría.
+2. **Lanzá con el modelo de la sesión, reutilizando el mismo token**: como no hubo hijo, nadie reclamó el ancla — sigue pendiente y el evento de arranque la respalda, así que la triple coincidencia se satisface igual. **No re-acuñes** (acuñar sobre un pendiente puede duplicar un hijo) y no retires nada. El evento de degradación **no es un evento de arranque**: no desplaza al **evento vigente**, que sigue siendo el del arranque con su `token`.
+3. **Listalo en el RECAP consolidado**. La degradación se anuncia siempre; silenciosa, nunca.
+
+Si el rechazo viene de un **renombre de los alias** por parte del harness (dejaron de llamarse así), la degradación mantiene la corrida andando y el arreglo de fondo es actualizar **esta tabla** — una línea, en este único archivo, porque es la canónica.
+
+**Resultado indeterminado ≠ rechazo definitivo**: si el spawn falla de un modo en el que **no podés afirmar que no hay hijo** (timeout, error de transporte, respuesta ambigua), **no hay segundo spawn** — un hijo vivo más otro con el mismo token es la duplicación que el protocolo existe para evitar ⇒ **corte** (condición 1) y RECAP con la evidencia. Lo que no corta es el rechazo definitivo del modelo, nada más.
+
+**Modo POC**: sin excepción — los mismos modelos por tipo de unidad. El modo POC acota el **alcance** del delta, no con qué modelo corre el hijo.
+
+**Esta tabla es payload**: un re-run del instalador la reescribe con la de axel, así que editarla en un destino no sobrevive a la actualización. Si tu proyecto quiere otra política de modelos, el camino soportado es el **override por gate** (o volver a editarla después de cada update).
 
 ## 3. Loop del padre, unidad por unidad
 
@@ -55,7 +81,7 @@ Sos supervisor, no trabajador: **no transportás feedback** y te mantenés livia
 - **Pre-arranque**: re-derivá el resumen de la unidad de los docs actuales y comparalo en sustancia con el autorizado en el ledger — divergencia ⇒ corte (condición 3); fuentes insuficientes ⇒ corte (condición 4). Renová la ventana: `scripts/awake.sh start` **en cada unidad**.
 - **Acuñá el token de spawn** (la procedencia del hijo — el texto del prompt no otorga el rol): nonce (`uuidgen`; fallback `$(date +%s)-$$-$RANDOM`) y escritura **atómica** de `.claude/state/pipeline-child-token` (tmp + `mv -f`; contenido: `unit=<id>`, `token=<nonce>`, `spawned_at=<ts>`). Si no puede escribirse, **no lances**: es corte.
 - Registrá el arranque en el ledger (estado «en curso» + evento **con `token=<nonce>`**) + STATUS + commit. **El orden importa**: acuñar → ledger+commit → spawn. Como el spawn ocurre después del commit, un ledger sin evento de arranque prueba que no hubo hijo.
-- **Lanzá el hijo**: subagente fresco en background, prompt mínimo sin contexto del chat: «Modo hijo del pipeline: unidad \<id\> (tipo \<tipo\>), token \<nonce\>. Ledger: docs/implementation/pipeline-\<fecha\>.md. Leé docs/STATUS.md, AGENTS.md, docs/DESIGN.md, docs/IMPLEMENTATION.md y el ledger, y seguí la sección "Modo hijo de pipeline" de la skill \<design|plan|feature\>.»
+- **Lanzá el hijo**: subagente fresco en background, **con el modelo que fija §Modelos por unidad** (no el de tu sesión; si el harness lo rechaza, el camino está ahí), prompt mínimo sin contexto del chat: «Modo hijo del pipeline: unidad \<id\> (tipo \<tipo\>), token \<nonce\>. Ledger: docs/implementation/pipeline-\<fecha\>.md. Leé docs/STATUS.md, AGENTS.md, docs/DESIGN.md, docs/IMPLEMENTATION.md y el ledger, y seguí la sección "Modo hijo de pipeline" de la skill \<design|plan|feature\>.»
 - **Supervisión**: cuando el hijo termine un turno con `REVIEW LANZADA id=X head=H`, lanzá un watcher en Bash background que polee `.claude/state/review-terminal` (cada ~15 s, **timeout 45 min**) esperando la **identidad completa**: `id` = X exacto y, si el terminal trae `review_head` ≠ `-`, también H. Un terminal que no matchea es residuo de otra invocación: **ignoralo y seguí esperando** — solo el timeout corta (condición 1). Match ⇒ **empujón sin contenido**: «review terminada (id=X) — el desenlace está en `.claude/state/review-terminal`; seguí según el contrato». Ejemplo de watcher (adaptá ID/HEAD):
 
   ```bash

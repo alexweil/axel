@@ -13,7 +13,9 @@ El contexto de chat es efímero y se descarta entre features; **el estado vive e
 
 ## Roles
 
-- **Generador**: Claude Code (hoy: esquema mixto por fase — Fable 5 para `/design` y `/plan`, Opus 5 para `/feature`, esfuerzo xhigh; lo elige el humano en la sesión). Diseña, escribe docs y código, commitea, y orquesta el loop.
+- **Generador**: Claude Code. Diseña, escribe docs y código, commitea, y orquesta el loop. **Dos planos de modelo, distintos**:
+  - **De la sesión** — lo **elige el humano** (hoy en axel: esquema mixto por fase — Fable 5 para `/design` y `/plan`, Opus 5 para `/feature`, esfuerzo xhigh).
+  - **De los hijos** (los subagentes de un lote o de un pipeline) — lo **fija la maquinaria** por tipo de unidad y **no se hereda** de la sesión: `fable` para los que corren `design`/`plan` (unidades `design-delta` y `plan-delta`), `opus` para los que corren `feature` (modo lote de `/feature all` · `NN..MM` y unidades `feature` de un pipeline). Son alias de familia, no IDs de API. Tabla canónica, precedencia y degradación anunciada: skill `build`, §«Modelos por unidad»; el humano lo overridea puntualmente por gate.
 - **Reviewer**: Codex, invocado como subproceso vía `scripts/review.sh` (hoy: gpt-5.6-sol, esfuerzo xhigh — config SOLO en las variables al tope de ese script). Revisa cada rango de commits, puede ejecutar tests/builds para verificar por su cuenta, y emite un veredicto. No modifica el repo.
 - **Humano**: da el OK en los checkpoints (RECAP). No dirige el detalle: valida dónde estamos y qué sigue. Sus mensajes a mitad de loop tienen prioridad absoluta.
 

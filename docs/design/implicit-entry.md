@@ -114,7 +114,7 @@ El caso que motivó el diseño, resuelto como instancia del pipeline y no como s
 - **awake.sh**: el padre renueva la ventana al arrancar cada unidad.
 - **Métricas**: `rounds-log` por unidad, como hoy.
 - **Commits no revisados**: mismo esquema del lote — los commits de estado de una unidad los barre la r1 de la unidad siguiente; los del final quedan listados en el RECAP consolidado (el OK los cubre); el cierre post-OK usa la excepción del commit de registro del OK.
-- **Modelos por unidad**: hoy el humano elige modelo por sesión/fase; en pipeline el padre puede aplicar el esquema por tipo de unidad (override de modelo del subagente). Detalle en la bajada.
+- **Modelos por unidad**: el humano elige el modelo de la **sesión**; el de los **hijos** lo **fija la maquinaria** por tipo de unidad y no se hereda (`fable` para `design`/`plan`, `opus` para `feature`, en lote y en pipeline), con override puntual por gate y degradación anunciada si el harness lo rechaza. Bajado en el feature 11 ([implementation/11-subagent-models.md](../implementation/11-subagent-models.md)); tabla canónica en la skill `build`, §«Modelos por unidad».
 - **Instalador**: las skills y `templates/AGENTS.md` son payload — la entrada implícita completa (triggers, ruteo, `/build`) viaja a los proyectos destino con el re-run de actualización.
 
 ### Riesgo aceptado
@@ -128,5 +128,5 @@ Extiende el del lote: un error en el delta de design se propaga al plan y a los 
 - Ledger de pipeline: ¿generalización del ledger del lote o uno propio con el mismo contrato? Nombre, plantilla, tipos de unidad.
 - Relación de implementación entre `/feature all` y la etapa multi-feature del pipeline (contratos ya unificados por diseño; código a decidir).
 - Forma del marker «borrador (modo POC)» y de la pasada que lo cierra.
-- Overrides de modelo por tipo de unidad en el subagente.
+- ~~Overrides de modelo por tipo de unidad en el subagente.~~ **Resuelto**: el feature 10 decidió no cablearlos (§10 de su bajada) y el **feature 11** revirtió esa decisión — la maquinaria fija el modelo por tipo de unidad, con override por gate y degradación anunciada ([implementation/11-subagent-models.md](../implementation/11-subagent-models.md)).
 - Validación del pedido de `/build` (vacío, que no toca ninguna fase, contradictorio con STATUS).

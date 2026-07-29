@@ -170,6 +170,52 @@ Como en los features 08–10 no hay harness de despacho: el comportamiento lo ej
 - **R7 — Doc local desactualizado en destinos ya instalados** (r1 p3): tras un re-run, las skills aplican la regla nueva pero el `AGENTS.md` del destino —semilla intocable— sigue describiendo el plano viejo, así que su doc y su comportamiento divergen hasta que alguien lo edite a mano. Se acepta con registro: es el régimen de semillas del instalador, ya asumido por el feature 10 para su §Ruteo, y el costo de la alternativa (que el instalador pise `AGENTS.md`) es mucho peor — borraría las reglas propias del destino.
 - **R8 — El fallback depende de distinguir un rechazo definitivo de uno ambiguo** (§5): esa clasificación la hace un modelo leyendo el error del harness, no un código de retorno tipado. Ante la duda, la regla escrita empuja al lado seguro (ambiguo ⇒ corte), que cuesta una corrida frenada y nunca un hijo duplicado; es la asimetría deliberada del fail-closed.
 
+## Implementación (2026-07-29, paso único)
+
+Las seis sedes, escritas tal como las fijó la bajada. Sin cambios ejecutables.
+
+1. **`.claude/skills/build/SKILL.md`** — la §«Modelos por unidad» pasa de párrafo dentro del gate a **sección propia** (`## Modelos por unidad`), ubicada entre la rama «esperando autorización de pipeline» y el loop del padre: es donde se usa, y como sección tiene ancla estable para que `feature` la referencie. Trae la tabla de tres filas con su columna «por qué» (el perfil de capacidad), el enunciado de que la fija la maquinaria y no se hereda, los alias de familia, la precedencia de tres niveles, la degradación completa en tres pasos numerados —registro **y commit antes** del segundo spawn, fallback con el mismo token sin re-acuñar, línea en el RECAP—, la nota de que el evento de degradación no desplaza al evento vigente, el deslinde «resultado indeterminado ⇒ corte», el renombre de alias con su arreglo, el modo POC sin excepción y la nota de payload sobreescribible. El bullet «Lanzá el hijo» remite a la sección.
+2. **`.claude/skills/feature/SKILL.md`** — **una sola línea** cambiada, el bullet «Lanzá el hijo» del modo lote: fija `opus`, dice que lo fija la maquinaria y no la sesión, y nombra las dos únicas particularidades del lote (registro en el ledger del lote; override como corrección del gate de lote, que gana también al relanzar por reentrada), con puntero a la canónica para el resto. `git diff --stat` de la skill: **1 insertion, 1 deletion**.
+3. **`AGENTS.md` + `templates/AGENTS.md`** — §Roles reescrita con los dos planos. La regla de la maquinaria es **espejo literal** (verificado por `diff` de la línea); lo que difiere es solo lo local de axel: la línea del plano de sesión nombra el esquema mixto y el esfuerzo, la de la plantilla no.
+4. **`docs/design/implicit-entry.md`** — §«Modelos por unidad» enuncia la regla fijada y apunta a este doc; la línea de la lista de decisiones para la bajada queda **tachada y marcada resuelta**, con la historia completa (el 10 decidió no cablearlos, el 11 lo revirtió).
+5. **`docs/implementation/10-build-pipeline.md` §10** — nota de reversión al tope de la sección, en blockquote; el texto original queda **íntegro debajo**, sin una palabra cambiada.
+6. **`docs/DESIGN.md`** — fila de decisión del 2026-07-29 con los dos planos, el mecanismo y el «por qué».
+
+### Matriz E resuelta contra el texto instalado
+
+Las 22 filas, con la sede que las resuelve. Ninguna apela a este doc (única excepción declarada por el criterio 7: E13b, cuyo comportamiento vive en `scripts/install.sh`).
+
+| # | Resuelta por | Texto que la decide |
+|---|---|---|
+| E1 | `feature`, bullet de spawn del lote | «subagente fresco en background **con modelo `opus`**» |
+| E2, E3 | `build` §Modelos por unidad, tabla | filas `design-delta`/`plan-delta` ⇒ `fable` |
+| E4 | ídem, tabla | fila `feature` ⇒ `opus` |
+| E5 | ambas skills | «lanzá cada hijo con el modelo de **su tipo de unidad**, no con el de tu sesión» / «lo fija la maquinaria por tipo de unidad, no la sesión» |
+| E6 | `build`, precedencia (1) | «ajuste de alcance registrado en el ledger … gana sobre la tabla» |
+| E6b | `feature`, bullet de spawn | «el override del humano entra como **corrección del gate de lote** (paso 2), en la línea «Exclusiones/correcciones» del ledger» |
+| E7 | `build`, degradación | «**no cortes la corrida**» + los tres pasos |
+| E7b | `feature`, bullet de spawn | «en un lote cambian solo dos cosas: el registro va al **ledger del lote**…» + puntero a la canónica |
+| E7c | `build` | «**Resultado indeterminado ≠ rechazo definitivo** … no hay segundo spawn ⇒ **corte**» |
+| E7d | `feature` §Reentrada del lote, tabla del token (sin cambios) | fila «pendiente `T` · evento con `T` ⇒ **ambiguo** … no relances» |
+| E7e | `build`, pasos 1–2 | «**antes** del segundo spawn» + «reutilizando el mismo token … **No re-acuñes**» + «no es un evento de arranque» |
+| E7f | `build`, paso 1 | «sin ese commit, un padre que cae después del fallback deja al hijo corriendo degradado **sin registro**» |
+| E8 | `build`, nota de alias | «alias de familia … la tabla no envejece cuando sale una versión nueva» |
+| E9 | `build`, rechazo + cierre del bloque | «incluido el caso de que el harness los **renombre**» + «el arreglo de fondo es actualizar **esta tabla** — una línea, en este único archivo» |
+| E10 | `build`, precedencia (1) | «queda escrito en el bloque Gate, así que **sobrevive a la reentrada**» |
+| E10b | `feature`, bullet de spawn | «desde donde gana sobre `opus` también al relanzar por reentrada» |
+| E11 | `AGENTS.md` §Roles | los dos bullets: «**De la sesión** — lo **elige el humano**» / «**De los hijos** … lo **fija la maquinaria**» |
+| E12 | `build`, nota final | «**Esta tabla es payload**: un re-run del instalador la reescribe … el camino soportado es el **override por gate**» |
+| E13 | `templates/AGENTS.md` §Roles | los mismos dos bullets, sin la elección concreta de axel |
+| E13b | `scripts/install.sh`, `SEED_SRC` | «Semillas: owned por el destino, se crean solo si faltan y no se tocan jamás después» ⇒ la §Roles nueva no llega a destinos ya instalados; la regla operativa sí, por `PAYLOAD` |
+| E14 | `build`, nota de POC | «**Modo POC**: sin excepción — los mismos modelos por tipo de unidad» |
+
+### Verificación de los criterios mecánicos
+
+- **C2** — `git diff --stat` de `.claude/skills/feature/SKILL.md`: **1 file changed, 1 insertion(+), 1 deletion(-)**. La tabla del «Modo hijo de pipeline» conserva sus **cinco** filas (contadas sobre el archivo) y el texto sigue diciendo «con cinco sustituciones».
+- **C3** — `diff` de la línea «De los hijos» entre `AGENTS.md` y `templates/AGENTS.md`: **sin diferencias**.
+- **C8** — `git diff <base> -- scripts/ tests/`: **vacío**. Las tres suites en verde: `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**, `tests/lint.sh` limpio.
+  **Nota sobre el conteo de `loop.sh`**: Codex reportó 287 en la r1 y acá dan 293. No es una regresión ni un efecto del feature — se verificó corriendo la misma suite en un worktree del commit `9f338fd` (el que Codex revisó en la r4), donde también da **293**. La diferencia es de entorno entre el worktree snapshot del reviewer y el repo canónico, no de contenido: la comparación válida es mismo-commit contra mismo-entorno, y ahí el número es idéntico antes y después de la implementación.
+
 ## Review log
 
 ### r1 (base `e6d26e2`, HEAD `316628b`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados
