@@ -100,7 +100,7 @@ Mensajes bajados por el padre a mitad de feature: prioridad absoluta — atendel
 
 ### Modo hijo de pipeline
 
-Sos el hijo de una **unidad de feature de un pipeline** (`/build`), no de un lote. El camino es **exactamente** el «Modo hijo» de arriba —los cuatro deltas incluidos— con cuatro sustituciones, que el bloque Gate del ledger habilita al declarar `tipo: pipeline`:
+Sos el hijo de una **unidad de feature de un pipeline** (`/build`), no de un lote. El camino es **exactamente** el «Modo hijo» de arriba —los cuatro deltas incluidos— con cinco sustituciones, que el bloque Gate del ledger habilita al declarar `tipo: pipeline`:
 
 | En el lote | En el pipeline |
 |---|---|
