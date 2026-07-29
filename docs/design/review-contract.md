@@ -57,14 +57,76 @@ Tras el APPROVED final de un feature, el generador hace commits de cierre (solo 
 
 `review.sh` publica, como **último acto de todo camino de salida** de `new|round`, un registro terminal en `.claude/state/review-terminal` — **atómico** (tmp + `mv` en el mismo filesystem: ningún lector ve un terminal a medias) y con la identidad de la invocación, una `clave=valor` por línea: `ts` (ISO-8601 UTC), `id` (env `AXEL_REVIEW_ID`, `-` si no vino), `mode` (`new|round`), `round` y `review_head` (`-` en los rechazos pre-invocación), `result` (`APPROVED | CHANGES_REQUESTED | NO_VERDICT | PROC_FAIL | DEADLOCK | INPUT_ERROR | ABORTED`) y `rc` (el exit code real). Reglas:
 
-- `id` es la **identidad de invocación** del modo lote de `/feature` (protocolo operativo: skill `feature`; el diseño de fondo vive en el repo axel como `design/batch-features.md`, fuera del payload instalado): el invocador la pasa por env con unicidad real por invocación (`<NN>:r<M>:<nonce>`). Fuera del lote no se setea y nada del flujo cambia.
+- `id` es la **identidad de invocación** del modo lote de `/feature` (protocolo operativo: skill `feature`; el diseño de fondo vive en el repo axel como `design/batch-features.md`, fuera del payload instalado): el invocador la pasa por env con unicidad real por invocación (`<NN>:r<M>:<nonce>`). Fuera del lote no se setea (`id=-`) y nada del flujo cambia; ese terminal es el que consume la **reentrada individual** de cualquier fase, con la identidad que define §Reentrada.
 - `ABORTED` es el default para una salida no clasificada (p. ej. un fallo de `set -e` a mitad de corrida), con lo capturado hasta ahí.
 - `status`, `reset-deadlock` y el uso inválido **no** son invocaciones de review: no escriben terminal.
-- Para un consumidor externo (el padre del lote), el terminal es el **desenlace autoritativo**: `last-verdict` y `last-review.md` solo son vigentes cuando `result` es `APPROVED` o `CHANGES_REQUESTED` — ante cualquier otro resultado quedaron deliberadamente viejos.
-- El consumidor solo reacciona a un terminal cuya **identidad completa** coincide con la invocación que espera (`id` exacto y, cuando `review_head` ≠ `-`, también el SHA); un residuo de otra invocación se ignora — la ausencia de terminal se resuelve por timeout del lado del lector, jamás adivinando.
+- Para todo consumidor —el padre del lote, o la reentrada de una fase tras una sesión caída— el terminal es el **desenlace autoritativo**: `last-verdict` y `last-review.md` solo son vigentes cuando `result` es `APPROVED` o `CHANGES_REQUESTED` — ante cualquier otro resultado quedaron deliberadamente viejos.
+- El consumidor solo reacciona a un terminal cuya **identidad completa** coincide con la invocación que espera (con `id`: el nonce exacto y, cuando `review_head` ≠ `-`, también el SHA; sin `id`: las cuatro condiciones de §Reentrada); un residuo de otra invocación se ignora — la ausencia de terminal se resuelve por timeout del lado del lector o entregándola al humano, jamás adivinando.
 - La escritura es blindada y best-effort: si el terminal no puede publicarse, la corrida no cambia en nada (veredicto, estado y exit code intactos).
 
 Regresión: clase L10 de `tests/loop.sh`.
+
+## Reentrada: reconstrucción tras una sesión caída
+
+Una sesión del generador puede morir en cualquier punto del loop (máquina reiniciada, terminal cerrada, contexto agotado). La que reabre **reconstruye antes de actuar**, fail-closed: no relanza ni duplica una review que puede estar en vuelo, no reprocesa a ciegas feedback ya atendido, no re-pide un gate ya dado ni re-cierra lo aprobado, y ante inconsistencia arma un RECAP en vez de adivinar. Lo que sigue es la parte **común a todas las fases**; el mapa «estado de los docs → paso del camino» vive en cada skill (`design`, `plan`, `feature`). El **modo lote** tiene su propia reentrada, con precedencia y ancla propias (skill `feature`): un terminal con `id` ≠ `-` nunca lo consume el camino individual.
+
+### Token de ronda en `STATUS.md`
+
+El estado local (`.claude/state/round`) no alcanza como ancla: se escribe **antes** de invocar a Codex, no distingue «desenlace pendiente» de «desenlace ya integrado», y no es versionado. El ancla es la línea de ronda de STATUS, que el loop ya commitea justo antes de cada review:
+
+```
+- **Ronda de review**: 3 · lanzada      # la ronda 3 se lanza sobre el HEAD de ESTE commit; su desenlace no fue consumido
+- **Ronda de review**: 3 · consumida    # el desenlace de la ronda 3 se consumió y este commit NO lanza review
+- **Ronda de review**: —                # no hay ciclo de review abierto en esta fase/feature
+```
+
+El número es **siempre el de `review.sh`** (el que el terminal publica en `round=`), nunca un acumulado, y se **deriva** de `.claude/state/round` — la misma fuente de la que `review.sh round` calcula el suyo (ver «Precondición de la ronda siguiente»). Transiciones, sin commits extra:
+
+| Commit | Token |
+|---|---|
+| El que precede a una invocación | `N · lanzada` |
+| El siguiente al desenlace, **si vuelve a invocar** | `N+1 · lanzada` — el salto **es** el hecho «N consumida y N+1 lanzada»: ocurren en el mismo commit |
+| El siguiente al desenlace, **si no invoca** (APPROVED consumido, paso intermedio, cierre, RECAP) | `N · consumida` |
+| Cierre del ciclo | `—` |
+
+Un ciclo reabierto con `new` vuelve a `1`, y eso escribe STATUS; la cuenta acumulada de la fase o feature vive en su Review log (features) o en las líneas de commit del ciclo, que nombran la ronda (design/plan), junto con el registro de que `new` rearmó la racha de deadlock.
+
+La línea **«Esperando»** usa vocabulario fijo: «esperando OK humano», «esperando confirmación de arranque», «esperando autorización de lote» (las tres esperas **humanas**: las únicas que disparan re-presentación y aviso), «esperando el desenlace de la review (ronda N)», o «nada del humano — \<trabajo en curso\>».
+
+### Frontera previa
+
+Un solo chequeo antes de resolver nada: **árbol sucio** (`git status --porcelain` no vacío) ⇒ la sesión caída dejó trabajo sin commitear. Ni absorberlo ni descartarlo: listarlo y preguntar. *(El estado local de la sesión de Codex **no** se evalúa acá: ver la precondición del final.)*
+
+### Resolución del desenlace de una review
+
+Fuentes: la línea de ronda de STATUS, `.claude/state/review-terminal` y el HEAD actual. **Identidad de la invocación individual** — las cuatro condiciones, todas necesarias:
+
+1. `id=-` (un terminal con id es de un lote y no es de este camino);
+2. `mode` coherente con la ronda declarada (`1 ⇒ new`, `>1 ⇒ round`);
+3. `round` = la ronda declarada en STATUS;
+4. `review_head` = HEAD actual.
+
+HEAD no siempre es el SHA que se lanzó — el contrato admite commits durante una review; cuando eso pasa, la condición 4 falla y el caso degrada a ambiguo, que es el resultado seguro.
+
+| STATUS | Terminal | Acción |
+|---|---|---|
+| `N · lanzada` | las **cuatro** condiciones | La ronda N terminó sin consumirse. Actuar según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` vigentes, seguir el loop; cualquier otro ⇒ quedaron viejos: camino de fallas del loop (`DEADLOCK` no se reintenta). |
+| `N · lanzada` | cualquier otra cosa: ausente, `id` ≠ `-`, `mode` incoherente, otra ronda, otro `review_head`, o un rechazo pre-invocación (`round=-`, `review_head=-`) | **Ambiguo**: la review puede estar en vuelo. **No relanzar ni duplicar** — entregarlo al humano con la evidencia y dos salidas: esperar el desenlace poleando el terminal (~15 s, tope 45 min) o relanzar si confirma que el proceso murió. |
+| `N · consumida` o `—` | irrelevante | No hay review en vuelo ni desenlace pendiente: seguir el loop desde donde los docs dicen. El Review log y los commits dicen qué feedback ya fue atendido — **jamás reprocesar a ciegas**. |
+| Línea **sin token** (STATUS previo a esta convención) | — | **No concluyente**: se consume como la fila 1 solo si el estado local está presente y coherente y el terminal cumple las cuatro condiciones **contra él** (`round` = `.claude/state/round`, `mode` coherente, `id=-`, `review_head` = HEAD). Si no: RECAP sin relanzar. |
+
+Los rechazos **pre-invocación** (`DEADLOCK`, `INPUT_ERROR`) publican `round=-` y `review_head=-`: no hay nada que atarlos a la ronda declarada, y un `ts` posterior prueba orden temporal, **no identidad** — por eso caen en ambiguo como el resto. **Evidencia best-effort para el humano, nunca autoritativa**: `ts` del terminal contra la fecha del commit de la marca (`git log -1 --format=%cI`), mtime de `.claude/state/last-review-events.jsonl` (Codex escribe ahí mientras corre), `pgrep -fl "codex exec"` y `.claude/state/changes-streak` (en ≥ 5 el loop está bloqueado por deadlock y el camino es el desempate humano + `reset-deadlock`). Ninguna decide sola: `pgrep` no ata un proceso a **este** repo y un mtime es un indicio. Decidir desde un indicio es lo que el fail-closed prohíbe.
+
+### Precondición de la ronda siguiente
+
+Se evalúa **antes de elegir el token y commitear**, al lanzar — jamás en la reentrada. Dos chequeos sobre el estado local, del que salen los dos números que tienen que coincidir:
+
+1. `.claude/state/round` presente y **numérico**: el token se deriva de ahí (`N` = `round` + 1, lo mismo que `review.sh round` va a calcular) y debe coincidir con la ronda recién consumida (`round` = `N-1`). El primer lanzamiento de un ciclo no necesita derivación: `new` publica siempre `1`.
+2. `.claude/state/codex-session-id` presente y del ciclo vigente — sin él, `round` cae en `resume --last` y puede retomar la sesión de otro feature.
+
+Desenlaces: **pérdida** del estado local (contador ausente o no numérico, o session id ausente) ⇒ no invocar `round`: reabrir con `new`, declarar `1 · lanzada` y registrar la ronda acumulada y la racha rearmada. **Contador numérico pero distinto del esperado** ⇒ hubo una invocación que el ciclo no registra ⇒ corte conservador (RECAP), sin invocar nada: un estado local incoherente no se repara adivinando, ni gastando una review cuyo desenlace la identidad va a rechazar.
+
+La ausencia del session id **no prueba** que la sesión murió: `review.sh` lo borra al arrancar un `new` y lo reescribe recién al capturar `thread.started`, así que durante un `new` en vuelo su ausencia es normal. Por eso el orden de la reentrada es: árbol sucio → resolver el desenlace → y solo si el paso siguiente necesita una ronda nueva, esta precondición. Un terminal ya publicado se consume igual aunque el contador o la sesión se hayan perdido: el desenlace no depende de ninguno de los dos.
 
 ## Ciclo de vida de sesiones
 

@@ -20,6 +20,17 @@ El gate de arranque quedó presentado sin confirmación registrada: no avances t
 
 El gate de lote quedó presentado sin autorización registrada: no avances trabajo nuevo. Re-derivá los N resúmenes de los docs y re-presentá el gate de lote completo (resúmenes + pedido de autorización). Procedencia: respuesta directa — aviso según skill `recap`. Con la autorización, seguí desde el bloque **«Con la autorización»** del paso 2 del modo lote — no re-presentes ni pidas una segunda autorización.
 
+## Si STATUS apunta a un feature individual activo
+
+Hay un feature en curso **sin** ledger de lote (bajada fina, implementación, o una review sin desenlace consumido) y sin ninguna de las tres esperas de arriba: es una **reentrada**. Reconstruí antes de actuar con el protocolo común —frontera previa, token de ronda de STATUS, resolución del desenlace, precondición de la ronda siguiente— de `docs/design/review-contract.md` §Reentrada: **no relances jamás una review que puede estar en vuelo**; ante ambigüedad, entregá lo encontrado al humano con la evidencia y las dos salidas. Con el desenlace resuelto, el paso sale de los docs — la confirmación de arranque (o la autorización de lote) ya registrada en el doc del feature **no se re-pide**:
+
+- **Doc del feature ausente o incompleto** (faltan secciones, sin criterios de cierre): retomá la **bajada fina** (paso 4 de abajo).
+- **Doc completo, `Ronda: —`**: review de la bajada (`scripts/review.sh new`).
+- **`CHANGES_REQUESTED` consumido**: atendé los puntos que el Review log **no** registre como atendidos —los commits mandan, jamás reproceses a ciegas— → commit → `round`.
+- **`APPROVED` de la bajada consumido**: implementación en pasos chicos (paso 6).
+- **`APPROVED` de cierre con los criterios cumplidos**: camino de cierre (paso 7).
+- **Inconsistencia** (STATUS contra IMPLEMENTATION.md o el git log; feature en curso que no coincide con el doc): RECAP con lo encontrado, sin adivinar.
+
 ## Feature nuevo (STATUS no apunta a ninguno en curso)
 
 1. Tomá el siguiente feature según la prioridad de IMPLEMENTATION.md.
@@ -74,7 +85,7 @@ Mensajes bajados por el padre a mitad de feature: prioridad absoluta — atendel
 
 ### Reentrada del lote
 
-STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + git y decidí **fail-closed**. **Primero el ledger**: si registra un corte sin resolución humana posterior, el corte es **absorbente** — no relances nada aunque el ancla y el terminal matcheen (el ancla se conserva como evidencia justamente en ese caso): re-presentá el RECAP del corte (respuesta directa — sin push) y esperá al humano. Solo sin corte pendiente aplica la máquina de estados de `.claude/state/batch-expected`:
+STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + git y decidí **fail-closed**. Esta reentrada **tiene precedencia** sobre la individual y usa su propia ancla (`.claude/state/batch-expected`, con la identidad `id` de la invocación): el camino individual del contrato exige `id=-`, así que jamás consume un terminal de lote — y acá el `review_head` = HEAD del camino individual no es garantía, porque el padre puede commitear el ledger con una review del hijo en vuelo. **Primero el ledger**: si registra un corte sin resolución humana posterior, el corte es **absorbente** — no relances nada aunque el ancla y el terminal matcheen (el ancla se conserva como evidencia justamente en ese caso): re-presentá el RECAP del corte (respuesta directa — sin push) y esperá al humano. Solo sin corte pendiente aplica la máquina de estados de `.claude/state/batch-expected`:
 
 - `phase=launched` + terminal con identidad completa coincidente ⇒ la review terminó sin consumirse: relanzá un hijo fresco para ese feature — retoma leyendo el terminal.
 - `phase=launched` + terminal ausente o de otra identidad ⇒ review posiblemente en vuelo: **no relances** — RECAP con lo encontrado.
@@ -115,5 +126,6 @@ Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inc
 - Reviews largas (xhigh puede tardar >10 min): corré `scripts/review.sh` con Bash en background (`run_in_background`) y continuá cuando termine. No dupliques una review en curso.
 - Tope de 5 rondas sin convergencia, cambio de scope, o algo roto que excede el feature → cortá a RECAP temprano con las posturas de ambos agentes. Todo RECAP sigue la skill `recap` (estructura y aviso — el criterio de cuándo va push vive ahí).
 - `review.sh` exit 2: mirá el stderr. Si dice `DEADLOCK` **no reintentes**: armá el RECAP con ambas posturas y esperá el desempate humano; con su OK corré `scripts/review.sh reset-deadlock` y seguí según lo que él decida. Si fue una falla de proceso (codex caído, sin mensaje final), `review.sh` **ya la reintentó una vez** — diagnosticá con `.claude/state/last-review-events.jsonl` (y `last-review-events.failed.jsonl`, el intento fallido); solo si la causa es claramente transitoria relanzá la ronda una vez más, y si persiste, RECAP con el problema. Si fue un veredicto inválido (mensaje entregado sin la línea exacta), no es transitorio: relanzá una ronda recordándole el contrato al reviewer, y si se repite, RECAP.
+- **Token de ronda** (lo que hace reentrable el feature): el commit previo a cada review declara `N · lanzada` en STATUS, con `N` derivado de `.claude/state/round`; el commit siguiente al desenlace declara `N+1 · lanzada` si vuelve a invocar, o `N · consumida` si no. Vocabulario, transiciones y precondición de la ronda siguiente: `docs/design/review-contract.md` §Reentrada.
 - Todo commit toca algún doc. `main` lineal, sin amend.
 - Mensajes del humano a mitad del loop: prioridad absoluta — respondé y ajustá antes de seguir.
