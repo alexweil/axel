@@ -15,6 +15,7 @@ Entregables:
 - **`AGENTS.md` + `templates/AGENTS.md`** (regla de sincronía): el bloque del interinato multifase sustituido por el despacho a `/build`; `/build` en la lista de fases y en la gramática posicional de comandos explícitos; y la **regla dura extendida** («ni cruzar a otra fase sin OK — salvo lote o pipeline autorizado»).
 - **`description` re-redactadas** de `design`, `plan` y `feature` para desambiguarlas contra `build` — deuda declarada por el 09 (§8), no opcional.
 - **Skill `recap`**: RECAP consolidado de pipeline (base `gate_base` del ledger de pipeline) y, en modo POC, los dos caminos post-OK que el diseño fija.
+- **Skill `status`** (cuerpo, no `description`): ajuste mínimo para que una consulta durante un pipeline responda de verdad — leer el ledger cuando STATUS apunta a uno y reportar tipo de corrida, unidad en curso y progreso, más el marker de borrador si está (§11).
 - **`docs/design/review-contract.md`** (payload): `AXEL_REVIEW_ID` generalizado de «identidad del modo lote» a «identidad de las corridas orquestadas» (lote y pipeline), con el formato de id por unidad; y **«esperando autorización de pipeline»** como quinta espera humana del vocabulario.
 - **`scripts/install.sh` + `tests/install.sh`**: `.claude/skills/build/SKILL.md` en la allowlist del payload, con su cobertura. Sin esto la entrada implícita completa **no viaja** a los destinos.
 - **Plantilla del ledger de pipeline** (en la skill `build`) y **discriminante `tipo:`** en el bloque Gate de ambos ledgers, con el ledger de la corrida en curso anotado (§3).
@@ -25,7 +26,7 @@ Entregables:
 - **`docs/DESIGN.md`**: ya está al día — la fila de decisiones del 2026-07-29, el componente `.claude/skills/` (que ya nombra `/build`), el principio 4 y el párrafo «Entrada implícita» se escribieron en el ciclo de diseño. Este feature no reabre diseño.
 - **`scripts/review.sh` y `scripts/awake.sh`**: sin cambios. La generalización de `AXEL_REVIEW_ID` es **de contrato, no de lógica** — `review.sh` ya publica `id=${AXEL_REVIEW_ID:--}` sin interpretar su contenido (línea 110), así que un id `design:r1:<nonce>` funciona hoy sin tocar una línea. Único cambio ejecutable del feature: la allowlist del instalador y su test.
 - **El protocolo del lote**: `/feature all` / `NN..MM` no cambia de contrato. El pipeline **no lo invoca** (el diseño prohíbe el lote anidado) y **no reescribe** su máquina de estados: la reusa por referencia con sustituciones declaradas (§1, §6).
-- **Skill `status`**: no se toca. Es lectura pura, no muta, y su `description` ya declara ser la única entrada de consulta — el 09 no la marcó para re-redacción porque no compite con `build` (una consulta nunca es un pedido de trabajo). El marker de borrador se ve en el propio `DESIGN.md` y lo ofrece el RECAP consolidado (§9).
+- **La `description` de `status`**: no se toca — ya declara ser la única entrada de consulta y no compite con `build` (una consulta nunca es un pedido de trabajo). Su **cuerpo** sí recibe un ajuste mínimo, que pasó a ser alcance en r1 (§11).
 - **Overrides de modelo por tipo de unidad**: se resuelve por decisión explícita de no cablearlos (§10), no por implementación.
 
 ## Enfoque técnico
@@ -99,11 +100,11 @@ Una corrida puede omitir tipos (pedido que solo necesita plan + feature ⇒ dos 
 | `pipeline` | skill `build`, §Reentrada del pipeline |
 | ausente, vacío o cualquier otro valor | **corte** — no se asume nada. Recuperación: un humano anota el `tipo:` correcto en el bloque Gate y se relanza |
 
-Los dos esqueletos (el del lote en la skill `feature`, el del pipeline acá) nacen con su `tipo:`. El **único ledger preexistente** es el de la corrida `2026-07-29` que está implementando este feature: se anota con `tipo: lote` en su bloque Gate, exactamente como el 09 anotó su `protocolo: legacy`. Es una anotación de compatibilidad declarada, no una inferencia.
+Los dos esqueletos (el del lote en la skill `feature`, el del pipeline acá) nacen con su `tipo:`. El **único ledger preexistente** es el de la corrida `2026-07-29` que está implementando este feature: **quedó anotado** con `tipo: lote` en su bloque Gate — hecho en la ronda 1 de este ciclo (p1: el doc lo afirmaba antes de que fuera cierto, y con el discriminante instalado la ausencia habría producido el corte que este mismo doc define) —, exactamente como el 09 anotó su `protocolo: legacy`. Es una anotación de compatibilidad declarada, no una inferencia.
 
 Qué protege: que `build` relance un hijo sobre un ledger de lote, o que la reentrada del lote de `feature` consuma un ledger de pipeline. Baja probabilidad, daño real (hijo del tipo equivocado sobre una corrida ajena) y costo de una línea.
 
-### 4. Gate de pipeline: el ledger nace **antes** del gate
+### 4. Gate de pipeline y loop del padre
 
 Un solo mensaje con la ruta propuesta —unidades en orden, con tipo y resumen del delta de cada una—, **qué va a haber visible al final**, el modo (`normal` o `POC`) y **una autorización global**. Ajustes puntuales del humano («dale, pero el diseño dejalo como está») se registran como ajustes de alcance. Llega por respuesta directa ⇒ sin push. Fin de turno.
 
@@ -117,6 +118,17 @@ Un solo mensaje con la ruta propuesta —unidades en orden, con tipo y resumen d
 Consecuencia buscada: la **rama de reentrada** re-presenta la ruta **registrada**, no una re-derivada — no hay forma de re-derivarla. Y `gate_base` incluye el commit del gate en el relato del RECAP consolidado, que es donde corresponde: la autorización es parte de la corrida.
 
 La quinta espera humana no lleva contenido en la línea de STATUS (a diferencia de «esperando confirmación de plan»): el contenido está en el ledger, que es versionado. El contrato lo dice así.
+
+**Loop del padre, unidad por unidad** — es el del lote, y la skill lo escribe **completo** (r1 p4: el diseño ya fijó estos contratos y la bajada no puede dejarlos implícitos):
+
+1. **Pre-arranque**: re-derivar el resumen de la unidad de los docs actuales y compararlo en sustancia con el autorizado en el ledger ⇒ **divergencia = corte**; fuentes insuficientes ⇒ corte. Y **renovar la ventana: `scripts/awake.sh start` al arrancar cada unidad** (una corrida larga excede las 12h).
+2. **Acuñar el token** (atómica) → **ledger + STATUS + commit** del evento de arranque con `token=` → **spawn** del hijo. El orden es durable: sin evento en el ledger no hubo hijo.
+3. **Supervisión**: watcher sobre `.claude/state/review-terminal` esperando **identidad completa** (`id` exacto y, si `review_head` ≠ `-`, también el HEAD), poleo ~15 s, **timeout 45 min**; un terminal que no matchea es residuo y se ignora. Match ⇒ **empujón sin contenido** al hijo. El padre **no transporta feedback**.
+4. `UNIDAD <id> APROBADA` ⇒ verificar el estado (doc de la unidad al día, «APPROVED — pendiente OK de pipeline», STATUS, commits presentes, anclas limpias) ⇒ ledger + commit ⇒ unidad siguiente.
+5. **Condiciones de corte — las cuatro, completas** (no solo divergencia y timeout): (1) las del loop —deadlock de 5 rondas, exit 2 persistente, veredicto inválido repetido— **más** la ausencia de señal terminal dentro del timeout; (2) cambio de scope o sorpresa que excede la unidad; (3) divergencia contra el resumen autorizado; (4) fuentes insuficientes. En todos: registrar el corte en el ledger (commit restringido por pathspec si el hijo dejó el árbol sucio), RECAP con el estado encontrado, **push de una línea**, fin de turno. Las unidades aprobadas quedan intactas.
+6. **Mensajes del humano a mitad de pipeline: prioridad absoluta.** Llegan al padre —que se mantiene liviano justamente para poder conversar—: responde, y si afectan a la unidad en curso los baja **de inmediato** por mensaje al hijo (lo despierta aunque esté esperando una review); si invalidan la unidad o la corrida ⇒ corte.
+
+**Pedido de review acotado al delta** (obligación del hijo, fijada por el diseño): cada unidad pide revisar **el delta contra el pedido autorizado y su escala declarada**, no una pasada completa del proyecto. En modo POC el pedido lo dice con todas las letras: «diseño borrador para POC — revisá que alcance para el esqueleto, no exhaustividad».
 
 ### 5. Hijos de pipeline
 
@@ -141,6 +153,28 @@ La quinta espera humana no lleva contenido en la línea de STATUS (a diferencia 
 | ledger `docs/implementation/batch-*.md`, `tipo: lote` | ledger `docs/implementation/pipeline-*.md`, `tipo: pipeline` |
 | anclas `.claude/state/batch-child-token{,.claimed-T,.retired-T}` y `.claude/state/batch-expected` | `.claude/state/pipeline-child-token{,.claimed-T,.retired-T}` y `.claude/state/pipeline-expected` |
 | identidad de unidad `feature=NN`; cierre `FEATURE NN APROBADO` | identidad `unit=<id>`; cierre `UNIDAD <id> APROBADA` |
+| doc de la unidad = `docs/implementation/NN-*.md` (con su Review log) + fila de `IMPLEMENTATION.md` | **según el tipo** (abajo) |
+
+**Cuarta sustitución: dónde vive la memoria de la unidad** (r1 p3 — sin esto la máquina referenciada, escrita en vocabulario de feature, no se aplica literalmente a un design-delta ni a un plan-delta). La sección referenciada dice «doc del feature», «IMPLEMENTATION», «estado local del feature en curso»; leída desde el pipeline, cada aparición se resuelve por el tipo de la unidad:
+
+| Tipo | Doc de la unidad | Memoria del ciclo de review | Estado que la reentrada consulta |
+|---|---|---|---|
+| `design-delta` | `docs/DESIGN.md` (+ `docs/design/*.md` que el delta toque) | las **líneas de commit del ciclo, que nombran la ronda** (`design` no tiene Review log propio — regla vigente de la skill) | ledger + STATUS + `.claude/state/` |
+| `plan-delta` | `docs/IMPLEMENTATION.md` | ídem (`plan` tampoco tiene Review log propio) | ídem |
+| `feature` | `docs/implementation/NN-*.md` + fila de `IMPLEMENTATION.md` | el **Review log** del doc del feature | ídem |
+
+«Estado local **del feature** en curso» (`codex-session-id`, `round`) se lee como «de la **unidad** en curso»: es el mismo estado local, que por construcción pertenece a una sola unidad a la vez.
+
+**Esquema exacto de `.claude/state/pipeline-expected`** (mismo contrato que `batch-expected`, con la identidad generalizada), escritura atómica (tmp + `mv -f`):
+
+```
+id=<unidad>:r<M>:<nonce>
+head=<sha del HEAD del hijo al lanzar>
+unit=<id>
+phase=launched|consumed
+```
+
+Y `.claude/state/pipeline-child-token`: `unit=<id>`, `token=<nonce>`, `spawned_at=<ts>`; reclamada por rename a `pipeline-child-token.claimed-<token>`, retirada a `.retired-<token>`.
 
 Todo lo demás es literal: corte **absorbente** primero (un corte sin resolución humana no se relanza aunque el ancla matchee), la máquina de `*-expected` (`launched` + terminal de identidad completa ⇒ relanzar; `launched` sin terminal ⇒ no relanzar, RECAP; `consumed` ⇒ consistencia normal; ancla ausente ⇒ solo cuenta si el resto del estado local es coherente), la tabla de ocho filas del token con el invariante de ancla única y el retiro determinístico, el **orden durable completo** en todo relanzamiento (retirar → acuñar → evento + STATUS + commit → spawn), y «nunca re-pedir el gate autorizado ni re-cerrar lo aprobado».
 
@@ -163,8 +197,10 @@ El 09 declaró el interinato como **un solo bloque semántico**: el párrafo «M
 | **vacío** (`/build` sin argumento) | no hay pedido que rutear: **pregunta en una línea** qué querés construir. No asume «seguí con lo que hay» — eso es `/feature` |
 | **que no toca ninguna fase** (consulta, charla, algo fuera del método) | no hay pipeline: entrega a `/status` si era consulta; si no, pregunta |
 | **monofase** | **despacho directo** a la skill de esa fase con su punto de confirmación (y `/plan` con su confirmación liviana): `/build` **no cuenta como autorización** — la autorización es siempre de un gate. No se crea ledger |
-| **contradictorio con STATUS** (pide implementar features que el plan no tiene, o contradice lo registrado) | lo dice y pregunta; si lo que contradice es **estado pendiente**, manda el paso 2 (abajo) |
+| **contradictorio con lo registrado** | lo dice y **pregunta**, sin arrancar. Es contradicción cuando el pedido choca con un hecho que los docs registran —pedir implementar un feature que la tabla marca **Cerrado**, o pedir lo contrario de una decisión asentada en `DESIGN.md`—, no cuando pide algo que los docs simplemente **todavía no tienen** |
 | **multifase, estado estable** | gate de pipeline (§4) |
+
+**«Todavía no planificado» no es contradicción** (r1 p2): un pedido de trabajo que el plan no contiene es exactamente el caso multifase normal que el diseño fija —«implementá X» con backlog vacío necesita un plan-delta antes de implementar ⇒ `/build`, no `/plan`— y es la fila C2. La contradicción es sobre **estado registrado**, no sobre ausencia: por eso una fila pregunta y la otra abre el gate. Y si lo que el pedido choca es **estado pendiente**, no decide esta tabla: manda el paso 2 del orden de despacho (abajo).
 
 **`/build` explícito no puentea estado pendiente** — asimetría fijada por el diseño y única entre los comandos: los demás comandos de fase explícitos conservan el contrato de hoy (informan el estado ajeno en una línea y sigue mandando el humano), pero `/build` entra por la reentrada de la skill dueña. La razón es que `/build` **encadena**: dejarlo arrancar sobre una espera abierta propagaría la espera sin resolver a través de N unidades. Su **guarda de entrada** lo hace valer desde el payload, aunque §Ruteo falte en el destino.
 
@@ -197,12 +233,13 @@ Lo escribe el hijo de la unidad correspondiente cuando el ledger declara `Modo: 
 
 El diseño deja «overrides de modelo por tipo de unidad» para la bajada. Decisión: **no se cablean**. En axel el esquema de modelo por fase es una **elección del humano en la sesión** (`AGENTS.md` §Roles lo dice así), no una regla de la maquinaria; cablear «design-delta ⇒ modelo X» en una skill que es payload exportaría las preferencias de hoy de axel a todos los proyectos destino y quedaría desactualizada sin que nadie la mire. El padre lanza cada hijo con el modelo por defecto de la sesión, y si el humano quiere otro para un tipo de unidad lo dice en el gate: queda registrado como ajuste de alcance en el ledger y el padre lo aplica al spawnear. Cero código, cero desactualización silenciosa, y el control donde el método ya lo pone.
 
-### 11. Instalador y contrato
+### 11. Instalador, contrato y `status`
 
 - **`scripts/install.sh`**: `.claude/skills/build/SKILL.md` se agrega a `PAYLOAD_SRC` y `PAYLOAD` (arrays paralelos). Es la línea sin la cual la entrada implícita **no viaja**: `AGENTS.md` es semilla, así que en un destino ya instalado la §Ruteo nueva no llega — pero la skill `build`, su `description` y su guarda sí, por payload. **`tests/install.sh`**: `build` entra en el loop de aserciones de T1 (línea 78), que es el que verifica que el payload completo aterriza.
 - **`docs/design/review-contract.md`** (payload):
   - `AXEL_REVIEW_ID` deja de declararse «identidad de invocación del modo lote de `/feature`» y pasa a ser la identidad de las **corridas orquestadas** —modo lote de `/feature` y pipeline de `/build`—, con formato `<unidad>:r<M>:<nonce>` donde la unidad es `NN` (feature), `design` o `plan`. **Sin cambio de lógica**: `review.sh` publica el valor sin interpretarlo. Se conserva intacto el resto: fuera de una corrida orquestada `id=-`, y ese terminal es el que consume la reentrada individual.
   - Vocabulario de la línea «Esperando»: **«esperando autorización de pipeline»** como quinta espera humana, con la nota de que su contenido vive en el ledger (versionado) y no en la línea.
+- **Skill `status`** (r1 p5 — el deslinde original no estaba demostrado): su cuerpo hoy pide reportar «fase, **feature** en curso, ronda, veredicto, qué se espera» y **no** menciona el ledger. Durante una unidad `design` o `plan` de un pipeline no hay feature en curso, así que el despacho correcto a `/status` (fila C12) daría igual una respuesta que no ubica al humano. Ajuste mínimo, dos añadidos: **si STATUS apunta a un ledger** (de lote o de pipeline), leerlo y reportar tipo de corrida, unidad o feature en curso y progreso (unidades cerradas / pendientes); y si `DESIGN.md` o `IMPLEMENTATION.md` traen el marker **«borrador (modo POC)»**, decirlo. Sigue siendo lectura pura. Se elige esto sobre la alternativa —exigirle a STATUS que duplique la información del ledger— porque duplicar estado versionado invita a que las dos copias diverjan, y el ledger ya es la fuente.
 
 ## Matrices de verificación
 
@@ -225,7 +262,9 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 | C9 | lote en curso | «armá una app nueva encima de esto» | reentrada de `feature` (lote activo manda), no `build` | paso 2 |
 | C10 | estable | «hacé todos los pendientes de corrido» | `/feature all` (lote), **no** `/build`: una sola fase | §7 + §6 del 09 |
 | C11 | **esperando autorización de pipeline** | «dale» en sesión fresca | `/build` → re-presenta la ruta **registrada en el ledger**; con el sí, arranca | paso 2 + §6 |
-| C12 | pipeline en curso | «¿dónde estamos?» | `/status` (la consulta precede a todo) | paso 1 |
+| C12 | pipeline en curso, unidad `design` en su ronda 2 | «¿dónde estamos?» | `/status` (la consulta precede a todo), **y su respuesta identifica** corrida de pipeline, unidad en curso y progreso — no «feature en curso: —» | paso 1 + §11 |
+| C13 | estable, la tabla del plan marca el feature 05 **Cerrado** | «implementá el feature 05» | **contradicción con lo registrado**: lo dice y pregunta; no abre gate ni despacha a `/feature` | §7 |
+| C14 | estable, backlog vacío | «implementá el export a CSV» | **no** es contradicción sino multifase: gate de pipeline con ruta plan-delta → feature (es C2; queda acá el contraste explícito) | §7 |
 
 ### Matriz D — pipeline: unidades, cortes y defensas
 
@@ -243,18 +282,24 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 | D10 | reentrada del pipeline sobre un ledger con **corte registrado** sin resolución humana | corte **absorbente**: no relanza aunque ancla y terminal matcheen; re-presenta el RECAP del corte | §6 |
 | D11 | fin del pipeline | ledger con estados finales + STATUS «esperando OK» + RECAP consolidado (base `gate_base`, por unidad, no-revisados listados) + push + fin de turno | §4 + skill `recap` |
 | D12 | OK del RECAP consolidado en modo POC | cierre consolidado (unidades a «Cerrada», ledger cerrado, STATUS) **y** los dos caminos post-OK ofrecidos: endurecer o seguir iterando | §9 + excepción del commit de registro del OK |
+| D13 | reentrada del pipeline con `pipeline-expected` en `phase=consumed` sobre la unidad `design` | no hay review en vuelo ni desenlace pendiente: consistencia normal y hijo fresco. Lo ya atendido se reconstruye de **`DESIGN.md` + las líneas de commit del ciclo, que nombran la ronda** (design no tiene Review log) — jamás se reprocesa a ciegas | §6, cuarta sustitución |
+| D14 | mensaje del humano a mitad de pipeline | **prioridad absoluta**: el padre responde y, si afecta a la unidad en curso, lo baja de inmediato por mensaje al hijo (lo despierta aunque espere una review); si invalida la unidad o la corrida ⇒ corte | §4, paso 6 |
+| D15 | una unidad llega a **deadlock** (5 rondas sin converger) o a exit 2 persistente / veredicto inválido repetido | **corte** (condición 1), **sin reintentar** el deadlock: RECAP con las dos posturas + push; el desempate lo da el humano y sigue `reset-deadlock` | §4, paso 5 |
+| D16 | arranque de cada unidad | `scripts/awake.sh start` renovado antes del spawn | §4, paso 1 |
+| D17 | pedido de review de cualquier unidad | acotado **al delta autorizado y su escala declarada**, no a una pasada completa; en modo POC lo declara explícitamente | §4, cierre |
 
 ## Criterios de cierre
 
-1. Existe `.claude/skills/build/SKILL.md` con: guarda de entrada (incluida la asimetría de `/build` explícito), validación del pedido en sus cinco casos, gate de pipeline con el ledger creado **antes** de presentar, loop del padre (pre-arranque con divergencia, acuñado del token, orden durable, supervisión por señal terminal con timeout, empujón sin contenido), reentrada del pipeline y cierre con RECAP consolidado.
-2. La máquina de reentrada y el token de spawn **no están duplicados**: `build` declara las tres sustituciones (ledger, anclas, identidad/cierre) y referencia la §Reentrada del lote de `feature`, que **no cambió de contrato**. El `diff` de la skill `feature` se limita a: el bloque de parametrización del Modo hijo, `tipo: lote` en el esqueleto del ledger, la `description`, y la guarda para el caso hijo-de-pipeline.
-3. `design`, `plan` y `feature` tienen «Modo hijo de pipeline» con la línea de estado del contrato, sin RECAP ni OK individual; en `design` el ping-pong no ocurre y en `plan` no hay confirmación liviana, con la razón escrita (el gate las absorbió). Las guardas de `design` y `plan` admiten el estado de pipeline **solo** con token de spawn reclamado — nunca por el texto del prompt.
+1. Existe `.claude/skills/build/SKILL.md` con: guarda de entrada (incluida la asimetría de `/build` explícito), validación del pedido en sus cinco casos —con «todavía no planificado» tratado como multifase y **no** como contradicción—, gate de pipeline con el ledger creado **antes** de presentar, y el **loop del padre completo**: pre-arranque con divergencia y fuentes insuficientes, `awake.sh start` al arrancar **cada** unidad, acuñado del token en el orden durable, supervisión por señal terminal con timeout de 45 min, empujón sin contenido, **las cuatro condiciones de corte enteras** (las del loop —deadlock, exit 2 persistente, veredicto inválido repetido— más timeout, cambio de scope, divergencia y fuentes insuficientes), **mensajes del humano con prioridad absoluta** bajados al hijo, reentrada del pipeline y cierre con RECAP consolidado.
+2. La máquina de reentrada y el token de spawn **no están duplicados**: `build` declara las **cuatro** sustituciones (ledger, anclas, identidad/cierre, y doc/memoria de la unidad **por tipo**, con el esquema exacto de `pipeline-expected`) y referencia la §Reentrada del lote de `feature`, que **no cambió de contrato**. Cada aparición de «doc del feature», «IMPLEMENTATION» y «estado local del feature» de la sección referenciada tiene resolución escrita para `design-delta` y `plan-delta`. El `diff` de la skill `feature` se limita a: el bloque de parametrización del Modo hijo, `tipo: lote` en el esqueleto del ledger, la `description`, y la guarda para el caso hijo-de-pipeline.
+3. `design`, `plan` y `feature` tienen «Modo hijo de pipeline» con la línea de estado del contrato, sin RECAP ni OK individual; en `design` el ping-pong no ocurre y en `plan` no hay confirmación liviana, con la razón escrita (el gate las absorbió); **cada una pide su review acotada al delta autorizado y su escala declarada** (modo borrador incluido). Las guardas de `design` y `plan` admiten el estado de pipeline **solo** con token de spawn reclamado — nunca por el texto del prompt.
 4. `AGENTS.md` y `templates/AGENTS.md` son espejo literal (`diff` de las secciones tocadas vacío) y contienen: `/build` en las fases, `/build` en la gramática posicional, el despacho multifase a `/build` **en el mismo bloque** que ocupaba el interinato (que ya no existe en ninguno de los dos archivos), y la regla dura extendida a «ni cruzar a otra fase».
 5. Las cuatro `description` (`build`, `design`, `plan`, `feature`) son disjuntas por el discriminante monofase/multifase: **ninguna fila de la matriz C admite dos ganadoras**, y las de `design`/`plan`/`feature` nombran el destino multifase — la deuda que el 09 declaró queda saldada.
 6. El ledger de pipeline tiene plantilla en la skill, con `tipo: pipeline`, `protocolo: spawn-token v1`, pedido literal, modo, resultado visible y `gate_base`; el esqueleto del lote tiene `tipo: lote`; el ledger de la corrida `2026-07-29` está anotado. El discriminante de tres valores corta ante ausencia o valor desconocido.
 7. `docs/design/review-contract.md` generaliza `AXEL_REVIEW_ID` a las corridas orquestadas con el formato por unidad, sin cambio de lógica en `review.sh` (`git diff` de `scripts/` **vacío**), y suma «esperando autorización de pipeline» al vocabulario de esperas.
 8. `scripts/install.sh` lleva `.claude/skills/build/SKILL.md` en los dos arrays del payload y `tests/install.sh` lo verifica. Las **tres suites** (`tests/loop.sh`, `tests/install.sh`, `tests/lint.sh`) en verde como no-regresión.
-9. Las dos matrices se resuelven **enteras** contra el texto final instalado, sin apelar a este doc.
+9. La skill `status` sigue siendo lectura pura y, con STATUS apuntando a un ledger, su respuesta identifica **tipo de corrida, unidad o feature en curso y progreso**; si los docs traen el marker de borrador, lo dice. Verificable contra la fila C12.
+10. Las dos matrices se resuelven **enteras** contra el texto final instalado, sin apelar a este doc.
 
 ## Riesgos
 
@@ -268,4 +313,12 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 
 ## Review log
 
-(vacío)
+### r1 (base `ee20a57`, HEAD `490c833`) — CHANGES_REQUESTED · 5 puntos, los 5 aceptados
+
+Codex aprobó de entrada las decisiones de fondo (ledger propio, segundo padre, gate persistido antes de presentar, POC, no cablear modelos) y dos de los tres deslindes (`DESIGN.md`, `review.sh`). Lo que pidió:
+
+1. **El ledger vivo no tenía `tipo: lote`** aunque el doc lo afirmaba y el criterio 6 lo exigía. Aceptado y **hecho en esta ronda**: anotado en el bloque Gate de `batch-2026-07-29.md`, con la referencia al p1. El doc pasa a decir lo que es cierto (§3).
+2. **Contradicción interna en la validación del pedido**: la fila «contradictorio con STATUS» contaba como contradicción pedir algo que el plan no tiene, pero eso es exactamente el caso multifase que el diseño fija y que la matriz resuelve como gate de pipeline. Aceptado: la fila se reescribe sobre **estado registrado** (feature ya Cerrado, decisión asentada en `DESIGN.md`) y se separa explícitamente de «todavía no planificado»; entran las filas **C13** (contradicción real) y **C14** (el contraste).
+3. **Las tres sustituciones no alcanzaban** para aplicar literalmente la máquina de reentrada a `design` y `plan`: la sección referenciada habla de «doc del feature», `IMPLEMENTATION` y «estado local del feature». Aceptado: se agrega la **cuarta sustitución** —doc y memoria del ciclo **por tipo de unidad**, con `design`/`plan` resolviendo a `DESIGN.md`/`IMPLEMENTATION.md` y a las líneas de commit que nombran la ronda (no tienen Review log)— más el **esquema exacto** de `pipeline-expected` y `pipeline-child-token`, y la fila **D13** que congela la reentrada `phase=consumed` de una unidad `design`.
+4. **Los criterios permitían cerrar omitiendo contratos que el diseño ya fijó**: mensajes del humano con prioridad absoluta, **todas** las condiciones de corte (no solo divergencia y timeout), `awake.sh` por unidad y pedido de review acotado al delta y su escala. Aceptado: §4 pasa a ser «Gate de pipeline y loop del padre» con los seis pasos del padre escritos, el criterio 1 los exige enteros, el criterio 3 suma el pedido acotado, y entran las filas **D14–D17**.
+5. **El deslinde de `status` no estaba demostrado**: su cuerpo pide reportar «feature en curso» y no lee el ledger, así que durante una unidad `design`/`plan` el despacho correcto daría una respuesta que no ubica. Aceptado: entra un ajuste mínimo al cuerpo de `status` (leer el ledger si STATUS apunta a uno; decir el marker de borrador), con el criterio **9** y la fila **C12** reforzada. Se prefirió eso a duplicar el ledger en STATUS: dos copias de estado versionado divergen.
