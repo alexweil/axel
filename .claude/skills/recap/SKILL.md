@@ -1,7 +1,9 @@
 ---
 name: recap
-description: Generar un RECAP para el humano — qué se hizo desde el último OK, decisiones tomadas, estado del loop y qué viene si da el OK.
+description: Checkpoint a demanda de axel — RECAP para el humano: qué se hizo desde el último OK, decisiones tomadas, estado del loop y qué viene si da el OK. NO es una consulta: fija «esperando OK» en STATUS, commitea y frena el turno. Usala solo si el humano pide explícitamente un RECAP o un checkpoint, o si una skill de fase la invoca al cerrar. Para preguntas de estado, status.
 ---
+
+**Guarda de entrada.** Esta skill **muta**: fija «esperando OK» en STATUS y commitea apenas se dispara. Por eso solo actúa en dos casos: **pedido explícito** del humano de RECAP o checkpoint, o **invocación desde una skill de fase** al cerrar (APPROVED de cierre, RECAP temprano, corte de lote o pipeline). Ante cualquier otra entrada —una pregunta de estado, un pedido de trabajo, un ruteo dudoso— **no toques nada**: entregá a `/status` si era consulta, o a la skill dueña del estado pendiente si lo había. Y si la línea de ronda de STATUS dice `N · lanzada`, decilo **antes de commitear**: el commit mueve HEAD y el desenlace de esa review pasará a resolverse por el camino conservador del contrato (aviso, no bloqueo — un checkpoint pedido a mitad de loop es legítimo).
 
 Armá un RECAP leyendo `docs/STATUS.md`, el doc del feature en curso (`docs/implementation/NN-*.md`, incluido su Review log) y los commits desde el último OK (`git log`).
 

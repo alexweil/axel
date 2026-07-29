@@ -1,6 +1,6 @@
 ---
 name: adopt
-description: Cerrar la adopción de un proyecto instalado con axel — consumir docs/ADOPTION.md, mapear los docs preexistentes a la convención, derivar el STATUS real y dejar el loop operativo.
+description: Cierre de adopción de un proyecto instalado con axel — consumir docs/ADOPTION.md, mapear los docs preexistentes a la convención, derivar el STATUS real y dejar el loop operativo. Usala siempre que exista docs/ADOPTION.md (tiene precedencia sobre cualquier otra fase) y cuando el humano pide terminar de instalar o adoptar axel en este repo.
 ---
 
 Sos el generador. Esta skill cierra la adopción que el instalador de axel dejó pendiente.

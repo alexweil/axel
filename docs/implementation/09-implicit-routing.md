@@ -254,6 +254,24 @@ Precondición de cada fila: el despacho **no ocurrió correctamente** —el trig
 - **El interinato es texto con fecha de vencimiento**: si el 10 se posterga, queda como comportamiento vigente (correcto, solo menos ágil); si el 10 llega, hay que borrarlo — está declarado en su superficie, y el criterio de cierre 5 pide que sea reemplazable en un solo lugar.
 - **Ruteo al lote sobre-entusiasta**: un pedido vago podría abrir un lote de N features. Mitigación: regla de ambigüedad (fila 13 de la matriz) y el gate de lote, que presenta los N resúmenes antes de cualquier trabajo.
 
+## Implementación (2026-07-29, paso único)
+
+Como en el 08, el cambio es texto interdependiente —las descripciones, la sección de orden y las guardas se referencian entre sí— así que va en un solo paso: partirlo dejaría punteros a secciones inexistentes.
+
+| Archivo | Qué recibió |
+|---|---|
+| `.claude/skills/{design,plan,feature,status,recap,adopt}/SKILL.md` | **`description` como trigger**: qué hace + cuándo dispararse + su discriminante. `status` declara ser la única entrada de consulta; `recap` declara **no** serlo y nombra su efecto; `adopt` declara su precedencia; `feature` nombra el modo lote. Ninguna nombra el destino multifase. |
+| `.claude/skills/{design,plan,feature}/SKILL.md` | **Guarda de entrada**: estado ajeno + ruteo ⇒ entregar a la dueña; comando explícito ⇒ camino de hoy, informando en una línea. Cada una enumera lo que le es **ajeno** (en `feature`, el lote **no** lo es: lo resuelven sus ramas). |
+| `.claude/skills/recap/SKILL.md` | **Guarda que acota cuándo mutar**: solo pedido explícito de checkpoint o invocación de una skill de fase al cerrar; toda otra entrada entrega sin tocar estado. Aviso previo si la línea de ronda dice `N · lanzada`. |
+| `.claude/skills/plan/SKILL.md` | **Paso 0** (confirmación liviana con persistencia en STATUS + commit, solo si llegó despachado) y **rama «esperando confirmación de plan»** (re-presenta la interpretación **registrada**, no la re-deriva). |
+| `.claude/skills/feature/SKILL.md` | **Token de spawn**: el padre acuña antes del ledger+commit y lo anota en el evento de arranque; el hijo aplica el **discriminante de protocolo de tres valores** y **reclama por rename**; la reentrada del lote gana la **tabla de ocho filas** con el invariante de ancla única y el retiro determinístico. Esqueleto del ledger con `protocolo: spawn-token v1` y `token=` en el evento. Limpieza del claim al cerrar. |
+| `AGENTS.md` + `templates/AGENTS.md` (espejo) | **§Ruteo**: orden de 4 pasos, gramática posicional de invocación, regla de confirmación, interinato multifase, ruteo al lote, «qué no hace». Y la **corrección de la línea de `/recap`**, que dejaba de ser consulta. |
+| `docs/design/review-contract.md` | «esperando confirmación de plan» como **cuarta espera humana** del vocabulario, con la razón de que sea la única que lleva contenido en la línea. |
+| `docs/implementation/batch-2026-07-29.md` | Anotación `protocolo: legacy` en el bloque Gate (r3 p3 / r4 p2). |
+| `tests/loop.sh` | `unset` de los `AXEL_REVIEW_*` en el preámbulo (§8) — aplicado en el commit de r1. |
+
+Sin cambios en `scripts/`: el payload del instalador no incorpora archivos y su allowlist no se toca.
+
 ## Review log
 
 - **r1** (2026-07-29, `CHANGES_REQUESTED`, rango `a2f673d..a6af7ab`): review de la bajada. Codex validó los commits de cierre del 08 y de arranque del 09, y corrió las tres suites (lint limpio, install 459/0, loop 287/0 tras neutralizar el entorno). **Cinco puntos, los cinco aceptados**:

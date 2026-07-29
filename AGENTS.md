@@ -24,7 +24,26 @@ Fases, cada una con su skill:
 1. `/design` — ping-pong de ideas con el humano → consolidar `docs/DESIGN.md` → loop de review → RECAP → OK.
 2. `/plan` — `docs/IMPLEMENTATION.md` con features priorizados; el orden lo acuerdan generador y reviewer → RECAP → OK.
 3. `/feature` — el siguiente feature: gate de arranque (resumen breve + confirmación humana) → bajada fina → review → implementación iterando con review → RECAP → OK. Se repite feature por feature, cada uno en sesión limpia. **Modo lote**: `/feature all` o `/feature NN..MM` corre varios features pendientes en una sola corrida — gate de lote al inicio, un subagente fresco por feature, RECAP consolidado al final cuyo OK cierra ([docs/design/batch-features.md](docs/design/batch-features.md)).
-4. `/status` y `/recap` — consulta en cualquier momento, no cambian el trabajo.
+4. `/status` — consulta en cualquier momento: lectura pura, no cambia nada. `/recap` — **checkpoint a demanda**: no es consulta (fija «esperando OK» en STATUS, commitea y frena el turno); se pide explícitamente, o lo invocan las skills de fase al cerrar.
+
+### Ruteo: un pedido sin comando
+
+No hace falta conocer los comandos. Ante un pedido **sin comando explícito**, leé `docs/STATUS.md` y aplicá este orden — **el primer caso que aplica gana**, y los casos de estado pendiente preceden siempre a la clasificación del pedido (un pedido nuevo no puentea una espera):
+
+1. **Consulta** («¿dónde estamos?», «¿qué falta?», «¿cómo viene?») → **`/status` y nada más**: lectura pura, disponible en cualquier estado. `/recap` **no** es consulta: se elige solo ante un pedido explícito de RECAP o checkpoint — a mitad de loop, eso equivale a pedir un checkpoint temprano.
+2. **Estado pendiente manda** → el pedido entra por la **reentrada de la skill dueña**, nunca como trabajo nuevo: adopción sin cerrar (`docs/ADOPTION.md`) → `/adopt`; corte de lote registrado, OK humano pendiente, confirmación de plan pendiente, confirmación de arranque o autorización de lote pendientes, review lanzada sin desenlace consumido, o fase/feature/lote activo → la skill de esa fase, por su rama de reentrada.
+3. **Solo desde estado estable** (nada activo ni esperando) se clasifica el pedido, **por lo que necesita** y no por lo que los docs tengan: armar o extender el diseño → `/design` (incluye: no hay `DESIGN.md` real, solo la semilla del instalador); armar, extender o repriorizar el plan → `/plan`; avanzar con features ya planificados → `/feature` (con `all` o rango si pide varios de corrido); pedido que necesita **dos o más fases** → ver «Multifase», abajo.
+4. **Ambigüedad en cualquier paso** → preguntá **en una línea**. No adivines.
+
+**Qué cuenta como comando explícito** (regla posicional, no interpretativa): tras los espacios iniciales, el **primer token** del pedido es `/design`, `/plan`, `/feature`, `/status`, `/recap` o `/adopt`, con o sin argumentos. Solo eso es invocación explícita, y esos caminos funcionan **igual que hoy**. El comando en cualquier otra posición es **mención**, no invocación («¿qué hace `/feature` cuando se corta un lote?»): no se ejecuta — se responde o se pregunta.
+
+**El ruteo nunca arranca trabajo sin un punto de confirmación**: usa el de la fase donde existe (`/feature`, gate de arranque; `/design`, el ping-pong; `/adopt`, pregunta cada punto de juicio) y donde no existe lo agrega — `/plan` despachado registra su interpretación en STATUS, la presenta y espera una confirmación liviana antes de escribir; la invocación explícita directa de `/plan` queda como hoy.
+
+**Multifase (interino, hasta que exista `/build`)**: si el pedido necesita dos o más fases, decilo — nombrá la ruta completa (p. ej. diseño → plan → feature) — y arrancá **solo por la primera**, con su punto de confirmación. Las fases no se encadenan sin OK humano: cerrada la primera, decide el humano.
+
+**Modo lote**: un pedido inequívoco de correr varios features de corrido («hacé todos los pendientes») puede despachar a `/feature all` o a un rango — lo que habilita el lote es la **autorización del gate**, no la forma de invocación. Si no está claro cuántos features abarca, preguntá.
+
+Lo que el ruteo **no** hace: no rutea mensajes a mitad de loop (la prioridad absoluta del humano ya los cubre; si cambian el scope, RECAP temprano), no saltea esperas, y no reemplaza los comandos. Cada skill trae además su **guarda de entrada**, que hace valer «estado pendiente manda» aunque esta sección falte.
 
 ### El loop dentro de un feature
 

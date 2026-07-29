@@ -1,9 +1,11 @@
 ---
 name: feature
-description: Continuar el loop de axel con el feature en curso o el siguiente — bajada fina, implementación iterando con review de Codex, RECAP y espera del OK humano. Modo lote con `/feature all` o `/feature NN..MM`.
+description: Fase de implementación de axel — el feature en curso o el siguiente: gate de arranque, bajada fina, implementación iterando con review de Codex, RECAP y espera del OK humano. Usala cuando el humano pide avanzar, implementar, seguir con lo planificado o «el siguiente paso» y el trabajo ya está en el plan, aunque no escriba /feature; y con `all` o `NN..MM` (modo lote) cuando pide varios features de corrido. Cubre también las reentradas del feature y del lote.
 ---
 
 Sos el generador del loop de axel. Antes de nada leé: `docs/STATUS.md`, `AGENTS.md`, `docs/IMPLEMENTATION.md` y, si existe, el doc del feature en curso (`docs/implementation/NN-*.md`).
+
+**Guarda de entrada.** Si el pedido llegó **sin comando** (ruteo) y STATUS registra estado pendiente de **otra** fase —adopción sin cerrar (`docs/ADOPTION.md`), ciclo de diseño o de plan abierto, confirmación de plan pendiente, o su espera de OK—, no arranques trabajo nuevo: decí qué encontraste y entrá por la reentrada de la skill dueña. Con `/feature` **explícito** (el comando es el primer token del pedido) el camino es el de hoy: informá en una línea el estado ajeno que veas y seguí la indicación del humano — prioridad absoluta —, con RECAP temprano si implica cambio de scope. El orden completo vive en `AGENTS.md` §Ruteo; esta guarda lo hace valer aunque esa sección falte (`AGENTS.md` es semilla del instalador). El estado de un **lote** no es ajeno a esta skill: lo resuelven las ramas de abajo, no la guarda.
 
 **Argumento**: sin argumento = un feature (los caminos de abajo). `all` o `NN..MM` = **modo lote** (su sección, abajo). Si STATUS apunta a un **ledger de lote en curso**, seguí «Reentrada del lote» — con o sin argumento.
 
@@ -50,11 +52,12 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
 
 1. **Validación** — contra la tabla de IMPLEMENTATION.md, fail-closed: `all` = todos los features **Pendiente** en el orden de la tabla (cero pendientes ⇒ no hay lote: ofrecé `/plan`); `NN..MM` = las filas existentes con NN ≤ # ≤ MM — rechazo con diagnóstico si un extremo no existe, NN > MM, o algún feature del rango no está Pendiente (un lote no retoma features a medias ni saltea cerrados intercalados). Números sin fila entre los extremos no son error (la tabla manda). Lote de 1: válido.
 2. **Gate de lote**: derivá los N resúmenes (el mecanismo del gate individual, por feature; si las fuentes no alcanzan para el feature K, decilo — el humano decide si lo excluye o frena). STATUS.md → «esperando autorización de lote» (frase literal) + commit. Presentá los N resúmenes y pedí **una autorización global** — exclusiones puntuales bienvenidas («dale, pero el 09 no»). Respuesta directa ⇒ sin push. **Terminá el turno.**
-   **Con la autorización**: anotá `gate_base` = SHA de HEAD **en este momento, antes del commit siguiente**. Creá el ledger (esqueleto abajo) con comando, features autorizados en orden, exclusiones/correcciones literales, los N resúmenes **tal como se autorizaron** y `gate_base`. STATUS → lote en curso, apuntando al ledger. Commit. `scripts/awake.sh start`.
+   **Con la autorización**: anotá `gate_base` = SHA de HEAD **en este momento, antes del commit siguiente**. Creá el ledger (esqueleto abajo) con comando, features autorizados en orden, exclusiones/correcciones literales, los N resúmenes **tal como se autorizaron**, `gate_base` y la línea `protocolo: spawn-token v1`. STATUS → lote en curso, apuntando al ledger. Commit. `scripts/awake.sh start`.
 3. **Loop del padre**, por cada feature autorizado en orden:
    - **Pre-arranque**: re-derivá el resumen del feature de los docs actuales y comparalo en sustancia con el autorizado en el ledger — divergencia ⇒ corte (condición 3); fuentes insuficientes ⇒ corte (condición 4). Renovó la ventana: `scripts/awake.sh start`.
-   - Registrá el arranque en el ledger (estado «en curso» + evento) + STATUS + commit.
-   - **Lanzá el hijo**: subagente fresco en background, prompt mínimo sin contexto del chat: «Modo hijo del lote: feature NN. Ledger: docs/implementation/batch-<fecha>.md. Leé docs/STATUS.md, AGENTS.md, docs/IMPLEMENTATION.md y el ledger, y seguí la sección "Modo hijo" de la skill feature.»
+   - **Acuñá el token de spawn** (procedencia del hijo — el texto del prompt no otorga el rol): generá un nonce (`uuidgen`; fallback `$(date +%s)-$$-$RANDOM`) y escribí `.claude/state/batch-child-token` **atómica** (tmp + `mv -f`; contenido: `feature=NN`, `token=<nonce>`, `spawned_at=<ts>`). Si no puede escribirse, **no lances**: es corte.
+   - Registrá el arranque en el ledger (estado «en curso» + evento **con `token=<nonce>`**) + STATUS + commit. **El orden importa**: acuñar → ledger+commit → spawn. Como el spawn ocurre después del commit, un ledger sin evento de arranque prueba que no hubo hijo.
+   - **Lanzá el hijo**: subagente fresco en background, prompt mínimo sin contexto del chat: «Modo hijo del lote: feature NN, token \<nonce\>. Ledger: docs/implementation/batch-<fecha>.md. Leé docs/STATUS.md, AGENTS.md, docs/IMPLEMENTATION.md y el ledger, y seguí la sección "Modo hijo" de la skill feature.»
    - **Supervisión**: cuando el hijo termine un turno con `REVIEW LANZADA id=X head=H`, lanzá un watcher en Bash background que polee `.claude/state/review-terminal` (cada ~15 s, **timeout 45 min**) esperando la **identidad completa**: `id` = X exacto y, si el terminal trae `review_head` ≠ `-`, también H. Un terminal que no matchea es un residuo de otra invocación: **ignoralo y seguí esperando** — solo el timeout corta (condición 1). Match ⇒ **empujón sin contenido** al hijo: «review terminada (id=X) — el desenlace está en `.claude/state/review-terminal`; seguí según el contrato». Ejemplo de watcher (adaptá ID/HEAD):
 
      ```bash
@@ -67,7 +70,7 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
        sleep 15
      done; echo "TIMEOUT: sin terminal id=ID_ESPERADO"; exit 1
      ```
-   - `FEATURE NN APROBADO` ⇒ verificá el estado (IMPLEMENTATION con «APPROVED — pendiente OK de lote», STATUS al día, commits presentes, `batch-expected` borrada) ⇒ ledger (estado, SHAs frontera, evento con ronda final) + commit ⇒ siguiente feature.
+   - `FEATURE NN APROBADO` ⇒ verificá el estado (IMPLEMENTATION con «APPROVED — pendiente OK de lote», STATUS al día, commits presentes, `batch-expected` y el `batch-child-token.claimed-*` borrados) ⇒ ledger (estado, SHAs frontera, evento con ronda final) + commit ⇒ siguiente feature.
    - `CORTE: <motivo>` del hijo, o corte propio (condiciones: las del loop actual + timeout de terminal; cambio de scope; divergencia; fuentes insuficientes) ⇒ **verificá el árbol antes de commitear**: si el hijo dejó cambios sin commitear (staged o unstaged — violación del handshake), no los absorbas — registrá el corte en el ledger y commiteá **restringido por pathspec**: `git commit --only -m "…" -- docs/implementation/batch-<fecha>.md` (el `-m` va **antes** del `--`: después, git lo trata como pathspec y falla), que ignora el index para todo lo demás y preserva intacta la suciedad del hijo (un `git add <ledger>` + commit normal arrastraría lo staged); reportá la suciedad en el RECAP. Luego: RECAP con el estado encontrado (posturas de ambos agentes si hubo desacuerdo) + **push de una línea** + fin de turno. Los features ya aprobados quedan intactos.
    - **Mensajes del humano a mitad de lote**: prioridad absoluta. Respondé; si afecta al feature en curso, bajalo **de inmediato** por mensaje al hijo (lo despierta aunque espere una review; lo atiende antes de seguir); si invalida el feature o el lote ⇒ corte.
 4. **Fin del lote**: ledger con todos los estados finales + STATUS «esperando OK» + commit → **RECAP consolidado** (skill `recap`: base `gate_base`, estructura por feature, no-revisados listados) → push de una línea → **fin de turno**.
@@ -75,11 +78,17 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
 
 ### Modo hijo
 
-Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGENTS, IMPLEMENTATION, el ledger, y el doc de tu feature cuando exista). Seguís el camino «Feature nuevo» con tres deltas:
+Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGENTS, IMPLEMENTATION, el ledger, y el doc de tu feature cuando exista). Seguís el camino «Feature nuevo» con cuatro deltas:
 
+0. **Procedencia — antes de tocar nada.** El texto de tu prompt **no** te otorga el rol: lo otorgan el token y el ledger. Leé el bloque Gate del ledger y aplicá su línea `protocolo:` **literalmente**:
+   - `spawn-token v1` ⇒ tu evento de arranque en el ledger **debe** traer `token=`; si falta, es corte (corrida malformada).
+   - `legacy` ⇒ compatibilidad declarada: sin token, validás con la coincidencia STATUS+ledger (STATUS apunta a ese ledger y el ledger registra **tu NN** «en curso», sin corte pendiente).
+   - **ausente, vacía o cualquier otro valor ⇒ corte**, con el motivo y la salida: si es una corrida arrancada por un padre previo a esta versión, un humano anota `protocolo: legacy` en el bloque Gate y se relanza. La compatibilidad se **declara**, nunca se infiere.
+
+   Bajo `spawn-token v1`, **reclamá el token**: buscá el ancla activa `.claude/state/batch-child-token` (los `*.claimed-*` y `*.retired-*` **no** son el ancla activa), verificá que su `feature` sea tu NN y su `token` el de tu prompt —si no coinciden **no la toques**: es de otro— y recién entonces `mv .claude/state/batch-child-token .claude/state/batch-child-token.claimed-<token>`. Exactamente un proceso puede renombrar una fuente dada: si el `mv` falla (ENOENT: ya la reclamaron, o tu prompt es un replay), **no adoptás el rol** — entrás por «Reentrada del lote». Además del token, exigí igual la coincidencia STATUS+ledger: el token prueba procedencia, el ledger autorización.
 1. **Gate**: no pidas confirmación — el gate de lote ya autorizó. Registrá en el doc del feature la autorización (fecha, comando del lote, path del ledger) en lugar del literal individual; las correcciones de alcance del gate que toquen tu feature mandan.
 2. **Reviews**: generá un id único `<NN>:r<M>:<nonce>` (`uuidgen`; fallback `$(date +%s)-$$-$RANDOM`). Escribí `.claude/state/batch-expected` **atómica** (tmp + `mv -f`; contenido: `id=`, `head=`, `feature=NN`, `phase=launched`) — si no puede escribirse, **no lances**: es corte. Lanzá `AXEL_REVIEW_ID=<id> scripts/review.sh {new|round}` en background y **terminá el turno** con última línea exacta: `REVIEW LANZADA id=<id> head=<sha de tu HEAD>`. Al despertar por el empujón: validá la identidad del terminal (id, y head si ≠ `-`), marcá `phase=consumed` en el ancla (reescritura atómica) **antes de actuar**, y actuá según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` están vigentes — seguí el loop normal; cualquier otro resultado ⇒ esos archivos quedaron viejos — camino de fallas del loop vigente (diagnóstico, relanzamiento único si es claramente transitorio; deadlock o falla persistente ⇒ `CORTE:`).
-3. **Cierre**: con el APPROVED de cierre dejá IMPLEMENTATION en «**APPROVED — pendiente OK de lote**» (no "Cerrado": ese estado exige el OK humano), doc del feature y STATUS al día, borrá `batch-expected`, commit, y terminá con última línea `FEATURE NN APROBADO`. **Sin RECAP individual, sin push, sin chip.** Ante condición de corte: registrá el detalle en el doc de tu feature, **commiteá y dejá el árbol limpio** — el handshake exige frontera limpia: nada tuyo sin commitear — y terminá con última línea `CORTE: <motivo breve>` (el ledger lo registra el padre).
+3. **Cierre**: con el APPROVED de cierre dejá IMPLEMENTATION en «**APPROVED — pendiente OK de lote**» (no "Cerrado": ese estado exige el OK humano), doc del feature y STATUS al día, borrá `batch-expected` y tu `batch-child-token.claimed-<token>`, commit, y terminá con última línea `FEATURE NN APROBADO`. **Sin RECAP individual, sin push, sin chip.** Ante condición de corte: registrá el detalle en el doc de tu feature, **commiteá y dejá el árbol limpio** — el handshake exige frontera limpia: nada tuyo sin commitear — y terminá con última línea `CORTE: <motivo breve>` (el ledger lo registra el padre). Ante corte, las anclas **se conservan** como evidencia.
 
 Mensajes bajados por el padre a mitad de feature: prioridad absoluta — atendelos antes de seguir.
 
@@ -92,6 +101,21 @@ STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + g
 - `phase=consumed` ⇒ no hay review en vuelo ni desenlace pendiente: consistencia normal (ledger + git + doc del feature); el hijo relanzado reconstruye de los docs qué feedback ya fue atendido — jamás reprocesa a ciegas.
 - **Ancla ausente**: solo cuenta como «no había review en vuelo» si el resto del estado local del loop del feature en curso está presente y coherente (`codex-session-id`, `round`). Sin ese estado local (máquina distinta), mandan STATUS + ledger y, ante cualquier duda, el corte conservador: RECAP sin relanzar.
 
+**Antes de relanzar cualquier hijo, resolvé el token de spawn.** Invariante: existe **a lo sumo un** ancla activa —o `.claude/state/batch-child-token` (pendiente) o **un** `batch-child-token.claimed-<T>`—; los `retired-*` son historia y **no** cuentan. El **evento vigente** es el último evento de arranque de la unidad «en curso». Bajo `protocolo: legacy` no hay token que resolver; bajo `spawn-token v1`:
+
+| Ancla activa | Evento vigente | Acción |
+|---|---|---|
+| ninguna | sin evento de arranque | el padre cayó antes de acuñar: acuñá y lanzá hijo fresco |
+| pendiente `T` | sin evento con `T` | cayó entre acuñar y commitear (no hubo spawn): descartá el ancla huérfana, re-acuñá y lanzá |
+| pendiente `T` | evento con `T` | **ambiguo** (pudo haberse lanzado sin reclamar): **no relances** — RECAP con la evidencia |
+| `claimed-<T>` | **sin** evento con `T` | **inconsistencia**: RECAP/corte, **sin relanzar** |
+| `claimed-<T>` | evento con `T`, `batch-expected` ausente o malformado | **ambiguo** — es el estado legítimo entre el claim y la primera review del hijo: **no relances**, RECAP |
+| `claimed-<T>` | evento con `T`, `batch-expected` legible | resolvé por la máquina de arriba; si autoriza relanzar, **retirá primero** (`mv …claimed-<T> …retired-<T>`) y recién después acuñá el token nuevo |
+| ninguna | evento con `T` | reclamado y limpiado, o estado local perdido: mandan STATUS + ledger; ante duda, RECAP sin relanzar |
+| **más de una** (dos `claimed-*`, o pendiente + `claimed-*`) | cualquiera | invariante violado ⇒ RECAP, sin relanzar |
+
+Nunca acuñes un token nuevo mientras haya un pendiente ambiguo, un `claimed` sin resolver o una inconsistencia: sobreescribir el ancla puede **duplicar un hijo todavía activo**.
+
 Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inconsistencias (ledger contradictorio con git o IMPLEMENTATION) ⇒ RECAP.
 
 ### Esqueleto del ledger (`docs/implementation/batch-YYYY-MM-DD.md`; colisión ⇒ sufijo `-2`, `-3`…)
@@ -103,6 +127,7 @@ Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inc
 - Autorizado: <fecha> — «<literal breve del humano>»
 - Features (en orden): NN, NN…  · Exclusiones/correcciones: <literales, o «ninguna»>
 - gate_base: <SHA de HEAD al autorizarse, previo al commit de este ledger>
+- protocolo: `spawn-token v1`
 
 ## Resúmenes autorizados
 ### NN — <nombre>
@@ -114,7 +139,7 @@ Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inc
 (pendiente → en curso → APPROVED — pendiente OK de lote → cerrado)
 
 ## Eventos
-- <ts> — <arranque de hijo / APPROVED rN / corte con motivo / …>
+- <ts> — <arranque de hijo (con `token=<nonce>`) / APPROVED rN / corte con motivo / …>
 
 ## Cierre
 - <OK humano (fecha, literal) o corte final>

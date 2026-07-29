@@ -91,7 +91,7 @@ El número es **siempre el de `review.sh`** (el que el terminal publica en `roun
 
 Un ciclo reabierto con `new` vuelve a `1`, y eso escribe STATUS; la cuenta acumulada de la fase o feature vive en su Review log (features) o en las líneas de commit del ciclo, que nombran la ronda (design/plan), junto con el registro de que `new` rearmó la racha de deadlock.
 
-La línea **«Esperando»** usa vocabulario fijo: «esperando OK humano», «esperando confirmación de arranque», «esperando autorización de lote» (las tres esperas **humanas**: las únicas que disparan re-presentación y aviso), «esperando el desenlace de la review (ronda N)», o «nada del humano — \<trabajo en curso\>».
+La línea **«Esperando»** usa vocabulario fijo: «esperando OK humano», «esperando confirmación de arranque», «esperando autorización de lote», «esperando confirmación de plan» (las cuatro esperas **humanas**: las únicas que disparan re-presentación y aviso), «esperando el desenlace de la review (ronda N)», o «nada del humano — \<trabajo en curso\>». La cuarta la fija el ruteo implícito —`/plan` despachado por contexto no tiene gate propio— y es la única que **lleva contenido en la línea**: la interpretación del pedido, que no es derivable de los docs porque su fuente era el chat; las otras tres re-derivan su presentación de los docs.
 
 ### Frontera previa
 

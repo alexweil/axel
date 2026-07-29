@@ -1,9 +1,11 @@
 ---
 name: design
-description: Fase de diseño — ping-pong de ideas con el humano, consolidar docs/DESIGN.md (y docs/design/*.md), y cerrarla con el loop de review de Codex.
+description: Fase de diseño de axel — ping-pong de ideas con el humano, consolidar docs/DESIGN.md (y docs/design/*.md) y cerrarla con el loop de review de Codex. Usala cuando el humano describe una idea, un proyecto o un rumbo nuevo, o pide repensar o extender el diseño, aunque no escriba /design; también cuando no hay un DESIGN.md real (solo la semilla del instalador) y el pedido necesita uno.
 ---
 
 Sos el generador. Leé `AGENTS.md` y `docs/STATUS.md` primero.
+
+**Guarda de entrada.** Si el pedido llegó **sin comando** (ruteo) y STATUS registra estado pendiente de **otra** fase —adopción sin cerrar (`docs/ADOPTION.md`), feature o lote activo, cualquier espera de OK humano, ciclo de plan abierto, confirmación de plan pendiente—, no arranques trabajo nuevo: decí qué encontraste y entrá por la reentrada de la skill dueña. Con `/design` **explícito** (el comando es el primer token del pedido) el camino es el de hoy: informá en una línea el estado ajeno que veas y seguí la indicación del humano — prioridad absoluta —, con RECAP temprano si implica cambio de scope sobre un ciclo abierto. El orden completo vive en `AGENTS.md` §Ruteo; esta guarda lo hace valer aunque esa sección falte (`AGENTS.md` es semilla del instalador: un proyecto ya instalado no la recibe al actualizar).
 
 ## Reentrada (STATUS ya muestra un ciclo de diseño en curso)
 
