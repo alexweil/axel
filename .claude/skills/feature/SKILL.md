@@ -108,6 +108,7 @@ Sos el hijo de una **unidad de feature de un pipeline** (`/build`), no de un lot
 | anclas `.claude/state/batch-child-token{,.claimed-T}` y `batch-expected` | `.claude/state/pipeline-child-token{,.claimed-T}` y `pipeline-expected` |
 | identidad `feature=NN` en el ancla | `unit=NN` (el id de tu unidad **es** tu número de feature) |
 | cierre `FEATURE NN APROBADO`; estado «APPROVED — pendiente OK de lote» | cierre `UNIDAD NN APROBADA`; estado «APPROVED — pendiente OK de **pipeline**» |
+| la autorización que registrás en el doc del feature es la del **gate de lote** (fecha, comando `/feature all` o `NN..MM`, path del ledger) | la del **gate de pipeline**: fecha, el pedido de `/build` que lo originó (literal breve del bloque Gate) y el path del ledger de pipeline |
 
 Todo lo demás es literal: discriminante de protocolo, triple coincidencia, reclamo por rename, id de review `<NN>:r<M>:<nonce>`, handshake de señal terminal, sin RECAP ni push ni chip, y `CORTE: <motivo>` con el árbol limpio. Un `tipo:` ausente o desconocido en el ledger ⇒ **corte**, como el `protocolo:`. **El pedido de review va acotado al delta autorizado y a su escala declarada** (en modo POC, decilo: «revisá que alcance para el esqueleto, no exhaustividad»), no a una pasada completa del proyecto.
 
