@@ -1,7 +1,8 @@
 # STATUS
 
-- **Fase**: pipeline `/build` **en curso** (autorizado 2026-07-29) · ledger: [implementation/pipeline-2026-07-29.md](implementation/pipeline-2026-07-29.md) · unidades: plan-delta ✔ + feature 11 (modelo fijo de los subagentes por tipo de unidad)
-- **Feature en curso**: unidad `11` (feature) **cerrada** — **APPROVED de Codex en r6** (base `e6d26e2`, cierre en este commit), con los nueve criterios verificados por el reviewer. Estado: «APPROVED — pendiente OK de pipeline». La maquinaria fija el modelo de los hijos por tipo de unidad (`fable` para `design`/`plan`, `opus` para `feature`), con tabla canónica en la skill `build`, override por gate y degradación anunciada. Anclas del pipeline limpias
+- **Fase**: pipeline `/build` 2026-07-29 — **corrida terminada, esperando OK humano del RECAP consolidado** · ledger: [implementation/pipeline-2026-07-29.md](implementation/pipeline-2026-07-29.md)
+- **Feature en curso**: ninguno — las dos unidades en «**APPROVED — pendiente OK de pipeline**»: `plan` (plan-delta, r3, `2aaa9dc` → `e5f2f87`) y `11` (feature, r6, `8c11092` → `cdece9c`). La maquinaria fija el modelo de los hijos por tipo de unidad (`fable` para `design`/`plan`, `opus` para `feature`), con tabla canónica en la skill `build`, override por gate y degradación anunciada
 - **Ronda de review**: 6 · consumida
-- **Esperando**: nada del humano — el padre del pipeline consolida y presenta el RECAP, cuyo OK cierra las dos unidades
+- **Último veredicto**: APPROVED de cierre · ronda 6 · base `2c64c8a` · head revisado `74d3f5c` (unidad `11`)
+- **Esperando**: el **OK humano del RECAP consolidado** (base `gate_base` `51ec00b`), que cierra las dos unidades de una vez
 - **Actualizado**: 2026-07-29
