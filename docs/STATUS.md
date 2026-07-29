@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: feature — modo lote (`/feature all`: features 08, 09, 10)
-- **Feature en curso**: ninguno — gate de lote presentado
+- **Fase**: feature — **lote en curso** (`/feature all`: 08, 09, 10) · ledger: [implementation/batch-2026-07-29.md](implementation/batch-2026-07-29.md)
+- **Feature en curso**: ninguno todavía — lote autorizado, arrancando por el 08
 - **Ronda de review**: —
 - **Último veredicto**: APPROVED · ronda 2 · base `91f0f00` (extensión de plan 08–10)
-- **Esperando**: esperando autorización de lote — 08 (reentradas fail-closed), 09 (ruteo implícito), 10 (pipeline `/build`)
+- **Esperando**: nada del humano — el lote corre autónomo hasta el RECAP consolidado
 - **Actualizado**: 2026-07-29
