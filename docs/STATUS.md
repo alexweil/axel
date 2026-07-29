@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: design — **entrada implícita** (nivel 1: ruteo por contexto; nivel 2: pipeline `/build`, POC-first como caso particular), en loop de review
-- **Feature en curso**: ninguno (fase de diseño; el plan previo quedó completo)
-- **Ronda de review**: r2 `CHANGES_REQUESTED` (2 puntos: `/recap` no es read-only — consultas solo a `/status`; faltaba la reentrada del feature individual activo en el inventario) — corregidos ambos, r3 por lanzar
-- **Último veredicto**: CHANGES_REQUESTED · ronda 2 · base `2d5d30d`
-- **Esperando**: review r3 de Codex
+- **Fase**: design — **entrada implícita** (ruteo por contexto + pipeline `/build`): **APPROVED** de Codex en r3 — RECAP presentado, **esperando OK humano**
+- **Feature en curso**: ninguno (fase de diseño)
+- **Ronda de review**: r3 `APPROVED` (r1: 3 puntos corregidos; r2: 2 puntos corregidos)
+- **Último veredicto**: APPROVED · ronda 3 · base `a3071f2`
+- **Esperando**: OK humano del RECAP de diseño — con el OK: `/plan` en sesión limpia para bajar el diseño a features
 - **Actualizado**: 2026-07-29
