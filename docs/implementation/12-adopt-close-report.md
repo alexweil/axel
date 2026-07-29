@@ -229,12 +229,12 @@ Como en los features 08–11 no hay harness de despacho: el comportamiento lo ej
 
 Dos sedes, ninguna ejecutable.
 
-1. **`.claude/skills/adopt/SKILL.md`** (payload) — tres cambios, y nada más:
+1. **`.claude/skills/adopt/SKILL.md`** (payload) — **cuatro** cambios, y nada más:
    - **Paso 7 nuevo**, «Reportar el inventario de lo que tocaste», con cuatro bullets: chequeo de `git status --porcelain` con lo no commiteado declarado aparte; derivación con `git show --name-status -M <SHA>` y encabezado con la fuente (`N archivos · commit <SHA>` + el comando); **una línea por entrada** con el vocabulario de cinco acciones —`A`/`M`/`D`/`R`/`T`, con «el score es señal, no criterio» escrito en la fila del rename—; y el **camino de rango** con sus dos comandos, el conteo derivable de los marcadores, la secuencia en el orden en que pasó para un path sin efecto neto, y el fallback de `<base>` con su aviso.
    - **Paso 6**: suma «**todo el cierre en un commit**», que es la precondición del camino normal del paso 7.
    - **Regla final**: conserva íntegra su primera mitad («nada de lo preexistente se pisa sin decisión explícita del humano en esta sesión») y su segunda mitad deja de mandar la visibilidad al diff — ahora los movimientos quedan «en el diff del commit de cierre **y en el reporte del paso 7**, que es donde el humano los ve».
    - **Sección nueva `## Reporte de cierre (contrato)`**, genérica y autocontenida: las tres reglas (derivación con fuente declarada, completitud, clasificación en dos bloques con título) y el presupuesto. Encabezado explícito de reusabilidad: «Vale para **cualquier** cierre que edite archivos del humano y termine el turno con un mensaje; hoy su único consumidor es el paso 7 de esta skill».
-   - **La `description` no se toca** (es trigger de ruteo del feature 09), y los pasos 1–5 quedan **literales**.
+   - Y lo que **no** cambia, para que el conteo de cuatro sea verificable: la **`description`** (es trigger de ruteo del feature 09) y los **pasos 1–5**, literales.
 2. **`docs/DESIGN.md`** — fila de decisión del 2026-07-29, después de la del feature 11.
 
 ### Matriz R resuelta contra el texto instalado
@@ -269,7 +269,7 @@ Las 20 filas, con el texto de `.claude/skills/adopt/SKILL.md` que las decide. Ni
 - **C5** — `git diff bcf34f3 -- AGENTS.md templates/`: **vacío**. La decisión de §6 se cumple en el diff, no solo en el argumento.
 - **C7** — `wc -l .claude/skills/adopt/SKILL.md`: **39 líneas** (≤ 40; eran 19). El paso 7 y el contrato suman 20 líneas y los pasos 1–5 quedan intactos.
 - **C8** — `git diff bcf34f3 -- scripts/ tests/`: **vacío**. Las tres suites como no-regresión: `tests/lint.sh` limpio (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. (El conteo de `loop.sh` en el sandbox del reviewer da 287 porque ahí se saltea la clase L5 — causa cerrada en la r5 del feature 11.)
-- **C6** — matriz resuelta arriba, 20 filas contadas con `grep -c '^| R'` sobre la sección de la matriz.
+- **C6** — matriz resuelta arriba. Conteos **acotados a cada sección**, porque desde que existen las dos tablas un `grep -c '^| R'` sobre el archivo entero devuelve **40** y no 20 (evidencia corregida en la r5): `awk '/^## Matriz R — reporte de cierre/,/^## Criterios de cierre/' <doc> | grep -c '^| R'` ⇒ **20** (matriz de casos) y `awk '/^### Matriz R resuelta contra el texto instalado/,/^### Verificación de los criterios mecánicos/' <doc> | grep -c '^| R'` ⇒ **20** (matriz resuelta). Las dos tablas tienen las mismas 20 filas, que es lo que el criterio exige.
 
 ## Review log
 
@@ -296,3 +296,17 @@ Codex dio por incorporadas las cinco correcciones de la r1 y verificó 19 filas,
 **Las tres correcciones de clasificación quedaron cerradas** según el reviewer: la excepción de origen puro está acotada, **las ocho líneas del ejemplo se derivan de §4** (la verificación que más me importaba pedir) y la matriz contiene sus 20 casos, con STATUS y `git diff --check` limpios. Queda un solo punto, y es de la mecánica del comando:
 
 1. **El camino multicommit no producía la secuencia que promete.** `git log --format= --name-status -M` entrega los commits **del más nuevo al más viejo** y `--format=` borra encabezados y separadores. Dos consecuencias, las dos verificadas en mi propia evidencia de la r2 sin que las viera: el archivo de esta bajada aparecía como `M, M, A` cuando su secuencia real es `A, M, M` —así R14b podía informar «borrado y creado» donde fue «creado y borrado»—, y las entradas quedaban planas, sin forma de derivar el **conteo de commits** que el reporte debe declarar. **Aceptado**, con el comando que propuso: `git log --reverse --format='commit %H' --name-status -M <base>..HEAD` (verificado: seis bloques cronológicos con marcador, conteo derivable con `grep -c '^commit '`). §2 queda con los **tres** modificadores justificados uno por uno —`--name-status` (r2), `--reverse` y el marcador (r3)—, para que una relectura futura no los tome por decorativos y los pierda; alineados R9, R14b y el criterio 1.
+
+### r4 (base `bcf34f3`, HEAD `6f2c04a`) — **APPROVED de la bajada**
+
+Sin observaciones accionables: «El comando nuevo produce bloques cronológicos, conserva `A → M → M` y permite derivar el conteo. §2, R9, R14b y el criterio 1 quedaron alineados; el comando anterior solo aparece en el historial explicativo de review» y «la matriz mantiene 20 filas coherentes … no hay cambios fuera del alcance autorizado». Con esto arranca la implementación (un paso, dos sedes). *(Entrada agregada en la r5: el Review log terminaba en la r3 y omitía esta transición, de la que ya dependían STATUS e IMPLEMENTATION — punto 3 de esa ronda.)*
+
+**Cuatro rondas de bajada, todas convergentes**: 5 → 3 → 1 → 0 puntos, **los nueve aceptados sin argumentar**. La sustancia (derivar de git, dos bloques, alcance acotado, contrato reusable, `AGENTS.md` sin acompañar) no se discutió en ninguna; lo que costó cuatro rondas fue hacer la regla **reproducible** y el comando **correcto** — dos clasificaciones factuales mías estaban mal (r1), cada arreglo abría un borde nuevo (r2, r3) y el comando de unión invertía la secuencia y no permitía derivar el conteo (r3).
+
+### r5 (base `6f2c04a`, HEAD `15251b7`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados
+
+Primera ronda sobre la **implementación**. El reviewer la dio por buena en lo sustantivo —«la implementación funcional sí cumple C1–C4 y C7; **las 20 filas y el caso retrospectivo 2/6 se resuelven desde la skill**»— con lint, `loop.sh`, `install.sh`, `git diff --check` y los negativos de alcance limpios. Los tres puntos son defectos de **bookkeeping de este doc**, ninguno del texto de la skill:
+
+1. **La evidencia de C6 quedó falsa al agregar la segunda tabla**: `grep -c '^| R'` sobre el archivo devuelve **40**, no 20, porque ahora hay dos matrices de 20 filas. **Aceptado**: la evidencia pasa a **conteos acotados a cada sección** (con `awk` de rango + `grep -c`), con los dos resultados registrados y la razón del 40 explicada, para que la próxima relectura no la lea como regresión.
+2. **«Tres cambios» que enumeraban cuatro** (paso 7, paso 6, regla final, contrato). **Aceptado**: corregido a **cuatro**, y el bullet de cierre pasa a decir explícitamente qué **no** cambia (`description` y pasos 1–5) para que el conteo sea verificable contra el diff.
+3. **El Review log omitía el `APPROVED` de la r4**, del que STATUS e IMPLEMENTATION ya dependían. **Aceptado**: entrada de la r4 agregada —con la nota de que se agregó en esta ronda— y ubicada **dentro** del Review log, después de la r3. La memoria persistente del feature queda completa antes de registrar la ronda de implementación.
