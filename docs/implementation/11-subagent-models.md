@@ -188,7 +188,8 @@ Las 22 filas, con la sede que las resuelve. Ninguna apela a este doc (única exc
 | # | Resuelta por | Texto que la decide |
 |---|---|---|
 | E1 | `feature`, bullet de spawn del lote | «subagente fresco en background **con modelo `opus`**» |
-| E2, E3 | `build` §Modelos por unidad, tabla | filas `design-delta`/`plan-delta` ⇒ `fable` |
+| E2 | `build` §Modelos por unidad, tabla | fila `design-delta` ⇒ `fable` |
+| E3 | ídem, tabla | fila `plan-delta` ⇒ `fable` |
 | E4 | ídem, tabla | fila `feature` ⇒ `opus` |
 | E5 | ambas skills | «lanzá cada hijo con el modelo de **su tipo de unidad**, no con el de tu sesión» / «lo fija la maquinaria por tipo de unidad, no la sesión» |
 | E6 | `build`, precedencia (1) | «ajuste de alcance registrado en el ledger … gana sobre la tabla» |
@@ -214,7 +215,7 @@ Las 22 filas, con la sede que las resuelve. Ninguna apela a este doc (única exc
 - **C2** — `git diff --stat` de `.claude/skills/feature/SKILL.md`: **1 file changed, 1 insertion(+), 1 deletion(-)**. La tabla del «Modo hijo de pipeline» conserva sus **cinco** filas (contadas sobre el archivo) y el texto sigue diciendo «con cinco sustituciones».
 - **C3** — `diff` de la línea «De los hijos» entre `AGENTS.md` y `templates/AGENTS.md`: **sin diferencias**.
 - **C8** — `git diff <base> -- scripts/ tests/`: **vacío**. Las tres suites en verde: `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**, `tests/lint.sh` limpio.
-  **Nota sobre el conteo de `loop.sh`**: Codex reportó 287 en la r1 y acá dan 293. No es una regresión ni un efecto del feature — se verificó corriendo la misma suite en un worktree del commit `9f338fd` (el que Codex revisó en la r4), donde también da **293**. La diferencia es de entorno entre el worktree snapshot del reviewer y el repo canónico, no de contenido: la comparación válida es mismo-commit contra mismo-entorno, y ahí el número es idéntico antes y después de la implementación.
+  **Nota sobre el conteo de `loop.sh`, cerrada**: el reviewer reporta 287 y en el repo canónico dan 293. No es una regresión ni un efecto del feature. Primero se verificó corriendo la misma suite en un worktree del commit `9f338fd` —el que Codex revisó en la r4—, donde también da **293**: mismo contenido, distinto entorno. La **causa exacta** la confirmó Codex en la r5: en su sandbox se **saltea la clase L5**, y esos son los seis casos de diferencia. La comparación válida es mismo-commit contra mismo-entorno, y ahí el número es idéntico antes y después de la implementación.
 
 ## Review log
 
@@ -237,4 +238,19 @@ Codex dio por bien resuelto todo lo demás de la r1 —definitivo vs. ambiguo, m
 
 **La bajada sustantiva quedó lista** según el reviewer: proveniencia commiteada antes del fallback, mismo token, evento vigente intacto y matriz verificada en 22 filas. Árbol y `git diff --check` limpios, sin delta en `scripts/` ni `tests/`.
 
-1. **Review log estructuralmente desordenado.** El punto 3 de la r1 —el del deslinde payload/semilla— había quedado **después** del encabezado de la r2, de modo que r1 anunciaba tres puntos y contenía dos, y r2 anunciaba dos y contenía tres. Causa: la entrada de la r2 se insertó tomando como ancla el final del punto 2 de la r1, que en ese momento era el último bloque escrito. **Aceptado**: el punto vuelve a su lugar, antes de `### r2`, con el contenido intacto (se le quita solo la marca «(r1 p3)», que existía para señalar la pertenencia que el orden ya no dejaba ver).
+1. **Review log estructuralmente desordenado (r3).** El punto 3 de la r1 —el del deslinde payload/semilla— había quedado **después** del encabezado de la r2, de modo que r1 anunciaba tres puntos y contenía dos, y r2 anunciaba dos y contenía tres. Causa: la entrada de la r2 se insertó tomando como ancla el final del punto 2 de la r1, que en ese momento era el último bloque escrito. **Aceptado**: el punto vuelve a su lugar, antes de `### r2`, con el contenido intacto (se le quita solo la marca «(r1 p3)», que existía para señalar la pertenencia que el orden ya no dejaba ver).
+
+### r4 (base `e6d26e2`, HEAD `9f338fd`) — **APPROVED de la bajada**
+
+Sin observaciones accionables: «el Review log quedó consistente: r1/r2/r3 contienen 3/2/1 puntos respectivamente. La matriz conserva 22 filas, el delta sustantivo permanece intacto … La bajada está lista para implementar». Con esto arranca la implementación (un paso, las seis sedes).
+
+### r5 (base `e6d26e2`, HEAD `6cfbcaf`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
+
+Primera ronda sobre la **implementación**. El reviewer dio por bien implementada la maquinaria principal —sección canónica completa, puntero resolutivo desde `feature`, cinco sustituciones preservadas, reversión de §10 sin reescritura— y los cuatro puntos fueron defectos puntuales, tres de ellos invisibles en la lectura del texto nuevo:
+
+1. **`docs/design/implicit-entry.md` seguía diciendo que `templates/AGENTS.md` es payload.** Línea preexistente del feature 10, que ahora **contradice** el deslinde que este feature acababa de instalar en §4, E13b y `SEED_SRC`. **Aceptado**: reescrita — payload son las skills; la plantilla es semilla, así que su contenido nuevo llega a instalaciones nuevas y no a las existentes, y lo que gobierna el comportamiento en todos los casos son las skills.
+2. **La fila de `DESIGN.md` no era una fila.** Había quedado una **línea en blanco** entre la última fila de la tabla y la nueva, lo que en Markdown **termina la tabla**: el texto se renderizaba como párrafo suelto y C6 no se cumplía. **Aceptado**: línea eliminada, tabla continua verificada.
+3. **`IMPLEMENTATION.md` desactualizado**: la fila 11 seguía diciendo «bajada fina escrita, en review» cuando la bajada ya estaba APPROVED en r4 y lo que estaba en review era la implementación (C9 y concordancia con STATUS). **Aceptado**: fila al día.
+4. **La matriz resuelta declaraba 22 filas y tenía 21 físicas**: E2 y E3 estaban combinadas en una sola línea. Sin hueco de cobertura, pero C7 exige el conteo literal. **Aceptado**: separadas; ambas matrices verificadas por conteo en **22** filas.
+
+**Dato que cierra la discrepancia de `loop.sh`**: Codex confirmó que en su sandbox se **saltea la clase L5** — esos son los seis casos entre sus 287 y los 293 del repo canónico. La nota de verificación queda actualizada con la causa, ya no como diferencia inexplicada.

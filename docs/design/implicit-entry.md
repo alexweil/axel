@@ -115,7 +115,7 @@ El caso que motivó el diseño, resuelto como instancia del pipeline y no como s
 - **Métricas**: `rounds-log` por unidad, como hoy.
 - **Commits no revisados**: mismo esquema del lote — los commits de estado de una unidad los barre la r1 de la unidad siguiente; los del final quedan listados en el RECAP consolidado (el OK los cubre); el cierre post-OK usa la excepción del commit de registro del OK.
 - **Modelos por unidad**: el humano elige el modelo de la **sesión**; el de los **hijos** lo **fija la maquinaria** por tipo de unidad y no se hereda (`fable` para `design`/`plan`, `opus` para `feature`, en lote y en pipeline), con override puntual por gate y degradación anunciada si el harness lo rechaza. Bajado en el feature 11 ([implementation/11-subagent-models.md](../implementation/11-subagent-models.md)); tabla canónica en la skill `build`, §«Modelos por unidad».
-- **Instalador**: las skills y `templates/AGENTS.md` son payload — la entrada implícita completa (triggers, ruteo, `/build`) viaja a los proyectos destino con el re-run de actualización.
+- **Instalador**: las **skills** son payload — triggers, ruteo dentro de cada guarda y `/build` viajan a los proyectos destino con el re-run de actualización. `templates/AGENTS.md` **no**: es fuente de **semilla** (`SEED_SRC` de `scripts/install.sh`: se crea solo si falta y no se toca jamás después), así que su contenido nuevo llega a instalaciones **nuevas** y no a las ya existentes, cuyo `AGENTS.md` es del destino. Lo que gobierna el comportamiento en todos los casos son las skills; la §Ruteo y la §Roles de un destino instalado pueden quedar viejas hasta que alguien las edite (corregido en el feature 11, que instaló el mismo deslinde para el modelo de los hijos).
 
 ### Riesgo aceptado
 
