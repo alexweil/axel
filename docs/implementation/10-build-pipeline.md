@@ -44,7 +44,7 @@ El diseño fija que el pipeline **reusa los contratos del lote** generalizando �
 
 **Por qué el hijo vive en la skill de su fase** y no en `build`: es donde ya vive el trabajo. Un design-delta es `/design` sin ping-pong y sin RECAP; un plan-delta es `/plan` sin confirmación liviana y sin RECAP; una unidad de feature es exactamente el Modo hijo que el lote ya usa. Poner el cuerpo en `build` duplicaría tres fases enteras y las haría divergir en la primera corrección.
 
-**Por qué la máquina de reentrada se referencia y no se copia**: es la pieza más delicada del 09 (invariante de ancla única, retiro determinístico, ocho filas, discriminante de protocolo). Ambas skills son payload, así que la referencia resuelve también en un destino instalado. Copiarla garantizaría divergencia; parametrizarla cuesta un bloque de tres sustituciones (§6).
+**Por qué la máquina de reentrada se referencia y no se copia**: es la pieza más delicada del 09 (invariante de ancla única, retiro determinístico, ocho filas, discriminante de protocolo). Ambas skills son payload, así que la referencia resuelve también en un destino instalado. Copiarla garantizaría divergencia; parametrizarla cuesta un bloque de cuatro sustituciones (§6).
 
 ### 2. Unidades tipadas: tipos, ids y orden
 
@@ -140,11 +140,11 @@ La quinta espera humana no lleva contenido en la línea de STATUS (a diferencia 
 
 - **`design-delta` (skill `design`)**: **sin ping-pong**. El diseño lo fija para POC («el ping-pong largo se comprime en el gate») y la regla de confirmación lo generaliza: el gate de pipeline **es** el punto de confirmación de esta unidad. El hijo consolida el delta acotado al pedido autorizado, review `new` → rondas → APPROVED. En modo POC el `DESIGN.md` nace **mínimo y marcado** (§9), y el pedido de review declara la escala: «diseño borrador para POC — revisá que alcance para el esqueleto, no exhaustividad» (decisión del diseño).
 - **`plan-delta` (skill `plan`)**: **sin confirmación liviana** — la absorbió el gate (el diseño lo dice explícitamente para `/build` monofase; con más razón dentro del pipeline, donde la ruta entera se autorizó). El delta prioriza que el resultado visible llegue lo antes posible; en modo POC, feature 01 = esqueleto que camina.
-- **`feature` (skill `feature`)**: el Modo hijo que ya existe, **parametrizado por el `tipo:` del ledger** — un bloque con tres sustituciones (§6). Nada más cambia.
+- **`feature` (skill `feature`)**: el Modo hijo que ya existe, **parametrizado por el `tipo:` del ledger** — un bloque con cuatro sustituciones (§6), de las cuales las tres primeras aplican a una unidad de feature (la cuarta la resuelve trivialmente: su doc es el del feature, como en el lote). Nada más cambia.
 
 **Guardas de `design` y `plan`**: hoy tratan «feature/lote activo» como estado **ajeno sin excepción**, que era correcto mientras esas skills nunca eran hijas de nada. Ahora pueden serlo, y la excepción **no puede apoyarse en el texto del prompt** (r1 p3 del 09). Se define sobre la **procedencia probada**: el estado de un pipeline no es ajeno a la skill de la fase de la unidad en curso **cuando el token de spawn reclama** —evento vigente = prompt = ancla, y `unit` del ancla = el id de la unidad—; sin token válido es ajeno, y la skill entra por la reentrada de la dueña sin tocar nada. Una sesión que reproduzca el prompt sin token no pasa la guarda.
 
-### 6. Reentrada del pipeline: la misma máquina, tres sustituciones
+### 6. Reentrada del pipeline: la misma máquina, cuatro sustituciones
 
 `build` no reescribe la máquina de estados: declara las sustituciones y **referencia** la §Reentrada del lote de la skill `feature` (payload, presente en todo destino).
 
@@ -178,6 +178,8 @@ Y `.claude/state/pipeline-child-token`: `unit=<id>`, `token=<nonce>`, `spawned_a
 
 Todo lo demás es literal: corte **absorbente** primero (un corte sin resolución humana no se relanza aunque el ancla matchee), la máquina de `*-expected` (`launched` + terminal de identidad completa ⇒ relanzar; `launched` sin terminal ⇒ no relanzar, RECAP; `consumed` ⇒ consistencia normal; ancla ausente ⇒ solo cuenta si el resto del estado local es coherente), la tabla de ocho filas del token con el invariante de ancla única y el retiro determinístico, el **orden durable completo** en todo relanzamiento (retirar → acuñar → evento + STATUS + commit → spawn), y «nunca re-pedir el gate autorizado ni re-cerrar lo aprobado».
 
+**Las dos máquinas se aplican en conjunción, en este orden** (r2 p3): corte absorbente → máquina de `*-expected` → **tabla del token**. `phase=consumed` establece únicamente que *no hay review en vuelo ni desenlace pendiente*; **no** autoriza por sí sola a relanzar. Quien decide el relanzamiento es la tabla del token, que exige además ancla activa única, evento vigente coincidente y el retiro previo. Concluir «hijo fresco» desde `phase=consumed` sola es exactamente el atajo que la reentrada prohíbe.
+
 **Por qué anclas con nombre propio** en vez de reusar las del lote: los namespaces disjuntos evitan que un residuo de una corrida de otro tipo dispare el «más de una ancla activa ⇒ RECAP» de la corrida vigente, y evitan que un archivo llamado `batch-*` gobierne un pipeline. El invariante de ancla única sigue siendo **por corrida**, que es como está escrito.
 
 Ramas de reentrada de `build`, además de las de la máquina:
@@ -197,10 +199,15 @@ El 09 declaró el interinato como **un solo bloque semántico**: el párrafo «M
 | **vacío** (`/build` sin argumento) | no hay pedido que rutear: **pregunta en una línea** qué querés construir. No asume «seguí con lo que hay» — eso es `/feature` |
 | **que no toca ninguna fase** (consulta, charla, algo fuera del método) | no hay pipeline: entrega a `/status` si era consulta; si no, pregunta |
 | **monofase** | **despacho directo** a la skill de esa fase con su punto de confirmación (y `/plan` con su confirmación liviana): `/build` **no cuenta como autorización** — la autorización es siempre de un gate. No se crea ledger |
-| **contradictorio con lo registrado** | lo dice y **pregunta**, sin arrancar. Es contradicción cuando el pedido choca con un hecho que los docs registran —pedir implementar un feature que la tabla marca **Cerrado**, o pedir lo contrario de una decisión asentada en `DESIGN.md`—, no cuando pide algo que los docs simplemente **todavía no tienen** |
+| **con una premisa factual refutada por los docs** | lo dice y **pregunta**, sin arrancar |
 | **multifase, estado estable** | gate de pipeline (§4) |
 
-**«Todavía no planificado» no es contradicción** (r1 p2): un pedido de trabajo que el plan no contiene es exactamente el caso multifase normal que el diseño fija —«implementá X» con backlog vacío necesita un plan-delta antes de implementar ⇒ `/build`, no `/plan`— y es la fila C2. La contradicción es sobre **estado registrado**, no sobre ausencia: por eso una fila pregunta y la otra abre el gate. Y si lo que el pedido choca es **estado pendiente**, no decide esta tabla: manda el paso 2 del orden de despacho (abajo).
+**La categoría es angosta a propósito, y se define por dos exclusiones** (r1 p2, acotada en r2 p2):
+
+- **«Todavía no planificado» no es contradicción.** Un pedido de trabajo que el plan no contiene es el caso multifase normal que el diseño fija —«implementá X» con backlog vacío necesita un plan-delta antes de implementar ⇒ `/build`— y es la fila C2/C14. La contradicción es sobre lo **registrado**, no sobre lo ausente.
+- **Pedir cambiar lo registrado tampoco es contradicción: es el trabajo.** «Cambiá cómo funciona el review» contradice `DESIGN.md` por definición y es exactamente un **design-delta legítimo** (fila C15). Un método que tratara eso como contradicción no podría evolucionar nunca.
+
+Lo que queda es angosto y verificable: el pedido **afirma como hecho** algo que los docs registran de otro modo — «el feature 05 nunca se hizo, implementalo» contra una tabla que lo marca **Cerrado**. No se corrige ni se reinterpreta en silencio (ninguna de las dos lecturas es segura: puede ser un pedido de rehacerlo, o el humano mirando otro repo): se nombra el hecho registrado y se pregunta. Y si lo que el pedido choca es **estado pendiente**, no decide esta tabla: manda el paso 2 del orden de despacho (abajo).
 
 **`/build` explícito no puentea estado pendiente** — asimetría fijada por el diseño y única entre los comandos: los demás comandos de fase explícitos conservan el contrato de hoy (informan el estado ajeno en una línea y sigue mandando el humano), pero `/build` entra por la reentrada de la skill dueña. La razón es que `/build` **encadena**: dejarlo arrancar sobre una espera abierta propagaría la espera sin resolver a través de N unidades. Su **guarda de entrada** lo hace valer desde el payload, aunque §Ruteo falte en el destino.
 
@@ -263,8 +270,10 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 | C10 | estable | «hacé todos los pendientes de corrido» | `/feature all` (lote), **no** `/build`: una sola fase | §7 + §6 del 09 |
 | C11 | **esperando autorización de pipeline** | «dale» en sesión fresca | `/build` → re-presenta la ruta **registrada en el ledger**; con el sí, arranca | paso 2 + §6 |
 | C12 | pipeline en curso, unidad `design` en su ronda 2 | «¿dónde estamos?» | `/status` (la consulta precede a todo), **y su respuesta identifica** corrida de pipeline, unidad en curso y progreso — no «feature en curso: —» | paso 1 + §11 |
-| C13 | estable, la tabla del plan marca el feature 05 **Cerrado** | «implementá el feature 05» | **contradicción con lo registrado**: lo dice y pregunta; no abre gate ni despacha a `/feature` | §7 |
+| C13 | estable, la tabla del plan marca el feature 05 **Cerrado** | `/build el feature 05 nunca se hizo: implementalo y actualizá el diseño` (**explícito**, y multifase por su forma — llega a la validación de `build` sin pasar por el despacho) | **premisa factual refutada**: nombra el hecho registrado (05 Cerrado) y **pregunta**; no abre gate ni despacha a `/feature` | §7, validación |
 | C14 | estable, backlog vacío | «implementá el export a CSV» | **no** es contradicción sino multifase: gate de pipeline con ruta plan-delta → feature (es C2; queda acá el contraste explícito) | §7 |
+| C15 | estable, `DESIGN.md` registra «review por sesión única de Codex» | «cambiá eso: que cada ronda abra sesión nueva, y después implementalo» | **no** es contradicción: pedir cambiar lo registrado **es** el trabajo ⇒ `/build` con ruta design-delta → feature | §7, segunda exclusión |
+| C16 | pipeline **en modo POC** cerrado, `DESIGN.md` con el marker `borrador (modo POC)` | «¿cómo viene esto?» | `/status`, que además **dice el marker** y que el endurecimiento sigue pendiente | paso 1 + §11 |
 
 ### Matriz D — pipeline: unidades, cortes y defensas
 
@@ -272,7 +281,7 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 |---|---|---|---|
 | D1 | gate autorizado, unidad `design` arranca | hijo fresco de la skill `design`, **sin ping-pong**, review `new`, cierre con `UNIDAD design APROBADA` y estado «APPROVED — pendiente OK de pipeline» | §5 |
 | D2 | unidad `plan` arranca tras el design-delta | hijo de la skill `plan`, **sin confirmación liviana** (la absorbió el gate) | §5 |
-| D3 | unidad de feature `03` dentro del pipeline | hijo de la skill `feature`, §Modo hijo, con las tres sustituciones del tipo `pipeline`; **no** se abre un lote anidado | §1 + §6 |
+| D3 | unidad de feature `03` dentro del pipeline | hijo de la skill `feature`, §Modo hijo, con las cuatro sustituciones del tipo `pipeline`; **no** se abre un lote anidado | §1 + §6 |
 | D4 | el design-delta aprobado invalidó el resumen autorizado del plan-delta | **corte por divergencia** al arrancar la unidad: RECAP + push + corte en el ledger; las unidades aprobadas quedan intactas | condiciones de corte del lote + divergencia |
 | D5 | el padre no ve señal terminal en 45 min | corte por timeout (condición 1), sin adivinar | contrato de la señal terminal |
 | D6 | prompt «Modo hijo del pipeline: unidad design, token T» con ledger `tipo: pipeline`, evento vigente `token=T` y ancla `pipeline-child-token` con `unit=design`, `token=T` | triple coincidencia ⇒ gana el rename y trabaja; cualquier diferencia entre los tres ⇒ **corte sin reclamar** | §5 + §6 |
@@ -282,7 +291,8 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 | D10 | reentrada del pipeline sobre un ledger con **corte registrado** sin resolución humana | corte **absorbente**: no relanza aunque ancla y terminal matcheen; re-presenta el RECAP del corte | §6 |
 | D11 | fin del pipeline | ledger con estados finales + STATUS «esperando OK» + RECAP consolidado (base `gate_base`, por unidad, no-revisados listados) + push + fin de turno | §4 + skill `recap` |
 | D12 | OK del RECAP consolidado en modo POC | cierre consolidado (unidades a «Cerrada», ledger cerrado, STATUS) **y** los dos caminos post-OK ofrecidos: endurecer o seguir iterando | §9 + excepción del commit de registro del OK |
-| D13 | reentrada del pipeline con `pipeline-expected` en `phase=consumed` sobre la unidad `design` | no hay review en vuelo ni desenlace pendiente: consistencia normal y hijo fresco. Lo ya atendido se reconstruye de **`DESIGN.md` + las líneas de commit del ciclo, que nombran la ronda** (design no tiene Review log) — jamás se reprocesa a ciegas | §6, cuarta sustitución |
+| D13 | reentrada del pipeline sobre la unidad `design`, con el **estado completo**: ledger sin corte pendiente; ancla activa **única** `pipeline-child-token.claimed-<T>`; **evento vigente** de la unidad con `token=T`; `pipeline-expected` legible en `phase=consumed` | **la única combinación que autoriza relanzar** acá: retirar (`mv …claimed-T …retired-T`) → acuñar `U` → registrar el evento vigente con `token=U` + STATUS → **commit** → spawn con `U`. El hijo fresco reconstruye lo ya atendido de **`DESIGN.md` + las líneas de commit del ciclo, que nombran la ronda** (design no tiene Review log) — jamás reprocesa a ciegas | §6: máquina del token (fila `claimed-T` + evento `T` + expected legible) **y** máquina de `*-expected` |
+| D13b | misma unidad, `phase=consumed`, pero ancla **pendiente** `T` con evento `T` (o ancla ausente, o `claimed-<T>` sin evento `T`, o dos anclas activas) | **no relanzar**: `phase=consumed` prueba que no hay review en vuelo, **no** resuelve el token. Ambigüedad o inconsistencia ⇒ RECAP con la evidencia | §6: la tabla del token decide, no `*-expected` sola |
 | D14 | mensaje del humano a mitad de pipeline | **prioridad absoluta**: el padre responde y, si afecta a la unidad en curso, lo baja de inmediato por mensaje al hijo (lo despierta aunque espere una review); si invalida la unidad o la corrida ⇒ corte | §4, paso 6 |
 | D15 | una unidad llega a **deadlock** (5 rondas sin converger) o a exit 2 persistente / veredicto inválido repetido | **corte** (condición 1), **sin reintentar** el deadlock: RECAP con las dos posturas + push; el desempate lo da el humano y sigue `reset-deadlock` | §4, paso 5 |
 | D16 | arranque de cada unidad | `scripts/awake.sh start` renovado antes del spawn | §4, paso 1 |
@@ -298,7 +308,7 @@ Reemplaza y extiende las filas del interinato de la matriz A del 09 (10, 14, 18)
 6. El ledger de pipeline tiene plantilla en la skill, con `tipo: pipeline`, `protocolo: spawn-token v1`, pedido literal, modo, resultado visible y `gate_base`; el esqueleto del lote tiene `tipo: lote`; el ledger de la corrida `2026-07-29` está anotado. El discriminante de tres valores corta ante ausencia o valor desconocido.
 7. `docs/design/review-contract.md` generaliza `AXEL_REVIEW_ID` a las corridas orquestadas con el formato por unidad, sin cambio de lógica en `review.sh` (`git diff` de `scripts/` **vacío**), y suma «esperando autorización de pipeline» al vocabulario de esperas.
 8. `scripts/install.sh` lleva `.claude/skills/build/SKILL.md` en los dos arrays del payload y `tests/install.sh` lo verifica. Las **tres suites** (`tests/loop.sh`, `tests/install.sh`, `tests/lint.sh`) en verde como no-regresión.
-9. La skill `status` sigue siendo lectura pura y, con STATUS apuntando a un ledger, su respuesta identifica **tipo de corrida, unidad o feature en curso y progreso**; si los docs traen el marker de borrador, lo dice. Verificable contra la fila C12.
+9. La skill `status` sigue siendo lectura pura y, con STATUS apuntando a un ledger, su respuesta identifica **tipo de corrida, unidad o feature en curso y progreso** (fila C12); y con el marker `borrador (modo POC)` presente en `DESIGN.md` o `IMPLEMENTATION.md`, lo **dice** (fila C16). Las dos filas se resuelven contra el cuerpo instalado de la skill.
 10. Las dos matrices se resuelven **enteras** contra el texto final instalado, sin apelar a este doc.
 
 ## Riesgos
@@ -322,3 +332,12 @@ Codex aprobó de entrada las decisiones de fondo (ledger propio, segundo padre, 
 3. **Las tres sustituciones no alcanzaban** para aplicar literalmente la máquina de reentrada a `design` y `plan`: la sección referenciada habla de «doc del feature», `IMPLEMENTATION` y «estado local del feature». Aceptado: se agrega la **cuarta sustitución** —doc y memoria del ciclo **por tipo de unidad**, con `design`/`plan` resolviendo a `DESIGN.md`/`IMPLEMENTATION.md` y a las líneas de commit que nombran la ronda (no tienen Review log)— más el **esquema exacto** de `pipeline-expected` y `pipeline-child-token`, y la fila **D13** que congela la reentrada `phase=consumed` de una unidad `design`.
 4. **Los criterios permitían cerrar omitiendo contratos que el diseño ya fijó**: mensajes del humano con prioridad absoluta, **todas** las condiciones de corte (no solo divergencia y timeout), `awake.sh` por unidad y pedido de review acotado al delta y su escala. Aceptado: §4 pasa a ser «Gate de pipeline y loop del padre» con los seis pasos del padre escritos, el criterio 1 los exige enteros, el criterio 3 suma el pedido acotado, y entran las filas **D14–D17**.
 5. **El deslinde de `status` no estaba demostrado**: su cuerpo pide reportar «feature en curso» y no lee el ledger, así que durante una unidad `design`/`plan` el despacho correcto daría una respuesta que no ubica. Aceptado: entra un ajuste mínimo al cuerpo de `status` (leer el ledger si STATUS apunta a uno; decir el marker de borrador), con el criterio **9** y la fila **C12** reforzada. Se prefirió eso a duplicar el ledger en STATUS: dos copias de estado versionado divergen.
+
+### r2 (base `ee20a57`, HEAD `cf95ef4`) — CHANGES_REQUESTED · 4 ajustes contractuales, los 4 aceptados
+
+Codex dio por incorporados los cambios de fondo de r1 y verificó que la anotación `tipo: lote` existe en el ledger vivo. Los cuatro ajustes:
+
+1. **Cuatro referencias residuales a «tres sustituciones»** contradecían la cuarta recién agregada y el criterio 2. Aceptado: §1, §5, el título de §6 y D3 pasan a «cuatro», con la aclaración de que en una unidad de feature la cuarta se resuelve trivialmente (su doc es el del feature, como en el lote).
+2. **C13 no llegaba a la validación de `build`** —«implementá el feature 05» parece monofase y podía despachar a `/feature` antes de ejecutar §7—, y la categoría era demasiado ancha: «pedir lo contrario de una decisión de `DESIGN.md`» es un design-delta legítimo, no una contradicción. Aceptado en las dos mitades: C13 pasa a ser `/build` **explícito** con forma multifase, la categoría se acota a **premisa factual refutada por los docs** y se define por dos exclusiones escritas (ausencia ≠ contradicción; pedir cambiar lo registrado **es** el trabajo), con la fila **C15** congelando el caso legítimo.
+3. **D13 subespecificada**: `phase=consumed` prueba que no hay review en vuelo, pero no resuelve el token. Aceptado: D13 declara el **estado completo** que autoriza relanzar (sin corte pendiente + ancla única `claimed-<T>` + evento vigente `token=T` + expected legible en `consumed`) y el orden durable que sigue; entra **D13b** con los vecinos que **no** autorizan (pendiente ambigua, ancla ausente, `claimed` sin evento, dos anclas); y §6 fija explícitamente que las dos máquinas se aplican **en conjunción y en orden**, porque concluir «hijo fresco» desde `phase=consumed` sola es el atajo que la reentrada prohíbe.
+4. **El criterio 9 exigía el marker POC pero C12 no lo cubría.** Aceptado: entra la fila **C16** (pipeline en modo POC cerrado, docs con marker ⇒ `/status` lo dice) y el criterio 9 se reparte entre C12 (tipo de corrida, unidad, progreso) y C16 (marker).
