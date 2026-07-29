@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: pipeline `/build` — gate presentado, **esperando autorización de pipeline** · ledger: [implementation/pipeline-2026-07-29.md](implementation/pipeline-2026-07-29.md)
-- **Feature en curso**: ninguno — el pipeline propone dos unidades (plan-delta + feature 11: modelo fijo de los subagentes por tipo de unidad)
+- **Fase**: pipeline `/build` **en curso** (autorizado 2026-07-29) · ledger: [implementation/pipeline-2026-07-29.md](implementation/pipeline-2026-07-29.md) · unidades: plan-delta + feature 11 (modelo fijo de los subagentes por tipo de unidad)
+- **Feature en curso**: ninguno todavía — próxima unidad: `plan` (plan-delta)
 - **Ronda de review**: —
 - **Último veredicto**: APPROVED de cierre · ronda 7 · base `2c64c8a` (feature 10, lote cerrado con OK humano el 2026-07-29)
-- **Esperando**: la **autorización global del gate de pipeline** — la ruta autorizada y el pedido literal viven en el ledger (`gate_base` `51ec00b`); sin autorización no arranca ninguna unidad
+- **Esperando**: nada del humano — el padre orquesta las unidades autorizadas; el próximo checkpoint humano es el OK del RECAP consolidado del pipeline
 - **Actualizado**: 2026-07-29
