@@ -24,7 +24,7 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 | 05 | Confirmación previa a la implementación en `/feature` | **Cerrado** — APPROVED de Codex (r4) + OK humano (terminal), 2026-07-28 | [implementation/05-feature-gate.md](implementation/05-feature-gate.md) |
 | 06 | One-liner corto: defaults del bootstrap remoto | **Cerrado** — APPROVED de Codex (r11) + OK humano, 2026-07-28 | [implementation/06-oneliner-defaults.md](implementation/06-oneliner-defaults.md) |
 | 07 | Batch de features: `/feature all` y `/feature NN..MM` | **Cerrado** — APPROVED de Codex (r8) + OK humano, 2026-07-28 | [implementation/07-batch-features.md](implementation/07-batch-features.md) (diseño en [design/batch-features.md](design/batch-features.md)) |
-| 08 | Reentradas de fase y feature: inventario completo fail-closed | **En curso** — bajada fina APPROVED (r3); implementación en review de cierre (lote 2026-07-29) | [implementation/08-reentry-inventory.md](implementation/08-reentry-inventory.md) (diseño en [design/implicit-entry.md](design/implicit-entry.md)) |
+| 08 | Reentradas de fase y feature: inventario completo fail-closed | **APPROVED — pendiente OK de lote** — APPROVED de Codex (r5), 2026-07-29 (lote [implementation/batch-2026-07-29.md](implementation/batch-2026-07-29.md)) | [implementation/08-reentry-inventory.md](implementation/08-reentry-inventory.md) (diseño en [design/implicit-entry.md](design/implicit-entry.md)) |
 | 09 | Ruteo implícito: triggers y despacho por contexto | **Pendiente** | — (diseño en [design/implicit-entry.md](design/implicit-entry.md)) |
 | 10 | Pipeline `/build`: unidades tipadas con gate único | **Pendiente** | — (diseño en [design/implicit-entry.md](design/implicit-entry.md)) |
 
