@@ -60,18 +60,24 @@ git show --name-status -M <SHA del cierre>
 - **Magnitud, opcional**: si una línea gana claridad con el tamaño del cambio (`+131`, `−97`), se agrega; `--stat` es el segundo comando si la sesión lo quiere mirar. No es obligatorio y **no reemplaza** la descripción en palabras — `--stat` y `--name-status` no se combinan en una sola salida (el último formato gana), y el objetivo es una línea legible, no dos comandos.
 - **El cierre es un commit normal sobre `main` lineal** (regla dura del método), así que `git show` muestra su diff completo — no hay caso de merge commit con diff vacío.
 
-**Si el cierre quedó en más de un commit** (el humano pidió partirlo, un pendiente mecánico se commiteó antes, o la sesión se reabrió): el inventario cubre **la adopción entera**, con `git diff --name-status -M <base>..HEAD`, y el reporte **declara el rango y cuántos commits abarca**. Cómo se establece `<base>`, en orden:
+**Si el cierre quedó en más de un commit** (el humano pidió partirlo, un pendiente mecánico se commiteó antes, o la sesión se reabrió): el inventario cubre **la adopción entera** y necesita **dos** comandos, porque un solo `git diff <base>..HEAD` muestra el **efecto neto entre extremos** y no la unión de lo tocado — un archivo modificado y después restaurado, o el path intermedio de un `A → B → C`, desaparecería sin que nadie lo note, que es exactamente la falla del criterio (a) que este feature existe para cerrar (defecto detectado en la r1 de esta bajada):
+
+1. **Columna vertebral: la unión de paths tocados** — `git log --format= --name-only -M <base>..HEAD | sort -u` (verificado en este repo). Ningún path de esa unión puede faltar en el reporte.
+2. **Acción: el efecto neto** — `git diff --name-status -M <base>..HEAD`. Una línea por path, con la acción neta.
+3. Un path que está en la **unión** y no en el **neto** —tocado y restaurado, o paso intermedio de una cadena de movimientos— lleva su línea igual, declarada como tal: «tocado, sin efecto neto (paso intermedio)». **Se declara, no se omite.**
+
+Y el reporte **declara el rango y cuántos commits abarca**. Cómo se establece `<base>`, en orden:
 
 1. Los commits que la propia sesión hizo, que tiene a la vista.
 2. Si no puede establecerlos con certeza (sesión reabierta), la **frontera derivable de git**: el commit anterior al primero de la adopción es el que trajo el handoff — `git log --format=%H -- docs/ADOPTION.md | sed -n 2p` (el primero de esa lista es el cierre, que lo borra). Verificado en inquirylab: devuelve `846308f`, el commit del instalador. En ese caso el reporte **avisa** que el rango puede incluir commits ajenos: sobre-reportar declarado es aceptable, omitir no.
 
 **Antes de reportar, `git status --porcelain` vacío.** Si quedó algo sin commitear, el reporte lo lista **aparte**, como pendiente — nunca lo omite. Es el mismo fail-closed del método: un inventario derivado del commit no puede hablar de lo que no entró en el commit, así que lo declara.
 
-**Un archivo tocado y devuelto a su estado original no aparece** — correcto: el commit no lo cambió y no hay nada que ratificar. El inventario es de efectos, no de actividad.
+**Un archivo tocado y devuelto a su estado original**: en un cierre de **un** commit no existe como caso (un commit *es* un diff neto: si no cambió nada, no hay entrada, y no hay nada que ratificar). En el camino de **rango** sí existe, y por eso aparece declarado por la regla 3 de arriba.
 
 ### 3. Forma: una línea por entrada, dos bloques
 
-**Una línea por entrada de `--name-status`.** Es la regla que resuelve el criterio (b) del pedido con exactitud aritmética: inquirylab ⇒ **8 entradas ⇒ 8 líneas**, que es el número que el propio pedido fijó como referencia. Cada línea trae: el path (los **dos**, si la entrada es un rename), la **acción** y media línea de qué cambió.
+**Una línea por entrada de `--name-status`** (en el camino de rango, una por path de la unión). Es la regla que resuelve el criterio (b) del pedido con exactitud aritmética: inquirylab ⇒ **8 entradas ⇒ 8 líneas**, que es el número que el propio pedido fijó como referencia. Cada línea trae: el path (los **dos**, si la entrada es un rename), la **acción** y media línea de qué cambió.
 
 Vocabulario de acciones, mapeado a lo que git devuelve — el del pedido más el typechange, que `/adopt` produce de verdad al resolver el conflicto de `CLAUDE.md`:
 
@@ -80,49 +86,61 @@ Vocabulario de acciones, mapeado a lo que git devuelve — el del pedido más el
 | `A` | **creado** |
 | `M` | **editado** (o **fusionado**, si recibió el contenido de otro archivo) |
 | `D` | **borrado** (o el origen de un movimiento/fusión: la línea lo cruza con el destino) |
-| `R<score>` | **movido** — un score < 100 se dice: movido **y editado** |
+| `R<score>` | **movido** — un score < 100 dice además **y editado**, y es la **señal para inspeccionar** el delta antes de clasificar (§4): el score no decide el bloque |
 | `T` | **convertido a symlink** (el caso `CLAUDE.md` → `AGENTS.md`) |
 
 **Dos bloques con título visible**, en este orden: **«Mecánico — lo que mandaba el handoff»** y **«Para que ratifiques — lo que escribí yo sobre tu proyecto»**. La separación es lo que el pedido pide «de forma visible», y el orden pone último lo que el humano tiene que mirar.
 
 **Presupuesto**: el inventario primero; la narrativa de las decisiones difíciles puede ir **después** y en pocas líneas. Lo que el pedido prohíbe es que el relato **reemplace** al inventario, no que exista.
 
-Así se ve la adopción de inquirylab bajo esta forma (esto es el caso R1 de la matriz, resuelto contra el commit real):
+Así se ve la adopción de inquirylab bajo esta forma (esto es el caso R1 de la matriz, resuelto contra el commit real y contra el **handoff real**, leído en `4908bfb^:docs/ADOPTION.md`):
 
 ```
 Inventario del cierre — 8 archivos · commit 4908bfb (`git show --name-status -M 4908bfb`)
 
 Mecánico — lo que mandaba el handoff
-- `docs/DESIGN.md` — editado: recibe el `DESIGN.md` de la raíz sobre la semilla vacía, contenido intacto (+131)
 - `DESIGN.md` — borrado: su contenido pasó a `docs/DESIGN.md`
-- `docs/implementation/bitacora.md` — movido desde `IMPLEMENTATION.md` y editado (R075): la bitácora se separa, entradas verbatim
-- `docs/IMPLEMENTATION.md` — editado: queda la tabla de estado y los milestones (+367)
 - `docs/ADOPTION.md` — borrado: handoff consumido
 
 Para que ratifiques — lo que escribí yo sobre tu proyecto
-- `AGENTS.md` — editado: redacté la sección «Sobre este proyecto» entera (qué es, qué se construye, objetivo, alcance y fronteras) más la subsección «Disciplina propia del proyecto»
-- `docs/STATUS.md` — editado: derivé el estado real (Track G segunda vuelta; E4-v3 con pre-registro ratificado r9, esperando tu orden para correr e4v3-r1)
-- `README.md` — editado: el handoff no lo nombraba; reescribí 2 links a los docs movidos, agregué punteros a STATUS y AGENTS, y edité una fila de la tabla de mapa
+- `AGENTS.md` — editado (+17/−1): redacté la sección «Sobre este proyecto» entera (qué es, qué se construye, objetivo, alcance y fronteras) más la subsección «Disciplina propia del proyecto»
+- `docs/STATUS.md` — editado (+10/−3): derivé el estado real (Track G segunda vuelta; E4-v3 con pre-registro ratificado r9, esperando tu orden para correr e4v3-r1)
+- `README.md` — editado (+4/−2): es tu README, no un doc del método; reescribí la línea de guías con los links a los docs movidos, agregué punteros a STATUS y AGENTS, y edité la fila `docs/` de la tabla de mapa
+- `docs/DESIGN.md` — editado (+116/−15): recibe el `DESIGN.md` de la raíz (cuerpo intacto, links reajustados) y le **agregué la §9 «Profundizaciones»**: índice de los 15 docs de `docs/` con una glosa mía por cada uno
+- `docs/IMPLEMENTATION.md` — editado (+358/−9): recibe el plan de la raíz sin la bitácora, y le **agregué el párrafo «Sobre el vocabulario»** (cómo se relacionan «milestone» y «entrega» con el loop de axel)
+- `docs/implementation/bitacora.md` — movido desde `IMPLEMENTATION.md` y editado (R075, +71/−361): entradas preexistentes verbatim, y **escribí una entrada nueva** (2026-07-29) que resume la adopción y cierra el hueco de trazabilidad de la segunda vuelta de Track G con punteros a cada experimento
 ```
 
 Ocho líneas de inventario, las dos omisiones del pedido visibles y `AGENTS.md` declarado por su **alcance real** en vez de como un bloque secundario.
 
+**Dos correcciones factuales que la r1 forzó, y que cambian el ejemplo** (estaban mal en la primera versión de esta bajada; se registran porque son la prueba de que la regla de clasificación tiene que ser verificable contra el diff y no contra el relato del commit):
+
+1. El handoff **sí listaba `README.md`** entre sus 21 candidatos (verificado en `4908bfb^`), así que no puede clasificarse como «archivo que el handoff no nombraba». Va a ratificar por otra razón, la de §4 (b): no es uno de los cuatro docs canónicos ni vive en `docs/` — es el repo del humano, no la memoria del loop.
+2. La bitácora **no** era una mudanza verbatim: el diff del rename trae una **entrada nueva escrita por la sesión**. El mensaje del commit decía «entradas verbatim» y era cierto de las preexistentes, pero el archivo ganó texto propio ⇒ ratificar por §4 (a). Lo mismo pasa con `docs/DESIGN.md` (§9 nueva) y `docs/IMPLEMENTATION.md` (párrafo nuevo): mudanzas mandadas por el handoff **con prosa agregada** por la sesión.
+
+**El corolario incomoda y es el punto**: el reporte real habló de 3 archivos y «dos cosas que decidí yo», cuando **6 de los 8** llevaban texto que la sesión escribió sobre el proyecto ajeno. El split no está garantizado parejo —acá sale 2/6— y eso no es un defecto de la clasificación: **es el hallazgo**.
+
 ### 4. Clasificación: una regla aplicable mirando el diff
 
-El criterio (a) del pedido descarta el juicio libre de cada corrida, así que la asignación se decide con **dos preguntas** y un default:
+El criterio (a) del pedido descarta el juicio libre de cada corrida. «¿Lo mandaba el handoff?» **no alcanza** como pregunta discriminante —el scan del instalador lista como candidatos *todos* los `.md` de la raíz y de `docs/` (`scripts/install.sh`, bloque `CANDIDATES`: `find -maxdepth 1 -name '*.md'` más `docs/**/*.md`), así que en una adopción inicial casi todo lo preexistente viene mandado; en inquirylab fueron **21 candidatos**, `README.md` incluido—. Lo que decide es **qué le hizo la sesión al archivo**:
 
-1. **¿Lo mandaba el handoff?** — está listado en `docs/ADOPTION.md` (candidato a mapear, pendiente mecánico, doc canónico preexistente o faltante) o es la consecuencia forzada de una de esas operaciones.
-2. **¿El cambio incluye prosa que la sesión redactó sobre el proyecto del humano?**
+**Mecánico** — la operación que el handoff mandaba, ejecutada como la mandaba:
 
-- **Mecánico** = (1) sí **y** (2) no: mover, renombrar o fusionar un candidato; `CLAUDE.md` → symlink con su contenido propio fusionado; permisos o `defaultMode` de `.claude/settings.json`; `.gitignore`; sembrar un canónico faltante; borrar `ADOPTION.md`.
-- **Para que ratifiques** = todo lo demás, y **siempre** estos tres casos:
-  - **(a) prosa nueva sobre el proyecto ajeno** — la sección «Sobre este proyecto» de `AGENTS.md` (paso 2) y el `STATUS.md` derivado (paso 4). Aunque el handoff los mande: lo que el handoff manda es *completarlos*; **el texto lo escribió la sesión**. Se declaran por su **alcance real**, no por su título — es exactamente la subdeclaración que el pedido señala.
-  - **(b) archivos preexistentes del humano que el handoff no nombraba** y la sesión decidió tocar (típico: `README.md` con links a docs movidos). Que el cambio fuera necesario no lo vuelve mecánico: la decisión de editarlo fue de la sesión.
-  - **(c) contenido preexistente que quedó modificado** en un movimiento o una fusión — no solo mudado de lugar (un `R` con score < 100 es la señal barata).
-- **Archivo mixto**: una entrada con partes de las dos clases va **al bloque de ratificar**, y su línea nombra las dos. Es lo que mantiene «una línea por entrada» sin perder información (caso real: `AGENTS.md`, que fusiona `CLAUDE.md` *y* redacta «Sobre este proyecto»).
+- mover, partir, renombrar o re-titular un candidato, y ajustar **links y punteros** que la mudanza rompe;
+- los pendientes mecánicos que el handoff lista: `CLAUDE.md` → symlink con su contenido propio fusionado, permisos o `defaultMode` de `.claude/settings.json`, `.gitignore`;
+- sembrar un doc canónico faltante; borrar `ADOPTION.md`.
+
+**Para que ratifiques** — cualquiera de estas tres, y la duda:
+
+- **(a) texto que interpreta el proyecto**: qué es, qué se está construyendo, en qué estado está, qué se decidió, qué falta, cómo se trabaja. Da igual que el handoff mandara *completar* la sección: **el texto lo escribió la sesión**. Se declara por su **alcance real**, no por su título — es exactamente la subdeclaración que el pedido señala. Casos reales de inquirylab: la sección «Sobre este proyecto» de `AGENTS.md`, el `STATUS.md` derivado, la entrada nueva de la bitácora, la §9 de `docs/DESIGN.md`, el párrafo «Sobre el vocabulario» de `docs/IMPLEMENTATION.md`.
+- **(b) archivos fuera de la memoria del loop**: cualquier path que **no** sea uno de los cuatro canónicos (`AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`) ni viva bajo `docs/`, y que no sea un pendiente mecánico del handoff. Los canónicos y `docs/` son la memoria del método —el humano los va a leer como parte del proceso—; el resto del repo no, y una edición ahí conviene que la ratifique. Es un test **de path**, objetivo. Caso real: `README.md` de la raíz (que el handoff **sí** listaba: por eso el test no es «¿lo nombraba?»).
+- **(c) contenido preexistente que la sesión reescribió o resumió** — no el que solo se mudó, se partió o se re-tituló. **Señal para inspeccionar** (no criterio vinculante): un `R` con score < 100, o una mudanza cuyas adiciones no son solo títulos, links y punteros. Se mira el delta: si hay prosa de la sesión, es (a); si es la mudanza y nada más, es mecánico.
+- **Archivo mixto**: una entrada con partes de las dos clases va **al bloque de ratificar**, y su línea nombra las dos. Es lo que mantiene «una línea por entrada» sin perder información (caso real: `docs/IMPLEMENTATION.md`, que recibe el plan del humano *y* gana un párrafo escrito por la sesión).
 - **Default fail-closed: la duda va a ratificar.** Un archivo de más en ese bloque cuesta una línea que el humano lee; uno de menos es la ceguera que el feature existe para arreglar.
 
-**El handoff se borra en el mismo commit del cierre** — y sigue legible: su contenido está en el diff de ese commit (la entrada `D`), recuperable con `git show <SHA>:docs/ADOPTION.md` desde el padre. Una sesión reabierta puede reconstruir la clasificación sin adivinar qué mandaba el handoff.
+**Qué hace reproducible a la regla**: (b) es un test de path; (a) y (c) se deciden mirando **las adiciones del diff** y preguntando una sola cosa — *¿este texto habla del proyecto, o habla de dónde están los documentos?* Prosa de navegación (títulos, links, punteros, notas de rol de un doc) es mecánica; prosa que describe el proyecto, su estado o sus decisiones es de ratificar. El caso límite lo resuelve el default, no una discusión.
+
+**El handoff se borra en el mismo commit del cierre** — y sigue legible: `git show <SHA>^:docs/ADOPTION.md` (con `^`: en `<SHA>` el archivo ya no existe y el comando falla), o el diff del propio commit, donde la entrada `D` lo trae completo. Una sesión reabierta reconstruye la clasificación sin adivinar qué mandaba el handoff.
 
 ### 5. La condición de reusabilidad: contrato nombrado dentro de la skill
 
@@ -137,7 +155,10 @@ El gate acotó a `/adopt` **con la condición** de que el mecanismo quede escrit
 
 La regla de sincronía de `AGENTS.md` obliga a mantener las dos copias al día «si tocás **el proceso o las reglas**». Acá no aplica, por tres razones:
 
-1. **No hay nada que sincronizar**: `AGENTS.md` no describe los pasos internos de `/adopt`. Lo menciona dos veces —en el orden de ruteo («adopción sin cerrar (`docs/ADOPTION.md`) → `/adopt`») y en la lista de comandos explícitos— y ninguna de las dos cambia. Verificable por grep sobre ambos archivos.
+1. **Ninguna mención existente queda falsa ni incompleta.** El inventario real (grep, corregido en la r1 — la primera versión de esta bajada decía «dos menciones» y era falso):
+   - **`AGENTS.md` (raíz), tres menciones, todas operativas y de ruteo**: el orden de despacho («adopción sin cerrar (`docs/ADOPTION.md`) → `/adopt`»), la lista de comandos explícitos, y la línea de puntos de confirmación («`/adopt`, pregunta cada punto de juicio»). **No** tiene entrada de fase para `/adopt`: la lista numerada de fases del método arranca en `/design`.
+   - **`templates/AGENTS.md`, seis**: las tres de arriba, más el placeholder de «Sobre este proyecto» («Completar en `/adopt` o `/design`…»), la nota de precedencia («Si existe `docs/ADOPTION.md` … corré `/adopt` antes de cualquier otra fase») y —esta sí— una **entrada de fase**: «1. `/adopt` — solo si hay `docs/ADOPTION.md`: cerrar la adopción (mapear docs preexistentes, derivar el estado real) antes de todo lo demás».
+   Ninguna enumera los pasos internos de la skill: la entrada de fase está a **altura de propósito y de orden** («qué fase es, cuándo corre, para qué»), no de procedimiento — a diferencia de la de `/feature`, que sí lista sus pasos («gate de arranque → bajada fina → review → implementación → RECAP → OK»). `/adopt` gana un paso de cierre; su propósito, su condición de disparo y su precedencia no cambian, así que las seis menciones siguen siendo **completas y verdaderas** sin nombrar el reporte. Agregarlo ahí sería detalle de procedimiento en un doc que deliberadamente no lo tiene para esta fase.
 2. **No cambia el proceso ni una regla dura**: el grafo de fases, los checkpoints, el loop de review y las reglas duras quedan idénticos. El feature agrega **un paso de reporte al final de una skill** y no crea checkpoint (§7).
 3. **Ponerlo ahí sería peor**: `templates/AGENTS.md` es semilla intocable, así que el contrato quedaría desactualizado en todos los destinos ya instalados mientras la skill —payload— aplica otra cosa. Es el R7 del feature 11, evitable acá simplemente no metiéndolo en la semilla.
 
@@ -148,7 +169,7 @@ La decisión queda registrada en este doc y en la fila de `DESIGN.md`; el criter
 - **No es un checkpoint.** No fija «esperando» nada, no pide un OK y no frena el flujo: `/adopt` ya pregunta al humano **en cada punto de juicio** (pasos 1–5, más la regla de que nada preexistente se pisa sin decisión explícita). El reporte es la **auditoría de cierre** de decisiones ya tomadas con él presente. Agregar una sexta espera humana al vocabulario fijo del contrato ([../design/review-contract.md](../design/review-contract.md) §Reentrada) sería cambiar el contrato de reentrada por un efecto que no se pidió.
 - **No lleva push.** La sesión de `/adopt` es interactiva y el reporte llega justo después de la última respuesta del humano ⇒ respuesta directa ⇒ sin aviso, tal como la skill `recap` ya lo clasifica («preguntas interactivas de `/design` o `/adopt`»). Sin delta en `recap`.
 - **No se persiste como doc.** Es un rendering de git, reproducible en cualquier momento con el comando que el propio reporte declara; nada se pierde. Persistirlo pediría además un commit **posterior** al cierre, cuyo inventario no podría incluirse en sí mismo. Lo que queda versionado es lo de siempre: el commit y su mensaje.
-- **No reemplaza al cuerpo del commit** ni le impone formato. En inquirylab el mensaje ya era completo; el hueco estaba en el turno.
+- **No reemplaza al cuerpo del commit** ni le impone formato. En inquirylab el mensaje era sustancialmente completo —nombraba `README.md`, la sección de `AGENTS.md` y hasta la entrada nueva de la bitácora—: el hueco estaba en el turno, no en git.
 
 ## Matriz R — reporte de cierre
 
@@ -156,38 +177,41 @@ Como en los features 08–11 no hay harness de despacho: el comportamiento lo ej
 
 | # | Caso | Qué debe pasar | Dónde se resuelve |
 |---|---|---|---|
-| R1 | **Retrospectivo**: la adopción de inquirylab (`4908bfb`, 8 entradas) corrida con el texto nuevo | **8 líneas** de inventario; `README.md` y `AGENTS.md` presentes; `README.md` en «para que ratifiques» por (b); `AGENTS.md` declarado por su **alcance real** (la sección entera), no como bloque secundario | paso 7 (una línea por entrada) + contrato, regla 3 con sus casos (a) y (b) |
+| R1 | **Retrospectivo**: la adopción de inquirylab (`4908bfb`, 8 entradas) corrida con el texto nuevo | **8 líneas** de inventario, con el split **2 mecánico / 6 ratificar** del §3: mecánico `DESIGN.md` y `docs/ADOPTION.md` (borrados puros); ratificar `AGENTS.md`, `docs/STATUS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md` y la bitácora por (a) —cada uno con la prosa que la sesión agregó, declarada por su alcance real— y `README.md` por (b) | paso 7 (una línea por entrada) + contrato, regla 3 con (a) y (b) |
 | R2 | La sesión está convencida de que solo importan 3 de los 8 archivos | Salen los **8**: la lista la produce el comando, no su juicio | contrato, reglas 1 y 2 («ninguna entrada puede faltar») |
-| R3 | Rename detectado (`R075 IMPLEMENTATION.md docs/implementation/bitacora.md`) | **Una** línea con **los dos** paths, acción «movido **y editado**» (score < 100) | paso 7, tabla de acciones (`R<score>`) |
-| R4 | Movimiento que git ve como `D` + `M` (`DESIGN.md` → `docs/DESIGN.md`, pisando la semilla) | **Dos** líneas, cruzadas entre sí (origen y destino se nombran) | paso 7, filas `D` y `M` de la tabla |
+| R3 | Rename detectado con score < 100 y **prosa nueva** en el delta (el caso real: `R075 IMPLEMENTATION.md → docs/implementation/bitacora.md`, con una entrada escrita por la sesión) | **Una** línea con **los dos** paths, acción «movido **y editado**», y **bloque ratificar** por (a): el score dispara la inspección, la inspección encuentra prosa propia y **esa** decide | paso 7, fila `R<score>` (señal, no criterio) + contrato, regla 3, casos (a) y (c) |
+| R3b | Rename cuyo delta son **solo** título, links y punteros reajustados por la mudanza | **Mecánico**, con el score declarado como inspeccionado — mover y re-titular es la operación que el handoff mandaba | contrato, regla 3 (lista de mecánico + caso (c) «no el que solo se mudó») |
+| R4 | Movimiento que git ve como `D` + `M` (`DESIGN.md` → `docs/DESIGN.md`, pisando la semilla) | **Dos** líneas, cruzadas entre sí (origen y destino se nombran); el `D` puro es **mecánico**, y el destino va donde lo manden sus adiciones (en inquirylab, ratificar por la §9 nueva) | paso 7, filas `D` y `M` + contrato, regla 3 |
 | R5 | Conflicto de `CLAUDE.md`: su contenido propio se fusiona en `AGENTS.md` y queda como symlink | `CLAUDE.md` como **convertido a symlink** (`T`) en mecánico; `AGENTS.md` en **ratificar** con las dos cosas en su línea (fusión + prosa nueva) | paso 7, fila `T` + regla del **archivo mixto** |
 | R6 | Pendientes mecánicos del handoff: permisos de `.claude/settings.json`, `.gitignore` | Una línea cada uno en **mecánico** | contrato, regla 3 (lista de mecánico) |
 | R7 | `docs/ADOPTION.md` borrado al consumirse | Línea en **mecánico**: «borrado: handoff consumido» | ídem |
-| R8 | `README.md` del humano: el handoff no lo nombraba, pero sin editarlo quedaban links rotos | **Ratificar**, por (b) — necesario ≠ mecánico | contrato, regla 3, caso (b) |
-| R9 | El cierre quedó en **más de un commit** | Inventario sobre el **rango**, con el rango y el conteo de commits **declarados** | paso 7, cláusula de rango |
+| R8 | `README.md` de la raíz: el handoff **sí** lo listaba entre sus candidatos, y sin editarlo quedaban links rotos | **Ratificar**, por (b): no es canónico ni vive en `docs/` — es el repo del humano. Que estuviera mandado y que el cambio fuera necesario **no** lo vuelve mecánico | contrato, regla 3, caso (b) — test de path |
+| R8b | Archivo que el scan del handoff **no alcanza** (no es `.md` de la raíz ni de `docs/`: p. ej. `inquirybench/README.md`, un `Makefile`) y la sesión decidió tocar | **Ratificar**, por (b), por el mismo test de path | ídem |
+| R9 | El cierre quedó en **más de un commit** | Inventario sobre el rango con **dos** comandos —unión de paths tocados como columna vertebral, efecto neto para la acción—, y el rango y el conteo de commits **declarados** | paso 7, cláusula de rango (reglas 1–3) |
 | R10 | Al cerrar quedó algo **sin commitear** | Se declara **aparte** como pendiente; no se omite ni se mezcla con el inventario | paso 7, chequeo de `git status --porcelain` |
 | R11 | Sesión reabierta que no puede establecer sus propios commits | Frontera derivable de git (`git log --format=%H -- docs/ADOPTION.md \| sed -n 2p`) y **aviso** de que el rango puede incluir commits ajenos | paso 7, cláusula de rango, punto 2 |
 | R12 | Adopción de update, sin candidatos: solo un pendiente mecánico + STATUS derivado | Inventario corto (2–3 líneas), con el STATUS derivado en **ratificar** | contrato, presupuesto + regla 3 caso (a) |
 | R13 | La sesión quiere contar las dos decisiones difíciles que tomó | Puede, **después** del inventario y en pocas líneas — el relato no lo reemplaza | contrato, presupuesto |
-| R14 | Un archivo se tocó y se volvió a dejar como estaba | **No** aparece: el commit no lo cambió | paso 7 (el inventario es de lo que el commit tocó) |
+| R14 | Cierre de **un** commit: un archivo se tocó y se volvió a dejar como estaba | **No** aparece — dentro de un commit el caso no existe: un commit es un diff neto y no hay entrada que reportar (ni nada que ratificar) | paso 7, cláusula del archivo restaurado |
+| R14b | Cierre de **varios** commits: un path tocado y restaurado, o el path intermedio de un `A → B → C` | **Aparece igual**, con su línea: «tocado, sin efecto neto (paso intermedio)». La unión lo trae aunque el diff entre extremos no lo muestre — es el hueco que la r1 detectó | paso 7, cláusula de rango, regla 3 |
 | R15 | `/adopt` corre sin `docs/ADOPTION.md` | Informa que no hay adopción pendiente y **no toca nada**: no hay cierre, no hay reporte | línea de guarda de la skill, intacta |
 | R16 | Mañana otra skill quiere el mismo cierre auditable | Adopta el bloque «Reporte de cierre (contrato)» tal como está —genérico y autocontenido— sustituyendo solo qué cuenta como mandato | bloque de contrato de la skill |
 
 ## Criterios de cierre
 
-1. `.claude/skills/adopt/SKILL.md` tiene un **paso 7 de reporte** que: termina el turno; nombra el **comando exacto** (`git show --name-status -M <SHA>`, y `git diff --name-status -M <base>..HEAD` con rango declarado si fueron varios commits); exige el chequeo de `git status --porcelain` con lo no commiteado declarado aparte; fija **una línea por entrada** con path(s), acción del vocabulario de cinco filas (incluido `T` ⇒ symlink y el `R<score>` < 100 ⇒ movido y editado) y media línea de qué cambió; y fija los **dos bloques con título** en el orden mecánico → ratificar.
+1. `.claude/skills/adopt/SKILL.md` tiene un **paso 7 de reporte** que: termina el turno; nombra el **comando exacto** del caso normal (`git show --name-status -M <SHA>`) y los **dos** del camino de rango (unión con `git log --format= --name-only -M <base>..HEAD | sort -u`, acción con `git diff --name-status -M <base>..HEAD`), con el rango y el conteo de commits declarados y la línea obligatoria para un path de la unión **sin efecto neto**; exige el chequeo de `git status --porcelain` con lo no commiteado declarado aparte; fija **una línea por entrada** (o por path de la unión) con path(s), acción del vocabulario de cinco filas —`T` ⇒ symlink; `R<score>` < 100 ⇒ movido y editado, **como señal para inspeccionar y no como criterio de bloque**— y media línea de qué cambió; y fija los **dos bloques con título** en el orden mecánico → ratificar.
 2. La skill trae el bloque **«Reporte de cierre (contrato)»** con las **tres reglas** (derivación con fuente declarada, completitud sin omisiones, clasificación) y el **presupuesto**, redactado **genérico y autocontenido** (R16), con la mención de que hoy su único consumidor es el paso 7.
-3. La **clasificación** es aplicable mirando el diff: las **dos preguntas**, la lista de lo mecánico, los **tres casos** que siempre van a ratificar (prosa nueva sobre el proyecto ajeno declarada por su alcance real; archivo preexistente que el mandato no nombraba; contenido preexistente modificado en un movimiento o fusión), la regla del **archivo mixto** y el **default fail-closed** («la duda va a ratificar»). Más la nota de que el handoff, borrado en el cierre, sigue legible en el diff de ese commit.
+3. La **clasificación** es aplicable mirando el diff: la lista de lo **mecánico** (mover/partir/re-titular un candidato con sus links y punteros; los pendientes mecánicos; sembrar un canónico; borrar el handoff), los **tres casos** que siempre van a ratificar —(a) texto que **interpreta el proyecto**, declarado por su alcance real; (b) **test de path**: fuera de los cuatro canónicos y de `docs/`, y sin ser pendiente mecánico; (c) contenido preexistente **reescrito o resumido**, con el score < 100 como señal de inspección—, la regla del **archivo mixto**, el **default fail-closed** («la duda va a ratificar») y la pregunta que hace reproducible a (a)/(c): *¿el texto nuevo habla del proyecto o de dónde están los documentos?*. Más la nota de que el handoff, borrado en el cierre, sigue legible con `git show <SHA>^:docs/ADOPTION.md` o en el diff del propio commit. **Lo que la clasificación no puede usar** como discriminante: «¿lo nombraba el handoff?» — el scan lista todos los `.md` de la raíz y de `docs/`.
 4. La **regla final** de la skill ya no manda la visibilidad al diff —apunta al reporte— y **conserva** su primera mitad: nada de lo preexistente se pisa sin decisión explícita del humano en esta sesión.
 5. **`AGENTS.md` y `templates/AGENTS.md` con diff vacío** en el rango del feature (`git diff <base> -- AGENTS.md templates/AGENTS.md`), y la decisión de que no acompañan argumentada en §6 de este doc.
-6. **Matriz R resuelta entera** (las 16 filas) contra el texto final de la skill, sin apelar a este doc. R1 se resuelve además **contra el commit real** `4908bfb` de inquirylab: el inventario que el texto nuevo produce entra en **8 líneas** y contiene `README.md` y `AGENTS.md` con su alcance real. Es retrospectivo **e hipotético**: re-correr el instalador sobre inquirylab propaga la skill pero **no reabre** una adopción cerrada (`tests/install.sh` T5), así que el inventario real se verá en la próxima adopción.
+6. **Matriz R resuelta entera** (las **19** filas: R1–R16 más R3b, R8b y R14b) contra el texto final de la skill, sin apelar a este doc. R1 se resuelve además **contra el commit real** `4908bfb` de inquirylab y contra su **handoff real** (`4908bfb^:docs/ADOPTION.md`): el inventario que el texto nuevo produce entra en **8 líneas**, con el split 2 mecánico / 6 ratificar, y contiene `README.md` y `AGENTS.md` con su alcance real. Es retrospectivo **e hipotético**: re-correr el instalador sobre inquirylab propaga la skill pero **no reabre** una adopción cerrada (`tests/install.sh` T5), así que el inventario real se verá en la próxima adopción.
 7. **Presupuesto de legibilidad**: la skill queda **≤ 40 líneas** (hoy 19) — el criterio (b) del pedido aplica también al texto de la maquinaria: un paso que no se lee no se cumple.
 8. **Sin cambios ejecutables**: `git diff <base> -- scripts/ tests/ templates/` **vacío**; las tres suites (`tests/loop.sh`, `tests/install.sh`, `tests/lint.sh`) en verde como no-regresión.
 9. `docs/DESIGN.md` suma la fila de decisión del 2026-07-29 con su «por qué» y el puntero a este doc; `docs/IMPLEMENTATION.md` tiene la fila 12 al día con este doc enlazado; `docs/STATUS.md` quedó al día en cada commit con el token de ronda del contrato.
 
 ## Riesgos
 
-- **R1 — La clasificación la hace un modelo, no un tipo de dato.** Las dos preguntas se aplican leyendo el diff, y un caso raro puede caer del lado equivocado. Lo acota el **default fail-closed**: la duda va a «ratificar», cuyo costo es una línea de más. La **completitud**, que es lo que el pedido exige, no depende del juicio: la da el comando.
+- **R1 — La clasificación la hace un modelo, no un tipo de dato.** De los tres tests, (b) es objetivo (path); (a) y (c) exigen leer las adiciones del diff. **Riesgo demostrado, no teórico**: la primera versión de esta bajada clasificó mal dos archivos —`README.md` por una premisa falsa sobre el handoff y la bitácora por creerle al mensaje del commit en vez de al diff— y las dos las cazó la r1. Lo que lo hace aceptable es la asimetría: el **default fail-closed** manda la duda a «ratificar» (costo: una línea), y la **completitud** —lo que el pedido exige— no depende del juicio en ningún caso: la da el comando.
 - **R2 — Rango sobre-inclusivo en el camino de reentrada** (R11): si el humano commiteó trabajo propio entre la instalación y el cierre, el rango derivado lo incluye. Se acepta declarándolo: el reporte avisa, y sobre-reportar es recuperable de un vistazo mientras omitir es la ceguera original.
 - **R3 — El efecto no se ve hasta la próxima adopción real.** La skill es payload: llega a un destino al re-correr el instalador, y una adopción **ya cerrada no se reabre** (`tests/install.sh` T5). Inquirylab queda como caso retrospectivo hipotético; el pipeline lo dice en su ledger.
 - **R4 — El contrato reusable vive dentro de `adopt`.** Si mañana otra skill lo adopta, hay que promoverlo o referenciarlo y podría divergir. Mitigación: bloque nombrado, genérico y autocontenido, más el patrón ya fijado por el feature 11 (canónica + referencia). Alternativa (payload propio) descartada por superficie ejecutable, §5.
@@ -196,4 +220,12 @@ Como en los features 08–11 no hay harness de despacho: el comportamiento lo ej
 
 ## Review log
 
-(pendiente)
+### r1 (base `bcf34f3`, HEAD `9412edb`) — CHANGES_REQUESTED · 5 puntos, los 5 aceptados
+
+Codex dio por buenas las dos decisiones estructurales —la sede reusable dentro de `adopt` para un único consumidor, y el vocabulario `A/M/D/R/T` como cobertura de las operaciones reales de la skill— y verificó por su cuenta `loop.sh` 287/0, `install.sh` 460/0, lint y `git diff --check` limpios. Los cinco puntos, todos verificados por mí antes de aceptar; **dos tumbaron clasificaciones factuales del ejemplo retrospectivo**, que es exactamente el tipo de error que el feature existe para prevenir:
+
+1. **Inconsistencia factual en el cierre previo** (barrido de los commits de cierre de la unidad `plan`, que este ciclo cubre por contrato): la extensión del pipeline 2 en `IMPLEMENTATION.md` decía «cinco pedidos» y enumeraba siete (cinco en r1, dos en r2), como bien dice el ledger. **Aceptado**: corregido a «siete pedidos —cinco en la r1 y dos en la r2—».
+2. **El camino multicommit podía omitir archivos en silencio.** Cierto y grave: `git diff <base>..HEAD` es el **efecto neto entre extremos**, no la unión de lo tocado — un archivo modificado y restaurado, o el path intermedio de un `A → B → C`, desaparecía sin dejar rastro, que es justo la falla del criterio (a). **Aceptado con la primera de las dos salidas que ofreció** (derivar la unión, no limitarse a efectos netos): el camino de rango pasa a **dos comandos** —unión de paths (`git log --format= --name-only -M`, verificado en este repo) como columna vertebral y `--name-status` neto para la acción—, con línea obligatoria «tocado, sin efecto neto (paso intermedio)» para lo que está en la unión y no en el neto. Alineados R9, R14 (queda acotado al cierre de **un** commit, donde el caso no existe), la nueva R14b y el criterio 1.
+3. **El caso retrospectivo clasificaba `README.md` sobre una premisa falsa.** Verificado en `4908bfb^:docs/ADOPTION.md`: el handoff **sí** lo listaba, entre **21 candidatos** —y el scan del instalador lista todos los `.md` de la raíz y de `docs/`, así que «¿lo nombraba el handoff?» no discrimina nada en una adopción inicial—. **Aceptado**: el caso (b) se redefine como **test de path** (fuera de los cuatro canónicos y de `docs/`, sin ser pendiente mecánico) con su razón —la memoria del loop vs. el resto del repo del humano—, `README.md` queda en ratificar por ese test, R8 se reescribe y se suma R8b. Corregido también `git show <SHA>:docs/ADOPTION.md` ⇒ **`<SHA>^:`** (en el commit del cierre el archivo ya no existe).
+4. **La clasificación no era reproducible en un caso central.** El `R075` de la bitácora estaba en «Mecánico» mientras la regla (c) mandaba a ratificar todo contenido preexistente modificado. Fui a ver el diff real y el reviewer tenía razón por una razón más fuerte que la que planteó: el rename **contiene una entrada nueva escrita por la sesión** (2026-07-29, resumen de la adopción y del hueco de trazabilidad de Track G) — y lo mismo pasa con `docs/DESIGN.md` (§9 «Profundizaciones» nueva) y `docs/IMPLEMENTATION.md` (párrafo «Sobre el vocabulario» nuevo). **Aceptado**: (c) se reformula a «contenido que la sesión **reescribió o resumió**, no el que solo se mudó, se partió o se re-tituló», el score < 100 queda como **señal para inspeccionar y no criterio vinculante**, R3/R4 declaran el bloque esperado y se suma R3b. El ejemplo retrospectivo se corrige entero: el split real es **2 mecánico / 6 ratificar**, y ese corolario —el reporte original habló de 3 archivos y 2 decisiones cuando 6 de 8 llevaban texto propio— pasa a ser parte del hallazgo.
+5. **El argumento factual de §6 era falso** aunque la decisión se sostenga: no son «dos menciones». **Aceptado**: inventario real por grep — `AGENTS.md` tiene **tres** menciones operativas y **ninguna** entrada de fase (la lista de fases arranca en `/design`); `templates/AGENTS.md` tiene **seis**, incluida una **entrada de fase**. El argumento se reescribe sobre la altura del texto: ninguna de las seis enumera pasos internos —la entrada de fase está a altura de propósito y orden, a diferencia de la de `/feature`, que sí lista los suyos—, así que ninguna queda falsa ni incompleta al agregar un paso de cierre, y meter procedimiento en la semilla reintroduciría el R7 del feature 11.
