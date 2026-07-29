@@ -199,7 +199,7 @@ Como en los features 08–11 no hay harness de despacho: el comportamiento lo ej
 | R11 | Sesión reabierta que no puede establecer sus propios commits | Frontera derivable de git (`git log --format=%H -- docs/ADOPTION.md \| sed -n 2p`) y **aviso** de que el rango puede incluir commits ajenos | paso 7, cláusula de rango, punto 2 |
 | R12 | Adopción de update, sin candidatos: solo un pendiente mecánico + STATUS derivado | Inventario corto (2–3 líneas), con el STATUS derivado en **ratificar** | contrato, presupuesto + regla 3 caso (a) |
 | R13 | La sesión quiere contar las dos decisiones difíciles que tomó | Puede, **después** del inventario y en pocas líneas — el relato no lo reemplaza | contrato, presupuesto |
-| R14 | Cierre de **un** commit: un archivo se tocó y se volvió a dejar como estaba | **No** aparece — dentro de un commit el caso no existe: un commit es un diff neto y no hay entrada que reportar (ni nada que ratificar) | paso 7, cláusula del archivo restaurado |
+| R14 | Cierre de **un** commit: un archivo se tocó y se volvió a dejar como estaba | **No** aparece — dentro de un commit el caso no existe: un commit es un diff neto y no hay entrada que reportar (ni nada que ratificar) | paso 7: el inventario **son** las entradas de `git show --name-status`, y un archivo sin cambio neto no tiene entrada (no hace falta cláusula propia — atribución corregida al implementar) |
 | R14b | Cierre de **varios** commits: un path tocado y restaurado, creado y borrado, o el path intermedio de un `A → B → C` | **Aparece igual**, y con **qué se le hizo, en el orden en que pasó**: la secuencia que muestra la unión cronológica («editado y restaurado», «creado y borrado», «renombrado de entrada y de salida») más la marca «sin efecto neto». Decir solo «tocado» no cumple, y decirlo al revés tampoco — por eso el comando lleva `--reverse` | paso 7, cláusula de rango, reglas 1 y 3 |
 | R15 | `/adopt` corre sin `docs/ADOPTION.md` | Informa que no hay adopción pendiente y **no toca nada**: no hay cierre, no hay reporte | línea de guarda de la skill, intacta |
 | R16 | Mañana otra skill quiere el mismo cierre auditable | Adopta el bloque «Reporte de cierre (contrato)» tal como está —genérico y autocontenido— sustituyendo solo qué cuenta como mandato | bloque de contrato de la skill |
@@ -224,6 +224,52 @@ Como en los features 08–11 no hay harness de despacho: el comportamiento lo ej
 - **R4 — El contrato reusable vive dentro de `adopt`.** Si mañana otra skill lo adopta, hay que promoverlo o referenciarlo y podría divergir. Mitigación: bloque nombrado, genérico y autocontenido, más el patrón ya fijado por el feature 11 (canónica + referencia). Alternativa (payload propio) descartada por superficie ejecutable, §5.
 - **R5 — Una línea por archivo no dice cuánto cambió por dentro.** Un cambio de 3 líneas y uno de 300 se ven parecidos. Mitigación: la media línea de descripción, la magnitud opcional y el SHA declarado, que lleva al diff en un comando. Es el precio deliberado del criterio (b).
 - **R6 — Nada obliga mecánicamente a correr el comando**: es texto de skill interpretado por un modelo, el mismo régimen de los features 08–11. Lo acota que el paso nombre el comando exacto y que el reporte deba **declarar su fuente**: un reporte sin SHA ni conteo es visiblemente incompleto para el humano que lo lee, que es quien pidió el feature.
+
+## Implementación (2026-07-29, paso único)
+
+Dos sedes, ninguna ejecutable.
+
+1. **`.claude/skills/adopt/SKILL.md`** (payload) — tres cambios, y nada más:
+   - **Paso 7 nuevo**, «Reportar el inventario de lo que tocaste», con cuatro bullets: chequeo de `git status --porcelain` con lo no commiteado declarado aparte; derivación con `git show --name-status -M <SHA>` y encabezado con la fuente (`N archivos · commit <SHA>` + el comando); **una línea por entrada** con el vocabulario de cinco acciones —`A`/`M`/`D`/`R`/`T`, con «el score es señal, no criterio» escrito en la fila del rename—; y el **camino de rango** con sus dos comandos, el conteo derivable de los marcadores, la secuencia en el orden en que pasó para un path sin efecto neto, y el fallback de `<base>` con su aviso.
+   - **Paso 6**: suma «**todo el cierre en un commit**», que es la precondición del camino normal del paso 7.
+   - **Regla final**: conserva íntegra su primera mitad («nada de lo preexistente se pisa sin decisión explícita del humano en esta sesión») y su segunda mitad deja de mandar la visibilidad al diff — ahora los movimientos quedan «en el diff del commit de cierre **y en el reporte del paso 7**, que es donde el humano los ve».
+   - **Sección nueva `## Reporte de cierre (contrato)`**, genérica y autocontenida: las tres reglas (derivación con fuente declarada, completitud, clasificación en dos bloques con título) y el presupuesto. Encabezado explícito de reusabilidad: «Vale para **cualquier** cierre que edite archivos del humano y termine el turno con un mensaje; hoy su único consumidor es el paso 7 de esta skill».
+   - **La `description` no se toca** (es trigger de ruteo del feature 09), y los pasos 1–5 quedan **literales**.
+2. **`docs/DESIGN.md`** — fila de decisión del 2026-07-29, después de la del feature 11.
+
+### Matriz R resuelta contra el texto instalado
+
+Las 20 filas, con el texto de `.claude/skills/adopt/SKILL.md` que las decide. Ninguna apela a este doc.
+
+| # | Resuelta por | Texto que la decide |
+|---|---|---|
+| R1 | paso 7 + contrato, regla 3 | «**Una línea por entrada**» + los dos títulos de bloque + (a)/(b) ⇒ las 8 líneas y el split 2/6 del §3 |
+| R2 | contrato, reglas 1–2 | «el inventario sale de **git**, nunca de tu memoria» · «la completitud la da el comando, no tu criterio» |
+| R3 | paso 7, fila `R` + contrato (a) | «con score < 100, «movido **y editado**», y **mirá el delta** antes de clasificar: el score es señal, no criterio» |
+| R3b | contrato, (c) | «ni el que cambió solo en su prosa de navegación o en su nota de rol» |
+| R3c | contrato, pregunta que decide (a)/(c) | «Un índice **con glosas** de qué trata cada doc ya habla del proyecto» |
+| R4 | paso 7, filas `D`/`M` + excepción de (b) | «el **origen puro** de un movimiento o fusión *hacia* esa memoria … es mecánico, y su línea **nombra el destino**» |
+| R5 | paso 7, fila `T` + archivo mixto | «**convertido a symlink** (`T`)» · «Un archivo con partes de las dos clases va **al bloque de ratificar**, y su línea nombra las dos» |
+| R6 | contrato, lista de mecánico | «los pendientes mecánicos (symlink de `CLAUDE.md`, permisos de `.claude/settings.json`, `.gitignore`)» |
+| R7 | ídem | «borrar `ADOPTION.md`» |
+| R8 | contrato, (b) | «todo archivo que no sea uno de los cuatro canónicos …, no viva bajo `docs/` y no sea un pendiente mecánico» + «el instalador lista como candidatos **todos** los `.md` de la raíz y de `docs/`» |
+| R8b | ídem | el mismo test de path, que no depende de que el handoff lo nombrara |
+| R9 | paso 7, bullet de rango | los dos comandos + «**declarás el rango y cuántos commits abarca** (los marcadores lo dan)» |
+| R10 | paso 7, bullet 1 | «Verificá `git status --porcelain` **vacío** … listalo **aparte** como pendiente: no lo omitas» |
+| R11 | paso 7, bullet de rango | «si no podés establecerlo, `git log --format=%H -- docs/ADOPTION.md \| sed -n 2p` es el del instalador — usalo avisando que el rango puede incluir commits ajenos» |
+| R12 | contrato, presupuesto + (a) | «**una línea por entrada**» ⇒ inventario corto; el STATUS derivado entra por (a) |
+| R13 | contrato, presupuesto | «la narrativa … **después** del inventario y en pocas líneas. El relato no reemplaza al inventario» |
+| R14 | paso 7, derivación | el inventario **son** las entradas de `git show --name-status`: sin cambio neto no hay entrada |
+| R14b | paso 7, bullet de rango | «con la secuencia **en el orden en que pasó** … y la marca «sin efecto neto»» |
+| R15 | guarda, línea 8 (intacta) | «Si **no existe** `docs/ADOPTION.md`: informá que no hay adopción pendiente y no toques nada» |
+| R16 | encabezado del contrato | «Vale para **cualquier** cierre que edite archivos del humano … hoy su único consumidor es el paso 7 de esta skill» |
+
+### Verificación de los criterios mecánicos
+
+- **C5** — `git diff bcf34f3 -- AGENTS.md templates/`: **vacío**. La decisión de §6 se cumple en el diff, no solo en el argumento.
+- **C7** — `wc -l .claude/skills/adopt/SKILL.md`: **39 líneas** (≤ 40; eran 19). El paso 7 y el contrato suman 20 líneas y los pasos 1–5 quedan intactos.
+- **C8** — `git diff bcf34f3 -- scripts/ tests/`: **vacío**. Las tres suites como no-regresión: `tests/lint.sh` limpio (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. (El conteo de `loop.sh` en el sandbox del reviewer da 287 porque ahí se saltea la clase L5 — causa cerrada en la r5 del feature 11.)
+- **C6** — matriz resuelta arriba, 20 filas contadas con `grep -c '^| R'` sobre la sección de la matriz.
 
 ## Review log
 
