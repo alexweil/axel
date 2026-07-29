@@ -6,30 +6,29 @@
 
 ## Alcance
 
-Cerrar el inventario de reentradas que el diseño de entrada implícita dejó a la vista ([design/implicit-entry.md](../design/implicit-entry.md), §«Reentradas — inventario real»), **antes** de que el ruteo del 09 dependa de él. Hoy `/feature` cubre «esperando OK», «esperando confirmación de arranque», «esperando autorización de lote» y la reentrada por ledger del lote; falta el **feature individual activo** (bajada, implementación, review sin desenlace consumido), y `/design` y `/plan` no tienen ninguna rama de reentrada. Reabrir una sesión caída a mitad de un loop de diseño o de plan no tiene hoy camino definido ni con comandos explícitos.
+Cerrar el inventario de reentradas que el diseño de entrada implícita dejó a la vista ([design/implicit-entry.md](../design/implicit-entry.md), §«Reentradas — inventario real y alcance de implementación»), **antes** de que el ruteo del 09 dependa de él. Hoy `/feature` cubre «esperando OK», «esperando confirmación de arranque», «esperando autorización de lote» y la reentrada por ledger del lote; falta el **feature individual activo** (bajada, implementación, review sin desenlace consumido), y `/design` y `/plan` no tienen ninguna rama de reentrada. Reabrir una sesión caída a mitad de un loop de diseño o de plan no tiene hoy camino definido ni con comandos explícitos.
 
 Entregables:
 
-- **`AGENTS.md` + `templates/AGENTS.md`** (regla de sincronía): sección **«Reentradas»** con las tres piezas compartidas — el invariante fail-closed, el **vocabulario de `STATUS.md`** del que depende la reconstrucción, y la **tabla de resolución del desenlace de una review**. Es la parte común a las tres fases, escrita una sola vez.
-- **Skill `feature`**: rama de reentrada del **feature individual activo**, la única del inventario que faltaba en esa skill.
-- **Skills `design` y `plan`**: sus ramas de reentrada (trabajo a medio consolidar, review en curso, esperando OK), inexistentes hoy.
-- **`docs/design/review-contract.md`**: reconocimiento del **consumidor individual** de la señal terminal — hoy el contrato la describe como mecanismo exclusivo del lote, y a partir de este feature la reentrada de cualquier fase la lee. Sin cambios de lógica en `review.sh`.
-- **`docs/STATUS.md`**: el vocabulario nuevo aplicado **desde el primer commit de este feature** — se autoaplica, como el gate del 05.
+- **`docs/design/review-contract.md`** — **sede canónica de la parte compartida** (r1 p1): sección «Reentrada: reconstrucción tras una sesión caída» con la frontera previa, el **vocabulario del token de ronda de STATUS**, la **tabla de resolución del desenlace** con su criterio de identidad individual, y la precondición de invocar `round`. Se elige este archivo porque el instalador lo **actualiza** como payload en cada re-run; sin cambios de lógica en `review.sh`.
+- **Skills `design`, `plan` y `feature`**: la rama de reentrada de cada fase — solo el mapa «estado de los docs → paso de su camino», con puntero al doc canónico. En `feature` es el **feature individual activo**, la única del inventario que faltaba ahí; en `design` y `plan`, las primeras que tienen.
+- **`AGENTS.md` + `templates/AGENTS.md`** (regla de sincronía): **una línea** de convención que nombra las reentradas y apunta al doc canónico. Es un puntero para lectores, deliberadamente **no load-bearing**: `AGENTS.md` es semilla del instalador (§5).
+- **`docs/STATUS.md`**: el vocabulario del token aplicado **desde el primer commit de este feature** — se autoaplica, como el gate del 05.
 - **`docs/IMPLEMENTATION.md`**: fila 08 al día.
 
 **Fuera de alcance**:
 
-- **Código ejecutable**: `review.sh` ya publica, desde el 07, todo lo que la reentrada necesita (señal terminal atómica con `mode`, `round`, `review_head`, `result`, `rc`, `ts`). Este feature no agrega lógica ni archivos nuevos ⇒ `scripts/install.sh` y su allowlist **no cambian**: skills, `templates/AGENTS.md` y `docs/design/review-contract.md` ya son payload, y todo lo nuevo viaja adentro de esos archivos.
+- **Código ejecutable**: `review.sh` ya publica, desde el 07, todo lo que la reentrada necesita (señal terminal atómica con `ts`, `id`, `mode`, `round`, `review_head`, `result`, `rc`). Este feature no agrega lógica ni archivos nuevos ⇒ `scripts/install.sh` y su allowlist **no cambian**: skills y `docs/design/review-contract.md` ya son payload actualizable, y todo lo load-bearing viaja adentro de esos archivos.
 - **El ruteo que entrega a estas reentradas** (feature 09) y el pipeline `/build` (feature 10). Este feature define los destinos; no define quién despacha hacia ellos.
 - **La reentrada del lote**, que ya existe y **conserva precedencia** con su ancla propia (`.claude/state/batch-expected` + ledger). Acá solo se documenta la convivencia (§5) para que no haya dos criterios en conflicto.
 - **`/adopt`**: no necesita rama nueva. Su estado es la existencia de `docs/ADOPTION.md`, la skill ya arranca decidiendo sobre esa señal y cada punto de juicio se pregunta al humano — es idempotente por construcción.
 - **`/status`**: lee STATUS y `scripts/review.sh status`; el vocabulario nuevo mejora lo que informa sin cambiarle una línea a la skill.
-- **Generalización del contrato de `AXEL_REVIEW_ID`**: declarada como superficie del feature 10 (el pipeline también la usa). Acá se toca el consumidor **sin** `id` (el individual), que es un hueco distinto.
+- **Generalización del contrato de `AXEL_REVIEW_ID`**: declarada como superficie del feature 10 (el pipeline también la usa). Acá se toca el consumidor **sin** `id` (el individual), que es un hueco distinto — y el flujo individual exige `id=-` justamente para no pisarse con el del lote (§2).
 - **Tests nuevos**: no hay código nuevo que congelar. La verificación es la matriz de reentrada de este doc (leída contra las skills por el reviewer) más las tres suites corridas como no-regresión.
 
 ## Enfoque técnico
 
-### 1. El ancla versionada: vocabulario de `STATUS.md`
+### 1. El ancla versionada: vocabulario del token de ronda en `STATUS.md`
 
 La reconstrucción necesita una respuesta inequívoca a una sola pregunta: **¿hay una review lanzada cuyo desenlace nadie consumió?** El estado local (`.claude/state/round`) no la responde — se escribe antes de invocar a Codex y no distingue «desenlace pendiente» de «desenlace ya integrado» — y no es versionado (una máquina distinta no lo tiene).
 
@@ -37,11 +36,22 @@ La responde **STATUS**, que ya se actualiza en cada commit y ya se commitea inme
 
 ```
 - **Ronda de review**: 3 · lanzada      # la ronda 3 se lanza sobre el HEAD de ESTE commit; su desenlace no fue consumido
-- **Ronda de review**: 3 · consumida    # el desenlace de la ronda 3 ya se leyó (y se está atendiendo o ya se atendió)
+- **Ronda de review**: 3 · consumida    # el desenlace de la ronda 3 se consumió y este commit NO lanza review
 - **Ronda de review**: —                # no hay ciclo de review abierto en esta fase/feature
 ```
 
-Transiciones (una sola regla, idéntica en las tres fases): **el commit que precede a la invocación declara `N · lanzada`; el commit siguiente —el que trae la corrección, el argumento o el cierre— la pasa a `N · consumida`.** Ningún commit extra: son los que el loop ya hace.
+**El número es siempre el de `review.sh`** — el mismo que el terminal publica en `round=` —, nunca un acumulado: de eso depende que la identidad de §2 cierre.
+
+**Transiciones** (r1 p3 — sin commits extra: alcanzan los que el loop ya hace):
+
+| Commit | Token que escribe |
+|---|---|
+| El que precede a una invocación | `N · lanzada` |
+| El siguiente al desenlace, **si vuelve a invocar** (corrección o argumento → nueva ronda) | `N+1 · lanzada` — el salto de número **es** el hecho «N consumida y N+1 lanzada»: los dos ocurren en el mismo commit y no pueden escribirse por separado |
+| El siguiente al desenlace, **si no invoca** (APPROVED consumido, paso intermedio, cierre, RECAP) | `N · consumida` |
+| Cierre del ciclo de la fase/feature | `—` |
+
+**Ciclo reabierto con `new`** (sesión de Codex perdida — §2, precondición): el número de `review.sh` vuelve a **1**, y eso es lo que STATUS escribe (`1 · lanzada`), porque el token debe coincidir con el `round` del terminal. La cuenta **acumulada** del feature no se pierde: vive en el Review log de su doc (`r6 — ronda 1 del ciclo reabierto`), y en design/plan en la línea de commit de la ronda. También se anota ahí que `new` rearmó la racha de deadlock, para que la regla de las 5 rondas siga leyéndose a nivel del feature.
 
 La línea **«Esperando»** fija su vocabulario (los tres primeros literales ya son disparadores vigentes de las skills y no cambian):
 
@@ -53,26 +63,35 @@ La línea **«Esperando»** fija su vocabulario (los tres primeros literales ya 
 | «esperando el desenlace de la review (ronda N)» | review lanzada, sin desenlace consumido |
 | «nada del humano — <trabajo en curso>» | el loop avanza solo |
 
-Solo los tres primeros son esperas **humanas**: son los únicos que disparan re-presentación y aviso. El cuarto es redundante con el token de la línea de ronda **por diseño**: el ruteo del 09 clasifica leyendo «Esperando», y las reentradas resuelven leyendo la línea de ronda; ante contradicción entre ambas líneas, gana el camino conservador (§2, última fila).
+Solo los tres primeros son esperas **humanas**: son los únicos que disparan re-presentación y aviso. El cuarto es redundante con el token de la línea de ronda **por diseño**: el ruteo del 09 clasifica leyendo «Esperando», y las reentradas resuelven leyendo la línea de ronda; ante contradicción entre ambas líneas gana el camino conservador (§2, fila 2).
 
 ### 2. Resolución del desenlace de una review (la parte compartida)
 
-Fuentes: la línea de ronda de STATUS (arriba), `.claude/state/review-terminal` (contrato: [design/review-contract.md](../design/review-contract.md) §Señal terminal) y el HEAD actual. **Identidad de la invocación en el caso individual**: fuera del lote no hay `AXEL_REVIEW_ID` (`id=-`), así que la identidad es `round` del terminal = la ronda declarada en STATUS **y** `review_head` = HEAD actual — que es exactamente el commit que declaró `lanzada`, porque la invocación ocurre inmediatamente después de él.
+**Frontera previa — un solo chequeo**: **árbol sucio** (`git status --porcelain` no vacío). La sesión caída dejó trabajo sin commitear: no absorberlo ni descartarlo — listarlo y preguntar. Es la misma regla de frontera limpia que el lote le exige al hijo. *(La validación de la sesión de Codex **no** va acá: ver la precondición al final de esta sección — r1 p2.)*
+
+Fuentes: la línea de ronda de STATUS (§1), `.claude/state/review-terminal` ([design/review-contract.md](../design/review-contract.md) §Señal terminal) y el HEAD actual.
+
+**Identidad de la invocación en el flujo individual** — las cuatro condiciones, todas necesarias (r1 p5):
+
+1. `id=-` — fuera del lote no se setea `AXEL_REVIEW_ID`; un terminal **con** id es de una invocación de lote (o de pipeline, 10) y no es nuestro.
+2. `mode` coherente con la ronda declarada: `1 ⇒ new`, `>1 ⇒ round`.
+3. `round` = la ronda declarada en STATUS.
+4. `review_head` = HEAD actual.
+
+No se afirma que HEAD sea siempre el SHA que se lanzó: el contrato admite explícitamente commits durante una review. Cuando eso pasa, la condición 4 falla y el caso **degrada a ambiguo** — que es precisamente el resultado seguro.
 
 | STATUS (línea de ronda) | Señal terminal | Conclusión | Acción |
 |---|---|---|---|
-| `N · lanzada` | `round=N` **y** `review_head` = HEAD actual | la ronda N terminó y su desenlace no se consumió | Consumir según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` están **vigentes**, seguir el loop normal. Cualquier otro resultado ⇒ esos archivos quedaron viejos: camino de fallas del loop (diagnóstico con `last-review-events.jsonl`, relanzamiento único si la causa es claramente transitoria; `DEADLOCK` **no se reintenta** — RECAP con ambas posturas). |
-| `N · lanzada` | `round=-` con `result` ∈ {`DEADLOCK`, `INPUT_ERROR`} y `ts` posterior a la fecha del commit que declaró la marca (`git log -1 --format=%cI`) | rechazo **pre-invocación** de esta ronda: no hubo review | `DEADLOCK` ⇒ RECAP con ambas posturas (y `scripts/review.sh reset-deadlock` solo tras el desempate humano). `INPUT_ERROR` ⇒ relanzar la ronda con el pedido bien formado. |
-| `N · lanzada` | ausente, de otra ronda, con otro `review_head`, o con `ts` anterior a la marca | **ambiguo**: la review puede estar **en vuelo** | **No relanzar ni duplicar.** Presentar al humano lo encontrado + la evidencia best-effort (abajo) y las dos salidas: **esperar** el desenlace poleando el terminal (mismo watcher del lote: cada ~15 s, tope 45 min) o **relanzar** si confirma que el proceso murió. La sesión no avanza sola. |
+| `N · lanzada` | las **cuatro** condiciones de identidad | la ronda N terminó y su desenlace no se consumió | Consumir según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` están **vigentes**, seguir el loop normal. Cualquier otro resultado ⇒ esos archivos quedaron viejos: camino de fallas del loop (diagnóstico con `last-review-events.jsonl`, relanzamiento único si la causa es claramente transitoria; `DEADLOCK` **no se reintenta**). |
+| `N · lanzada` | cualquier otra cosa: terminal ausente, `id` ≠ `-`, `mode` incoherente, otra ronda, otro `review_head`, o un rechazo pre-invocación (`round=-`, `review_head=-`: `DEADLOCK`, `INPUT_ERROR`) | **ambiguo**: la review puede estar **en vuelo** | **No relanzar ni duplicar.** Presentar al humano lo encontrado + la evidencia best-effort (abajo) y las dos salidas: **esperar** el desenlace poleando el terminal (mismo watcher del lote: cada ~15 s, tope 45 min) o **relanzar** si confirma que el proceso murió. La sesión no avanza sola. |
 | `N · consumida` o `—` | irrelevante | no hay review en vuelo ni desenlace pendiente | Seguir el loop desde donde los docs dicen. El Review log del feature (o, en design/plan, los commits del ciclo) dice qué feedback ya fue atendido — **jamás reprocesar a ciegas**. |
-| línea **sin token** (STATUS anterior a esta convención, o proyecto instalado que todavía no la usa) | — | **no concluyente** | Degradación conservadora: se consume como la fila 1 **solo si** el estado local del loop está presente y es coherente (`.claude/state/round` = la ronda de STATUS, `codex-session-id` presente) **y** el terminal matchea (`round` = `.claude/state/round`, `review_head` = HEAD). En cualquier otro caso: RECAP sin relanzar. |
+| línea **sin token** (STATUS anterior a esta convención, o proyecto instalado que todavía no la usa) | — | **no concluyente** | Degradación conservadora: se consume como la fila 1 **solo si** el estado local del loop está presente y es coherente y el terminal cumple las cuatro condiciones **contra ese estado local** (`round` = `.claude/state/round`, `mode` coherente con él, `id=-`, `review_head` = HEAD). En cualquier otro caso: RECAP sin relanzar. |
 
-**Evidencia best-effort, nunca autoritativa** (para que el humano decida en la fila 3): `ts` del terminal comparado con la fecha del commit de la marca; mtime de `.claude/state/last-review-events.jsonl` (Codex escribe eventos ahí mientras corre: reciente y creciendo ⇒ probablemente viva); y `pgrep -fl "codex exec"`. Ninguna de las tres decide sola: `pgrep` no ata un proceso a **este** repo (otro proyecto o worktree puede tener el suyo) y un mtime es un indicio, no un hecho. Decidir desde un indicio sería exactamente lo que el fail-closed prohíbe; por eso la evidencia se **presenta** y el humano elige.
+**Por qué los rechazos pre-invocación caen en «ambiguo»** (r1 p4): `DEADLOCK` e `INPUT_ERROR` publican `round=-` y `review_head=-`, así que no hay nada que atar a la ronda declarada; un `ts` posterior al commit prueba **orden temporal, no identidad**, y una invocación posterior sobre el mismo commit puede haberlos sobreescrito. Fail-closed manda: se entregan al humano como el resto de los ambiguos. Como evidencia se suma `.claude/state/changes-streak` — en ≥ 5 `review.sh` se niega a lanzar y el único camino es el desempate humano seguido de `scripts/review.sh reset-deadlock`.
 
-**Frontera previa a cualquier resolución** — dos chequeos, en este orden:
+**Evidencia best-effort, nunca autoritativa** (para que el humano decida en la fila 2): `ts` del terminal comparado con la fecha del commit de la marca (`git log -1 --format=%cI`); mtime de `.claude/state/last-review-events.jsonl` (Codex escribe eventos ahí mientras corre: reciente y creciendo ⇒ probablemente viva); `pgrep -fl "codex exec"`; y `changes-streak`. Ninguna decide sola: `pgrep` no ata un proceso a **este** repo (otro proyecto o worktree puede tener el suyo) y un mtime es un indicio, no un hecho. Decidir desde un indicio sería exactamente lo que el fail-closed prohíbe; por eso la evidencia se **presenta** y el humano elige.
 
-1. **Árbol sucio** (`git status --porcelain` no vacío): la sesión caída dejó trabajo sin commitear. No absorberlo ni descartarlo: listarlo y preguntar. Es la misma regla de frontera limpia que el lote le exige al hijo.
-2. **Sesión de Codex perdida** (`.claude/state/codex-session-id` ausente, o el ciclo local pertenece a otro feature): **no correr `round`** — sin session id cae en `resume --last`, que puede retomar la sesión del feature anterior (el contrato lo prohíbe explícitamente en el retry de `new`). Reabrir el ciclo con `scripts/review.sh new`, aclarando en el pedido que es una reentrada y qué rondas ya hubo, y anotar en el Review log que la numeración de `review.sh` vuelve a 1 y que la racha de deadlock se rearmó — la cuenta de rondas **del feature** la lleva el doc, no el script.
+**Precondición de invocar `round`** (r1 p2 — se evalúa **al lanzar**, jamás en la reentrada): antes de una ronda que no sea la primera del ciclo, verificar `.claude/state/codex-session-id`. Si falta o pertenece a otro ciclo, no invocar `round` — caería en `resume --last`, que puede retomar la sesión de otro feature (el contrato lo prohíbe explícitamente hasta en el retry de `new`): se reabre el ciclo con `scripts/review.sh new`, aclarando en el pedido que es una reentrada y qué rondas ya hubo, con el registro de §1 (numeración a 1, racha rearmada). **La ausencia del archivo no prueba que la sesión murió**: `review.sh` lo borra al arrancar un `new` y lo reescribe recién al capturar `thread.started`, así que durante todo un `new` en vuelo su ausencia es normal. Por eso el orden de la reentrada es: árbol sucio → resolver el desenlace → y solo si el paso siguiente **realmente** necesita `round`, esta precondición. Un terminal ya publicado se consume igual aunque la sesión se haya perdido: el desenlace no depende de la sesión.
 
 ### 3. Ramas por fase (matriz de reentrada)
 
@@ -105,31 +124,31 @@ Cada skill gana una rama con su mapa «estado de los docs → paso de su camino�
 
 ### 4. Reparto de la superficie
 
-| Dónde | Qué |
-|---|---|
-| `AGENTS.md` + `templates/AGENTS.md` (espejo obligatorio) | Sección «Reentradas»: invariante fail-closed, vocabulario de STATUS (§1), tabla de resolución del desenlace (§2) y la frontera previa. ~25 líneas, una sola vez. Va acá porque es convención de **docs** transversal a las tres skills, AGENTS.md se carga solo en cada sesión, y el ruteo del 09 aterriza al lado. |
-| `.claude/skills/{design,plan,feature}/SKILL.md` | Solo el mapa propio de la fase (§3): 5–8 líneas cada una, con puntero a la sección de AGENTS.md para la parte común. Nada de la resolución de review se duplica. |
-| `docs/design/review-contract.md` | Un párrafo en §Señal terminal: el terminal también lo consume la **reentrada individual** de cualquier fase, cuya identidad es `round` + `review_head` (sin `id`, que fuera del lote es `-`); mismas garantías de identidad completa y misma prohibición de adivinar ante ausencia. Sin cambios en `review.sh`. |
-| `docs/STATUS.md` | El vocabulario, aplicado desde el primer commit de este feature. |
+| Dónde | Qué | Por qué ahí |
+|---|---|---|
+| `docs/design/review-contract.md` | **Canónico**: §Reentrada — frontera previa, vocabulario del token (§1), identidad y tabla de resolución (§2), precondición de `round`, y el reconocimiento del consumidor individual del terminal. | Es **payload**: el instalador lo sobreescribe en cada re-run, así que un proyecto ya instalado recibe la sección al actualizar la maquinaria. Además el estado que se resuelve acá es estado del loop de review, que es lo que ese contrato ya gobierna. |
+| `.claude/skills/{design,plan,feature}/SKILL.md` | Solo el mapa propio de la fase (§3): 5–8 líneas cada una, con puntero al doc canónico. Nada de la resolución se duplica. | También payload; y las skills son el lugar por donde el generador entra a la fase. |
+| `AGENTS.md` + `templates/AGENTS.md` (espejo obligatorio) | **Una línea** en Convenciones: existen reentradas fail-closed y el contrato vive en `docs/design/review-contract.md`. | Puntero para lectores, **no load-bearing** (r1 p1): `AGENTS.md` es **semilla**, no payload — el instalador no pisa el de un proyecto existente, así que nada que las skills necesiten puede vivir solo ahí. |
 
 ### 5. Compatibilidad hacia atrás y convivencia con el lote
 
-- **Proyectos instalados y historia previa**: un STATUS sin el token no rompe nada — cae en la última fila de §2 (degradación conservadora). El token no es un requisito de formato: es una marca que, cuando está, **decide**; cuando falta, obliga al camino conservador.
-- **Modo lote**: la **reentrada del lote conserva precedencia absoluta** — STATUS apunta al ledger, el corte registrado es absorbente y el ancla es `.claude/state/batch-expected`. El hijo de un lote escribe igual el token (es el mismo loop de `/feature`), pero en lote **manda el ancla**: el `id`/nonce es lo que identifica una invocación cuando hay un padre supervisando, y el padre puede commitear el ledger mientras la review del hijo está en vuelo — con lo cual `review_head` = HEAD deja de ser garantía. Fuera del lote no hay padre ni commits ajenos concurrentes, y el par STATUS+HEAD alcanza. Las dos anclas tienen la misma semántica (`lanzada`/`launched` → `consumida`/`consumed`); ninguna reemplaza a la otra.
+- **Proyectos instalados**: al re-correr el instalador reciben skills **y** `review-contract.md` actualizados — el par completo, sin depender de que su `AGENTS.md` (semilla intocable) sepa nada de esto. Ninguna skill referencia una sección que el destino pueda no tener.
+- **Historia previa y STATUS sin token**: no rompe nada — cae en la última fila de §2 (degradación conservadora). El token no es un requisito de formato: es una marca que, cuando está, **decide**; cuando falta, obliga al camino conservador.
+- **Modo lote**: la **reentrada del lote conserva precedencia absoluta** — STATUS apunta al ledger, el corte registrado es absorbente y el ancla es `.claude/state/batch-expected`. El hijo de un lote escribe igual el token (es el mismo loop de `/feature`), pero en lote **manda el ancla**: el `id`/nonce identifica la invocación cuando hay un padre supervisando, y el padre puede commitear el ledger mientras la review del hijo está en vuelo — con lo cual `review_head` = HEAD deja de ser garantía. La separación es explícita en las dos direcciones: el flujo individual exige `id=-`, así que jamás consume un terminal de lote. Las dos anclas tienen la misma semántica (`lanzada`/`launched` → `consumida`/`consumed`); ninguna reemplaza a la otra.
 - **Sin maquinaria nueva**: el token de STATUS y las ramas son texto en archivos que ya viajan. Cero archivos nuevos, cero cambios al instalador, cero lógica nueva en los scripts.
 
 ## Decisiones (las dos preguntas que el plan dejó abiertas)
 
 1. **Cómo distingue la reentrada una review en vuelo de una muerta.** No la distingue por sí sola, **y no debe**: la señal terminal se escribe al salir, así que su ausencia es genuinamente ambigua, y las únicas señales disponibles (proceso vivo, mtime del archivo de eventos) son heurísticas que no atan un proceso a este repo. Se elige la segunda opción del diseño: **entrega fail-closed al humano en la duda**, enriquecida con la evidencia best-effort y con dos salidas concretas ofrecidas (esperar poleando el terminal, o relanzar tras confirmar la muerte). Lo que la reentrada **sí** resuelve sola es el caso frecuente y decidible: la review terminó y nadie consumió el desenlace (identidad completa ⇒ se consume). Descartado: hacer autoritativa la detección de proceso vivo — decidir desde un indicio contradice el fail-closed que el diseño fija, y el costo del falso negativo (relanzar una review que corre) es duplicar trabajo del reviewer y ensuciar el estado del loop.
-2. **Cuánta reconstrucción es compartible.** Casi toda: la frontera previa (árbol sucio, sesión de Codex perdida), el vocabulario de STATUS y la tabla de resolución del desenlace son **idénticas** en las tres fases y se documentan una sola vez en AGENTS.md. Lo específico por fase es únicamente el mapa «estado de los docs → paso del camino», que es corto y vive en cada skill. Descartado: un archivo compartido nuevo (obligaría a tocar la allowlist del instalador para algo que entra en 25 líneas de un archivo que ya viaja) y duplicar la tabla en las tres skills (tres copias que se desincronizan).
+2. **Cuánta reconstrucción es compartible.** Casi toda: la frontera previa, el vocabulario del token, la identidad, la tabla de resolución y la precondición de `round` son **idénticas** en las tres fases y se documentan una sola vez, en `docs/design/review-contract.md`. Lo específico por fase es únicamente el mapa «estado de los docs → paso del camino», corto, en cada skill. Descartado: **`AGENTS.md` como sede canónica** (r1 p1) — es semilla del instalador, así que las skills actualizadas de un proyecto existente apuntarían a una sección que ese proyecto nunca recibiría; y **duplicar la tabla en las tres skills** — tres copias que se desincronizan. Un archivo nuevo en la allowlist era viable, pero agrega superficie al instalador (y a `tests/install.sh`) para algo que entra como sección en un contrato que ya viaja y que ya gobierna este estado.
 
 ## Criterios de cierre
 
-1. Las tres skills tienen rama de reentrada y entre las tres cubren **todo** el inventario de la matriz (§3), sin huecos y con el mismo criterio fail-closed; ninguna rama lanza `review.sh` sobre un estado `lanzada` sin desenlace confirmado.
-2. La parte compartida está documentada **una sola vez** (AGENTS.md §Reentradas) y referenciada desde las tres skills; `templates/AGENTS.md` es espejo exacto (regla de sincronía).
-3. El vocabulario de STATUS está definido y **aplicado en este mismo feature**: cada commit previo a una review declara `N · lanzada` y el siguiente la pasa a `N · consumida`.
-4. `review-contract.md` reconoce al consumidor individual del terminal, sin cambios de lógica en `review.sh` (el diff del script es vacío).
-5. Compatibilidad hacia atrás explícita: STATUS sin token ⇒ camino conservador documentado; la reentrada del lote conserva precedencia y su ancla.
+1. Las tres skills tienen rama de reentrada y entre las tres cubren **todo** el inventario de la matriz (§3), sin huecos y con el mismo criterio fail-closed; ninguna rama lanza `review.sh` sobre un estado `lanzada` sin desenlace confirmado, y ninguna infiere «sesión muerta» de la ausencia de `codex-session-id`.
+2. La parte compartida está **una sola vez** en `docs/design/review-contract.md` (payload actualizable), referenciada desde las tres skills; ninguna skill depende de contenido que solo exista en `AGENTS.md`. La línea de `AGENTS.md` está espejada en `templates/AGENTS.md` (regla de sincronía).
+3. El vocabulario del token está definido con sus transiciones ejecutables (`N · lanzada` → `N+1 · lanzada` cuando el commit vuelve a invocar; `N · consumida` cuando no) y **aplicado en este mismo feature**, con el número siempre igual al `round` que publica el terminal.
+4. El criterio de identidad individual exige las cuatro condiciones (`id=-`, `mode` coherente, `round`, `review_head`) y todo lo demás —incluidos los rechazos pre-invocación— degrada a ambiguo, sin excepción por `ts`.
+5. `review-contract.md` reconoce al consumidor individual del terminal, sin cambios de lógica en `review.sh` (el diff del script es vacío); la reentrada del lote conserva precedencia y su ancla, y las dos no pueden confundirse (`id=-` vs. `id` con nonce).
 6. Las tres suites en verde como no-regresión (`tests/loop.sh`, `tests/install.sh`, `tests/lint.sh`) y el payload del instalador sin cambios (ningún archivo nuevo).
 
 ## Riesgos
@@ -138,7 +157,8 @@ Cada skill gana una rama con su mapa «estado de los docs → paso de su camino�
 - **Instrucciones en prosa no se testean**: las skills no tienen suite. La verificación es la matriz de este doc leída contra el texto final por el reviewer, más las suites de código corridas como no-regresión. Queda registrado honestamente: este feature no agrega cobertura automatizada porque no agrega código.
 - **La evidencia de liveness es best-effort** y puede inducir al humano a error (un `codex exec` de otro proyecto parece «la review viva»). Mitigación: se presenta siempre etiquetada como no concluyente y con las dos salidas explícitas.
 - **Ventana entre consumir y commitear**: si la sesión muere después de leer el desenlace y antes del commit siguiente, la reentrada vuelve a consumir el mismo terminal. Es inocuo por construcción —nada se commiteó, y el Review log más los commits dicen qué se atendió— y el árbol sucio, si lo hay, frena antes en la frontera previa.
+- **Conservadurismo en los rechazos pre-invocación**: un `DEADLOCK` real reentrado se presenta como ambiguo en vez de nombrarse solo. Es el precio de no atribuir por `ts`; el desenlace práctico coincide (el deadlock termina en RECAP con las dos posturas de todas formas) y `changes-streak` viaja como evidencia.
 
 ## Review log
 
-(pendiente)
+- **r1** (2026-07-29, `CHANGES_REQUESTED`, rango `cfc5dd2..82e7d55`): cinco puntos, los cinco aceptados y corregidos en la bajada — (1) `AGENTS.md` no puede ser sede canónica: es **semilla** del instalador (un `AGENTS.md` preexistente no se pisa), así que un proyecto que actualiza la maquinaria recibiría skills apuntando a una sección inexistente ⇒ la parte compartida se muda a `docs/design/review-contract.md`, que sí es payload actualizable, y en AGENTS/plantilla queda solo un puntero declarado no load-bearing; (2) evaluar `codex-session-id` en la frontera previa podía **duplicar la review que protege** — `review.sh` borra ese archivo antes de `invoke_new` y lo reescribe recién al capturar `thread.started`, así que durante un `new` en vuelo su ausencia es normal ⇒ el chequeo pasa a ser **precondición de invocar `round`**, evaluada al lanzar, y el orden queda árbol sucio → desenlace → (solo si hace falta `round`) sesión; un terminal publicado se consume igual aunque la sesión se haya perdido; (3) la transición del token no era ejecutable: el commit que atiende un `CHANGES_REQUESTED` es a la vez el previo a la ronda siguiente y no puede declarar `N · consumida` y `N+1 · lanzada` ⇒ se define `N · lanzada → N+1 · lanzada` como **un solo hecho** (el salto implica el consumo) y `N · consumida` queda para los commits que no invocan; (4) el `ts` posterior al commit no atribuye un `DEADLOCK`/`INPUT_ERROR` (`round=-`, `review_head=-`: prueba orden, no identidad, y otra invocación puede sobreescribirlos) ⇒ esa fila cae en «ambiguo» como el resto, con `changes-streak` sumado a la evidencia; (5) la identidad post-invocación se endurece a **cuatro** condiciones (`id=-` para no consumir terminales de lote/pipeline, `mode` coherente con la ronda, `round`, `review_head`), se corrige la afirmación de que HEAD es siempre el SHA lanzado (el contrato admite commits durante una review: ese caso degrada a ambiguo, y por eso es seguro), y se documenta que un ciclo reabierto con `new` escribe `1` en STATUS mientras la ronda acumulada del feature vive en el Review log. Codex validó explícitamente la entrega humana de la duda «en vuelo vs. muerta», la ausencia de huecos en la matriz de fases y que la bajada no invade el alcance del 09/10.
