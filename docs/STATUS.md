@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: design — **entrada implícita** (ruteo por contexto + pipeline `/build`): **APPROVED** de Codex en r3 — RECAP presentado, **esperando OK humano**
-- **Feature en curso**: ninguno (fase de diseño)
-- **Ronda de review**: r3 `APPROVED` (r1: 3 puntos corregidos; r2: 2 puntos corregidos)
+- **Fase**: design — **entrada implícita cerrada** (APPROVED de Codex r3 + OK humano, 2026-07-29)
+- **Feature en curso**: ninguno
+- **Ronda de review**: —
 - **Último veredicto**: APPROVED · ronda 3 · base `a3071f2`
-- **Esperando**: OK humano del RECAP de diseño — con el OK: `/plan` en sesión limpia para bajar el diseño a features
+- **Esperando**: `/plan` en **sesión limpia** — bajar el diseño de entrada implícita ([design/implicit-entry.md](design/implicit-entry.md)) a features priorizados
 - **Actualizado**: 2026-07-29
