@@ -317,3 +317,19 @@ El reviewer dio por corregidos los tres de la r5 y por cumplidos **C1–C5, C8 y
 
 1. **C6 seguía contradiciéndose**: el criterio decía que las 20 filas se verifican con `grep -c '^| R'`, comando que devuelve **40** desde que existen las dos matrices. Estaba corregido en la evidencia (§Verificación) pero no en el criterio. **Aceptado**: el criterio 6 lleva ahora los mismos **conteos acotados por sección**, con la razón del 40 escrita en la línea.
 2. **C7 conservaba un valor pre-implementación** («hoy 19») cuando la skill instalada tiene **39**. **Aceptado**: el criterio queda «≤ 40 líneas — quedó en **39** (eran **19** antes del feature)», que es a la vez el criterio y su valor verificado.
+
+### r7 (base `6f2c04a` → `886fe4f`) — **APPROVED de cierre**
+
+Sin observaciones accionables: «C6 produce 20/20 con los conteos acotados y explica correctamente el total global de 40; C7 registra las 39 líneas actuales» y «**los nueve criterios de cierre se cumplen**. La skill permanece idéntica, el Review log está completo hasta r6, STATUS/IMPLEMENTATION/DESIGN son coherentes y alcance, lint y `git diff --check` quedaron limpios».
+
+**Siete rondas, dos ciclos**: r1–r4 sobre la bajada (APPROVED en r4) y r5–r7 sobre la implementación. **Catorce pedidos, los catorce aceptados sin argumentar** — ninguno tocó la sustancia, que Codex acordó desde la r1: derivar el inventario de git, dos bloques mecánico/ratificar, alcance acotado a `/adopt`, contrato reusable dentro de la skill y `AGENTS.md` sin acompañar.
+
+Lo que costó siete rondas fue **la precisión**, y en tres formas distintas:
+
+1. **Clasificaciones factuales mías, mal** (r1): `README.md` atribuido a «el handoff no lo nombraba» cuando el handoff real lo listaba entre 21 candidatos, y la bitácora dada por mudanza verbatim cuando el diff traía una entrada escrita por la sesión. Le creí al mensaje del commit en vez de al diff — exactamente el error que este feature existe para prevenir. El corolario corregido es el hallazgo del feature: **6 de los 8 archivos** llevaban texto propio, y el reporte original habló de 3.
+2. **Cada arreglo abría un borde** (r2, r3): la unión de paths perdía la acción; el test de path contradecía su propio caso; (c) y navegación se solapaban en un caso frecuente; y el comando de unión entregaba la secuencia **invertida** y sin conteo derivable — defecto que estaba en mi propia evidencia de la r2 sin que lo viera.
+3. **Bookkeeping desincronizado de su fuente** (r5, r6): la evidencia de C6 se volvió falsa por mi propio cambio (dos matrices ⇒ `grep` da 40), el conteo de cambios decía tres y enumeraba cuatro, el Review log omitía el APPROVED de la r4 y los enunciados de C6/C7 quedaron afirmando lo que su evidencia ya no decía.
+
+Las tres son la misma clase de defecto que el feature elimina del cierre de `/adopt`: **un texto que afirma algo que su fuente ya no dice**. Que hayan aparecido siete veces en la construcción de la propia regla es el argumento más fuerte a favor del criterio (a) del pedido — la completitud no puede depender de que el agente se acuerde, y en esta bajada lo único que nunca falló fue lo que salía de un comando.
+
+La unidad queda **APPROVED — pendiente OK de pipeline**: el OK humano llega con el RECAP consolidado, no individual.
