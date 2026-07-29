@@ -409,6 +409,7 @@ AXEL_ROOT="$(cd "$(dirname "$SCRIPT_PATH")/.." && git rev-parse --show-toplevel)
 # para que /adopt y las sesiones del destino puedan re-verificar settings sin acceso a axel.
 PAYLOAD_SRC=(
   .claude/skills/adopt/SKILL.md
+  .claude/skills/build/SKILL.md
   .claude/skills/design/SKILL.md
   .claude/skills/feature/SKILL.md
   .claude/skills/plan/SKILL.md
@@ -421,6 +422,7 @@ PAYLOAD_SRC=(
 )
 PAYLOAD=(
   .claude/skills/adopt/SKILL.md
+  .claude/skills/build/SKILL.md
   .claude/skills/design/SKILL.md
   .claude/skills/feature/SKILL.md
   .claude/skills/plan/SKILL.md

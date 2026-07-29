@@ -17,14 +17,15 @@ Estructura:
 
 Cerrá pidiendo el OK explícitamente. Si STATUS.md no dice ya "esperando OK", actualizalo y commiteá. Aplicá el protocolo de aviso de abajo. Después del RECAP, terminá el turno: no sigas trabajando sin el OK.
 
-## RECAP consolidado (fin de un lote de `/feature all` / `NN..MM`)
+## RECAP consolidado (fin de un lote de `/feature all` / `NN..MM`, o de un pipeline de `/build`)
 
-Cuando STATUS apunta a un **ledger de lote** esperando el OK consolidado, la estructura de arriba se ajusta así:
+Cuando STATUS apunta a un **ledger** —de lote o de pipeline— esperando el OK consolidado, la estructura de arriba se ajusta así:
 
-- **La base del relato es `gate_base`** (registrado en el ledger: el HEAD al autorizarse el gate) — **no** `last-approved-sha`, que tras N APPROVED del lote ya avanzó hasta el último feature y dejaría el relato vacío. `git log <gate_base>..HEAD` es el lote entero, autorización incluida.
-- **«Qué se hizo» y «Decisiones y review» van por feature**, en el orden corrido: resultado, rondas y decisiones de cada uno (fuentes: el ledger, los docs de features con sus Review logs, y los commits). Sumá los cortes o exclusiones si los hubo.
-- Los **no revisados** se listan igual que siempre (`last-approved-sha..HEAD`): remanentes del último feature, el ledger y el STATUS «esperando OK» — el OK consolidado es lo que los cubre. El commit de registro del OK (cierre consolidado: features a "Cerrado", cierre del ledger, STATUS) no existe todavía y queda cubierto por la excepción del contrato.
-- **Qué viene con tu OK**: el cierre consolidado + el paso siguiente (próximo feature del plan, o `/plan` si el backlog quedó vacío).
+- **La base del relato es `gate_base`** (registrado en el ledger: el HEAD al autorizarse el gate) — **no** `last-approved-sha`, que tras N APPROVED de la corrida ya avanzó hasta la última unidad y dejaría el relato vacío. `git log <gate_base>..HEAD` es la corrida entera, autorización incluida.
+- **«Qué se hizo» y «Decisiones y review» van por unidad** (feature en un lote; `design-delta` / `plan-delta` / feature en un pipeline), en el orden corrido: resultado, rondas y decisiones de cada una. Fuentes: el ledger, los docs que cada unidad tocó —con su Review log si lo tiene; en design/plan, las líneas de commit que nombran la ronda— y los commits. Sumá los cortes, exclusiones o ajustes de alcance si los hubo.
+- En un **pipeline**, decí además **qué quedó visible** — es lo que el gate prometió y lo que el humano puede juzgar sin leer los deltas.
+- Los **no revisados** se listan igual que siempre (`last-approved-sha..HEAD`): remanentes de la última unidad, el ledger y el STATUS «esperando OK» — el OK consolidado es lo que los cubre. El commit de registro del OK (cierre consolidado: unidades a "Cerrado", cierre del ledger, STATUS) no existe todavía y queda cubierto por la excepción del contrato.
+- **Qué viene con tu OK**: el cierre consolidado + el paso siguiente (próximo feature del plan, o `/plan` si el backlog quedó vacío). En un pipeline en **modo POC**, ofrecé los **dos caminos** y que elija el humano con el POC a la vista: **endurecer** los docs borrador (`/design` y/o `/plan`, que cierran el marker `borrador (modo POC)`) o **seguir iterando features** sobre el borrador. Recomendado, no forzado: el marker queda visible hasta que una pasada lo cierre.
 
 ## Aviso al humano (protocolo único — las demás skills refieren acá, no lo repiten)
 

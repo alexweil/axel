@@ -75,7 +75,7 @@ t "T1 instalación desde cero"
 T1="$(mk_target t1)"
 run_install "$T1"
 assert_rc 0
-for f in adopt design feature plan recap status; do assert_file "$T1/.claude/skills/$f/SKILL.md"; done
+for f in adopt build design feature plan recap status; do assert_file "$T1/.claude/skills/$f/SKILL.md"; done
 assert_file "$T1/scripts/review.sh";  assert_exec "$T1/scripts/review.sh"
 assert_file "$T1/scripts/awake.sh";   assert_exec "$T1/scripts/awake.sh"
 assert_file "$T1/docs/design/review-contract.md"

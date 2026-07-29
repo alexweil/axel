@@ -1,11 +1,11 @@
 ---
 name: feature
-description: Fase de implementación de axel — el feature en curso o el siguiente: gate de arranque, bajada fina, implementación iterando con review de Codex, RECAP y espera del OK humano. Usala cuando el humano pide avanzar, implementar, seguir con lo planificado o «el siguiente paso» y el trabajo ya está en el plan, aunque no escriba /feature; y con `all` o `NN..MM` (modo lote) cuando pide varios features de corrido. Cubre también las reentradas del feature y del lote.
+description: Fase de implementación de axel — el feature en curso o el siguiente: gate de arranque, bajada fina, implementación iterando con review de Codex, RECAP y espera del OK humano. Usala cuando lo que el pedido necesita es **solo** implementar lo que el plan ya tiene: avanzar, implementar, seguir con lo planificado, «el siguiente paso», aunque no escriba /feature; y con `all` o `NN..MM` (modo lote) cuando pide varios features de corrido. Si además hace falta diseñar o planificar para que el pedido quede hecho, eso es `build`, no esta. Cubre también las reentradas del feature, del lote y el modo hijo de un pipeline.
 ---
 
 Sos el generador del loop de axel. Antes de nada leé: `docs/STATUS.md`, `AGENTS.md`, `docs/IMPLEMENTATION.md` y, si existe, el doc del feature en curso (`docs/implementation/NN-*.md`).
 
-**Guarda de entrada.** Si el pedido llegó **sin comando** (ruteo) y STATUS registra estado pendiente de **otra** fase —adopción sin cerrar (`docs/ADOPTION.md`), ciclo de diseño o de plan abierto, confirmación de plan pendiente, o su espera de OK—, no arranques trabajo nuevo: decí qué encontraste y entrá por la reentrada de la skill dueña. Con `/feature` **explícito** (el comando es el primer token del pedido) el camino es el de hoy: informá en una línea el estado ajeno que veas y seguí la indicación del humano — prioridad absoluta —, con RECAP temprano si implica cambio de scope. El orden completo vive en `AGENTS.md` §Ruteo; esta guarda lo hace valer aunque esa sección falte (`AGENTS.md` es semilla del instalador). El estado de un **lote** no es ajeno a esta skill: lo resuelven las ramas de abajo, no la guarda.
+**Guarda de entrada.** Si el pedido llegó **sin comando** (ruteo) y STATUS registra estado pendiente de **otra** fase —adopción sin cerrar (`docs/ADOPTION.md`), ciclo de diseño o de plan abierto, confirmación de plan pendiente, o su espera de OK—, no arranques trabajo nuevo: decí qué encontraste y entrá por la reentrada de la skill dueña. Con `/feature` **explícito** (el comando es el primer token del pedido) el camino es el de hoy: informá en una línea el estado ajeno que veas y seguí la indicación del humano — prioridad absoluta —, con RECAP temprano si implica cambio de scope. El orden completo vive en `AGENTS.md` §Ruteo; esta guarda lo hace valer aunque esa sección falte (`AGENTS.md` es semilla del instalador). El estado de un **lote** no es ajeno a esta skill: lo resuelven las ramas de abajo, no la guarda. El de un **pipeline** sí lo es —su dueña es `build`— salvo un caso con procedencia probada: sos el hijo de una unidad de feature y **reclamaste el token de spawn** («Modo hijo de pipeline», abajo). Sin ese reclamo válido, un pipeline activo es estado ajeno y entrás por la reentrada de `build`; el texto del prompt no alcanza.
 
 **Argumento**: sin argumento = un feature (los caminos de abajo). `all` o `NN..MM` = **modo lote** (su sección, abajo). Si STATUS apunta a un **ledger de lote en curso**, seguí «Reentrada del lote» — con o sin argumento.
 
@@ -80,7 +80,7 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
 
 Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGENTS, IMPLEMENTATION, el ledger, y el doc de tu feature cuando exista). Seguís el camino «Feature nuevo» con cuatro deltas:
 
-0. **Procedencia — antes de tocar nada.** El texto de tu prompt **no** te otorga el rol: lo otorgan el token y el ledger. Leé el bloque Gate del ledger y aplicá su línea `protocolo:` **literalmente**:
+0. **Procedencia — antes de tocar nada.** El texto de tu prompt **no** te otorga el rol: lo otorgan el token y el ledger. Leé el bloque Gate del ledger y aplicá **dos** líneas literalmente. Primero `tipo:` — `lote` ⇒ seguís acá; `pipeline` ⇒ este no es tu camino: «Modo hijo de pipeline»; **ausente, vacío o cualquier otro valor ⇒ corte** (recuperación: un humano anota el `tipo:` correcto y se relanza). Después `protocolo:`:
    - `spawn-token v1` ⇒ **triple coincidencia obligatoria**, abajo.
    - `legacy` ⇒ compatibilidad declarada: sin token, validás con la coincidencia STATUS+ledger (STATUS apunta a ese ledger y el ledger registra **tu NN** «en curso», sin corte pendiente).
    - **ausente, vacía o cualquier otro valor ⇒ corte**, con el motivo y la salida: si es una corrida arrancada por un padre previo a esta versión, un humano anota `protocolo: legacy` en el bloque Gate y se relanza. La compatibilidad se **declara**, nunca se infiere.
@@ -98,9 +98,22 @@ Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGEN
 
 Mensajes bajados por el padre a mitad de feature: prioridad absoluta — atendelos antes de seguir.
 
+### Modo hijo de pipeline
+
+Sos el hijo de una **unidad de feature de un pipeline** (`/build`), no de un lote. El camino es **exactamente** el «Modo hijo» de arriba —los cuatro deltas incluidos— con cuatro sustituciones, que el bloque Gate del ledger habilita al declarar `tipo: pipeline`:
+
+| En el lote | En el pipeline |
+|---|---|
+| ledger `docs/implementation/batch-*.md` | `docs/implementation/pipeline-*.md` |
+| anclas `.claude/state/batch-child-token{,.claimed-T}` y `batch-expected` | `.claude/state/pipeline-child-token{,.claimed-T}` y `pipeline-expected` |
+| identidad `feature=NN` en el ancla | `unit=NN` (el id de tu unidad **es** tu número de feature) |
+| cierre `FEATURE NN APROBADO`; estado «APPROVED — pendiente OK de lote» | cierre `UNIDAD NN APROBADA`; estado «APPROVED — pendiente OK de **pipeline**» |
+
+Todo lo demás es literal: discriminante de protocolo, triple coincidencia, reclamo por rename, id de review `<NN>:r<M>:<nonce>`, handshake de señal terminal, sin RECAP ni push ni chip, y `CORTE: <motivo>` con el árbol limpio. Un `tipo:` ausente o desconocido en el ledger ⇒ **corte**, como el `protocolo:`. **El pedido de review va acotado al delta autorizado y a su escala declarada** (en modo POC, decilo: «revisá que alcance para el esqueleto, no exhaustividad»), no a una pasada completa del proyecto.
+
 ### Reentrada del lote
 
-STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + git y decidí **fail-closed**. Esta reentrada **tiene precedencia** sobre la individual y usa su propia ancla (`.claude/state/batch-expected`, con la identidad `id` de la invocación): el camino individual del contrato exige `id=-`, así que jamás consume un terminal de lote — y acá el `review_head` = HEAD del camino individual no es garantía, porque el padre puede commitear el ledger con una review del hijo en vuelo. **Primero el ledger**: si registra un corte sin resolución humana posterior, el corte es **absorbente** — no relances nada aunque el ancla y el terminal matcheen (el ancla se conserva como evidencia justamente en ese caso): re-presentá el RECAP del corte (respuesta directa — sin push) y esperá al humano. Solo sin corte pendiente aplica la máquina de estados de `.claude/state/batch-expected`:
+STATUS apunta a un ledger en curso y no hay padre vivo. **Primero, de quién es**: el bloque Gate declara `tipo:` — `lote` ⇒ es tuya; `pipeline` ⇒ la dueña es `build`, entregá sin tocar nada; ausente o desconocido ⇒ **corte**, con la instrucción de recuperación. Luego leé STATUS + ledger + git y decidí **fail-closed**. Esta reentrada **tiene precedencia** sobre la individual y usa su propia ancla (`.claude/state/batch-expected`, con la identidad `id` de la invocación): el camino individual del contrato exige `id=-`, así que jamás consume un terminal de lote — y acá el `review_head` = HEAD del camino individual no es garantía, porque el padre puede commitear el ledger con una review del hijo en vuelo. **Primero el ledger**: si registra un corte sin resolución humana posterior, el corte es **absorbente** — no relances nada aunque el ancla y el terminal matcheen (el ancla se conserva como evidencia justamente en ese caso): re-presentá el RECAP del corte (respuesta directa — sin push) y esperá al humano. Solo sin corte pendiente aplica la máquina de estados de `.claude/state/batch-expected`:
 
 - `phase=launched` + terminal con identidad completa coincidente ⇒ la review terminó sin consumirse: relanzá un hijo fresco para ese feature — retoma leyendo el terminal.
 - `phase=launched` + terminal ausente o de otra identidad ⇒ review posiblemente en vuelo: **no relances** — RECAP con lo encontrado.
@@ -132,6 +145,7 @@ Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inc
 # Lote YYYY-MM-DD — `/feature <comando>`
 
 ## Gate
+- tipo: `lote`
 - Autorizado: <fecha> — «<literal breve del humano>»
 - Features (en orden): NN, NN…  · Exclusiones/correcciones: <literales, o «ninguna»>
 - gate_base: <SHA de HEAD al autorizarse, previo al commit de este ledger>
