@@ -11,7 +11,7 @@ Ejecutar varios features priorizados del plan de una sola corrida, uno tras otro
 - `/feature` sin argumento: contrato actual **intacto** — un feature, gate individual, RECAP, OK.
 - `/feature all`: todos los features pendientes del plan, en el orden del plan.
 - `/feature NN..MM`: rango contiguo de features pendientes (p. ej. `/feature 07..09`).
-- El batch es opt-in explícito y visible en el comando; no hay modo batch implícito.
+- El batch es opt-in explícito y visible en el comando; no hay modo batch implícito. *(Reinterpretado por [implicit-entry.md](implicit-entry.md), 2026-07-29: lo que protege el opt-in es la autorización del gate de lote, no la forma de invocación — el ruteo implícito puede despachar a `/feature all` ante un pedido inequívoco, y el gate sigue siendo el habilitante.)*
 
 ## Qué reemplaza al OK por feature
 

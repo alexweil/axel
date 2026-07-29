@@ -1,8 +1,8 @@
 # STATUS
 
-- **Fase**: feature 07 **cerrado** (APPROVED de Codex r8 + OK humano, 2026-07-28) — **plan completo**: no queda feature pendiente
-- **Feature en curso**: ninguno — backlog vacío
-- **Ronda de review**: —
-- **Último veredicto**: APPROVED · ronda 8 · base `2d5d30d`
-- **Esperando**: decisión del humano — `/plan` si quiere extender el backlog (los features nuevos podrían estrenar el modo lote)
-- **Actualizado**: 2026-07-28
+- **Fase**: design — **entrada implícita** (nivel 1: ruteo por contexto; nivel 2: pipeline `/build`, POC-first como caso particular), consolidada en [design/implicit-entry.md](design/implicit-entry.md); entrando al loop de review
+- **Feature en curso**: ninguno (fase de diseño; el plan previo quedó completo)
+- **Ronda de review**: r1 por lanzar (sesión nueva de Codex)
+- **Último veredicto**: — (ciclo nuevo)
+- **Esperando**: review r1 de Codex sobre el diseño de entrada implícita
+- **Actualizado**: 2026-07-29
