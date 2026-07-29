@@ -27,8 +27,8 @@ Hay un feature en curso **sin** ledger de lote (bajada fina, implementación, o 
 - **Doc del feature ausente o incompleto** (faltan secciones, sin criterios de cierre): retomá la **bajada fina** (paso 4 de abajo).
 - **Doc completo, `Ronda: —`**: review de la bajada (`scripts/review.sh new`).
 - **`CHANGES_REQUESTED` consumido**: atendé los puntos que el Review log **no** registre como atendidos —los commits mandan, jamás reproceses a ciegas— → commit → `round`.
-- **`APPROVED` de la bajada consumido**: implementación en pasos chicos (paso 6).
-- **`APPROVED` de cierre con los criterios cumplidos**: camino de cierre (paso 7).
+- **`APPROVED` consumido con los criterios de cierre todavía incompletos** (el de la bajada, o el de cualquier paso intermedio de implementación): seguí con la implementación en pasos chicos (paso 6), desde el punto que marque el Review log.
+- **`APPROVED` consumido con los criterios de cierre cumplidos**: camino de cierre (paso 7).
 - **Inconsistencia** (STATUS contra IMPLEMENTATION.md o el git log; feature en curso que no coincide con el doc): RECAP con lo encontrado, sin adivinar.
 
 ## Feature nuevo (STATUS no apunta a ninguno en curso)
@@ -126,6 +126,6 @@ Nunca re-pidas el gate autorizado ni re-cierres lo aprobado. El resto de las inc
 - Reviews largas (xhigh puede tardar >10 min): corré `scripts/review.sh` con Bash en background (`run_in_background`) y continuá cuando termine. No dupliques una review en curso.
 - Tope de 5 rondas sin convergencia, cambio de scope, o algo roto que excede el feature → cortá a RECAP temprano con las posturas de ambos agentes. Todo RECAP sigue la skill `recap` (estructura y aviso — el criterio de cuándo va push vive ahí).
 - `review.sh` exit 2: mirá el stderr. Si dice `DEADLOCK` **no reintentes**: armá el RECAP con ambas posturas y esperá el desempate humano; con su OK corré `scripts/review.sh reset-deadlock` y seguí según lo que él decida. Si fue una falla de proceso (codex caído, sin mensaje final), `review.sh` **ya la reintentó una vez** — diagnosticá con `.claude/state/last-review-events.jsonl` (y `last-review-events.failed.jsonl`, el intento fallido); solo si la causa es claramente transitoria relanzá la ronda una vez más, y si persiste, RECAP con el problema. Si fue un veredicto inválido (mensaje entregado sin la línea exacta), no es transitorio: relanzá una ronda recordándole el contrato al reviewer, y si se repite, RECAP.
-- **Token de ronda** (lo que hace reentrable el feature): el commit previo a cada review declara `N · lanzada` en STATUS, con `N` derivado de `.claude/state/round`; el commit siguiente al desenlace declara `N+1 · lanzada` si vuelve a invocar, o `N · consumida` si no. Vocabulario, transiciones y precondición de la ronda siguiente: `docs/design/review-contract.md` §Reentrada.
+- **Token de ronda** (lo que hace reentrable el feature): el commit previo a cada review declara el token en STATUS — con `new`, `1 · lanzada` **sin derivar** (`new` publica siempre 1, y el contador puede traer el valor del ciclo anterior); con `round`, `N` = `.claude/state/round` + 1. El commit siguiente al desenlace declara `N+1 · lanzada` si vuelve a invocar, o `N · consumida` si no. Vocabulario, transiciones y precondición de la ronda siguiente: `docs/design/review-contract.md` §Reentrada.
 - Todo commit toca algún doc. `main` lineal, sin amend.
 - Mensajes del humano a mitad del loop: prioridad absoluta — respondé y ajustá antes de seguir.

@@ -121,7 +121,7 @@ Los rechazos **pre-invocación** (`DEADLOCK`, `INPUT_ERROR`) publican `round=-` 
 
 Se evalúa **antes de elegir el token y commitear**, al lanzar — jamás en la reentrada. Dos chequeos sobre el estado local, del que salen los dos números que tienen que coincidir:
 
-1. `.claude/state/round` presente y **numérico**: el token se deriva de ahí (`N` = `round` + 1, lo mismo que `review.sh round` va a calcular) y debe coincidir con la ronda recién consumida (`round` = `N-1`). El primer lanzamiento de un ciclo no necesita derivación: `new` publica siempre `1`.
+1. `.claude/state/round` presente y **numérico**: el token se deriva de ahí (`N` = `round` + 1, lo mismo que `review.sh round` va a calcular) y debe coincidir con la ronda recién consumida (`round` = `N-1`). El primer lanzamiento de un ciclo no necesita derivación **y no debe derivarse**: `new` publica siempre `1`, y hasta que la invocación reescriba el contador este puede conservar el valor del ciclo anterior — derivar ahí daría un token distinto del `round=1` publicado.
 2. `.claude/state/codex-session-id` presente y del ciclo vigente — sin él, `round` cae en `resume --last` y puede retomar la sesión de otro feature.
 
 Desenlaces: **pérdida** del estado local (contador ausente o no numérico, o session id ausente) ⇒ no invocar `round`: reabrir con `new`, declarar `1 · lanzada` y registrar la ronda acumulada y la racha rearmada. **Contador numérico pero distinto del esperado** ⇒ hubo una invocación que el ciclo no registra ⇒ corte conservador (RECAP), sin invocar nada: un estado local incoherente no se repara adivinando, ni gastando una review cuyo desenlace la identidad va a rechazar.
