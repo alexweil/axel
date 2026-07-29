@@ -254,3 +254,10 @@ Primera ronda sobre la **implementación**. El reviewer dio por bien implementad
 4. **La matriz resuelta declaraba 22 filas y tenía 21 físicas**: E2 y E3 estaban combinadas en una sola línea. Sin hueco de cobertura, pero C7 exige el conteo literal. **Aceptado**: separadas; ambas matrices verificadas por conteo en **22** filas.
 
 **Dato que cierra la discrepancia de `loop.sh`**: Codex confirmó que en su sandbox se **saltea la clase L5** — esos son los seis casos entre sus 287 y los 293 del repo canónico. La nota de verificación queda actualizada con la causa, ya no como diferencia inexplicada.
+
+### r6 (base `e6d26e2` → `74d3f5c`) — **APPROVED de cierre**
+
+Sin observaciones accionables: «Los cuatro puntos de r5 quedaron corregidos y los **nueve criterios de cierre se cumplen**». Verificación independiente del reviewer: ambas matrices con 22 filas, cinco sustituciones, diff mínimo de `feature`, espejo de la regla entre `AGENTS.md` y plantilla, fila de `DESIGN.md` integrada en la tabla, §10 preservada con su nota de reversión, docs de estado coherentes, árbol y `git diff --check` limpios, y ningún cambio en `scripts/` ni `tests/` (las suites habían quedado verificadas en la r5; este commit solo tocaba documentación).
+
+**Seis rondas, dos ciclos**: r1–r4 sobre la bajada (APPROVED en r4) y r5–r6 sobre la implementación. La sustancia se acordó temprano en cada uno —Codex aceptó desde la r1 los alias de familia, el override por gate y el deslinde de la plantilla, y desde la r5 la maquinaria implementada—; los pedidos fueron de completitud y de precisión: el encaje de la degradación con el orden durable de spawn (r1–r2, el más valioso: la proveniencia se perdía sin commitear antes del fallback), la autosuficiencia de la matriz (r1), el deslinde payload/semilla (r1, r5) y cuatro defectos periféricos de la implementación (r5). El feature queda **APPROVED — pendiente OK de pipeline**: el OK humano llega con el RECAP consolidado, no individual.
+
