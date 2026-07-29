@@ -9,6 +9,12 @@
 # el repo axel real jamás participa. Exit 0 = toda la matriz en verde.
 set -euo pipefail
 
+# Hermeticidad del entorno: la suite setea los overrides que necesita POR CASO (L2 modelo/
+# esfuerzo, L8 retries, L9–L11 el id de invocación). Un AXEL_REVIEW_* heredado del shell
+# rompe justamente los casos que verifican el default — y el shell típico es el de una review
+# de lote, donde review.sh corre con AXEL_REVIEW_ID seteado (L10 falla ahí si no se limpia).
+unset AXEL_REVIEW_MODEL AXEL_REVIEW_EFFORT AXEL_REVIEW_SANDBOX AXEL_REVIEW_RETRIES AXEL_REVIEW_ID
+
 AXEL_REAL="$(cd "$(dirname "$0")/.." && git rev-parse --show-toplevel)"
 TESTS_TMP="$(mktemp -d "${TMPDIR:-/tmp}/axel-loop-tests.XXXXXX")"
 TESTS_TMP="$(cd "$TESTS_TMP" && pwd -P)"   # canónico: los paths de `git worktree list` se comparan literales
