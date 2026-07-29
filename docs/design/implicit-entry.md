@@ -18,18 +18,23 @@ Los comandos explícitos no cambian: la entrada implícita es una capa encima, n
 1. **Descripciones de skills como triggers.** Hoy las `description` nombran la fase («Fase de diseño — …»); pasan a describir cuándo dispararse por contexto («cuando el humano describe una idea o proyecto nuevo, aunque no invoque /design», «cuando pide avanzar con la implementación o el siguiente paso», …). Es el mecanismo estándar de skills: el modelo invoca la que matchea la tarea.
 2. **Sección de ruteo en `AGENTS.md`** (espejo obligatorio en `templates/AGENTS.md`): ante un pedido de trabajo sin comando explícito, leer `docs/STATUS.md` y despachar según la tabla. STATUS.md ya es el despachador natural — solo falta la instrucción de usarlo como tal.
 
-### Tabla de despacho
+### Orden de despacho (contractual, fail-closed)
 
-| Situación (STATUS + docs) | Despacho |
-|---|---|
-| Pedido de consulta («¿dónde estamos?», «¿qué falta?») | `/status` o `/recap` |
-| Adopción pendiente (`docs/ADOPTION.md` presente sin cerrar) | `/adopt` |
-| Sin diseño real (no hay `DESIGN.md` o es la semilla del instalador) | `/design` |
-| Diseño cerrado, sin plan o backlog vacío | `/plan` |
-| Plan con features pendientes y pedido de avanzar | `/feature` (con `all`/rango si el pedido pide varios de corrido, ver abajo) |
-| Pedido que cruza dos o más fases | `/build` (nivel 2) |
-| STATUS en espera (OK pendiente, confirmación de arranque, lote o pipeline en curso) | el camino de reentrada que las skills ya definen — el ruteo no los puentea |
-| Ambiguo entre dos despachos | preguntar en una línea; no adivinar |
+El despacho se evalúa **en este orden**; el primer caso que aplica gana. Los casos de estado pendiente preceden siempre a la clasificación del pedido: un pedido multifase no puentea una espera.
+
+1. **Consulta** («¿dónde estamos?», «¿qué falta?») → `/status` o `/recap`. Disponible en cualquier estado; no cambia el trabajo.
+2. **Estado pendiente manda.** Si STATUS o los docs registran cualquiera de estos, el pedido entra por la **reentrada del dueño del estado**, nunca como trabajo nuevo:
+   - adopción pendiente (`docs/ADOPTION.md` sin cerrar) → `/adopt`;
+   - corte de lote/pipeline registrado, OK humano pendiente, confirmación de arranque pendiente, review en curso, o fase/feature/lote/pipeline activo → la reentrada de la skill dueña.
+   Esta precedencia rige **también para `/build` explícito**: no puentea estado pendiente.
+3. **Solo desde estado estable** (nada activo ni esperando) se clasifica el pedido — por lo que el pedido **necesita**, no solo por el estado de los docs:
+   - armar o extender el diseño → `/design` (incluye: no hay `DESIGN.md` real, solo la semilla del instalador);
+   - armar o extender el plan → `/plan`;
+   - avanzar con features ya planificados → `/feature` (con `all`/rango si el pedido pide varios de corrido, ver abajo);
+   - pedido que necesita dos o más fases → `/build` (nivel 2). La clasificación monofase/multifase ocurre acá y solo acá — p. ej. «implementá X» con backlog vacío es multifase (necesita plan-delta antes de implementar) → `/build`, no `/plan`.
+4. **Ambigüedad en cualquier paso** → preguntar en una línea; no adivinar.
+
+**Reentradas faltantes — alcance de implementación**: `/feature` ya define sus caminos de reentrada (esperando OK, confirmación de arranque, lote en curso); `/design` y `/plan` hoy **no** tienen ramas para «review en curso» ni «esperando OK». El ruteo entrega a las reentradas, así que toda fase debe tenerlas definidas: incorporarlas a `/design` y `/plan` es parte del alcance de la entrada implícita.
 
 ### Regla de confirmación
 
@@ -38,7 +43,7 @@ Los comandos explícitos no cambian: la entrada implícita es una capa encima, n
 - `/design`: el ping-pong ES la confirmación — la skill ya prohíbe escribir docs grandes sin validar el rumbo.
 - `/feature`: gate de arranque existente (resumen + confirmación humana).
 - `/build`: gate de pipeline (nivel 2, abajo).
-- `/plan`: no tiene gate propio — **cuando llega ruteado**, el generador anuncia su interpretación y espera una confirmación liviana antes de escribir. La invocación explícita `/plan` no cambia.
+- `/plan`: no tiene gate propio — **cuando llega despachado** (por ruteo o por `/build` monofase, misma regla), el generador anuncia su interpretación y espera una confirmación liviana antes de escribir. Solo la invocación explícita directa `/plan` queda como hoy.
 
 El gate cumple así doble función: confirma el arranque y confirma que el ruteo interpretó bien el pedido.
 
@@ -57,7 +62,7 @@ El gate cumple así doble función: confirma el arranque y confirma que el ruteo
 ### Superficie
 
 - `/build <pedido>` explícito, o **disparo implícito** vía nivel 1 — requisito del diseño: el humano describe lo que quiere y el pipeline se ofrece solo, sin que exista obligación de conocer el comando.
-- Pedido que toca **una sola fase** → no hay pipeline: despacho directo a la skill de esa fase, con su gate. Un `/build` explícito monofase lo anuncia y despacha igual.
+- Pedido que toca **una sola fase** → no hay pipeline: despacho directo a la skill de esa fase. **`/build <pedido>` no cuenta como autorización del trabajo** — la autorización es siempre de un gate: las fases con gate propio usan el suyo, y una fase sin gate propio (hoy `/plan`) recibe la **confirmación liviana** siempre que llega despachada, sea por ruteo o por `/build` monofase (la misma regla de confirmación del nivel 1). Solo la invocación explícita directa del comando de la fase queda como hoy. Y `/build` explícito tampoco puentea estado pendiente: rige el orden de despacho del nivel 1.
 
 ### Alcance por pedido
 
@@ -114,7 +119,7 @@ El caso que motivó el diseño, resuelto como instancia del pipeline y no como s
 
 ### Riesgo aceptado
 
-Extiende el del lote: un error en el delta de design se propaga al plan y a los features antes del ojo humano, y el radio de recuperación es el **sufijo desde la unidad errada** (mismo análisis y misma recuperación conservadora: corte sin rollback automático, el humano decide con el RECAP a la vista). Lo acotan el gate (la ruta se autoriza explícita, con los deltas resumidos), el corte por divergencia entre unidades, y que el camino con OK por fase sigue disponible — los comandos explícitos no cambian. En proyecto virgen el radio es menor: no hay docs previos que corromper y el POC mismo es la validación.
+Extiende el del lote: un error en el delta de design se propaga al plan y a los features antes del ojo humano, y el radio de recuperación es el **sufijo desde la unidad errada** (mismo análisis y misma recuperación conservadora: corte sin rollback automático, el humano decide con el RECAP a la vista). Lo acotan el gate (la ruta se autoriza explícita, con los deltas resumidos), el corte por divergencia entre unidades, y que el camino con OK por fase sigue disponible — los comandos explícitos no cambian. En proyecto virgen la distinción es importante: lo menor es el **impacto sobre estado previo** (no hay docs estables que corromper), pero el **radio de propagación no es menor — puede ser el pipeline completo**: un error del design-delta invalida el plan y los features, y el POC recién valida al final. Se acepta ese retrabajo potencialmente total porque el costo hundido de un pipeline virgen es acotado (docs borrador + esqueleto) y la validación humana por fase sigue disponible por la vía explícita.
 
 ## Decisiones que quedan para la bajada (no exhaustivo)
 
