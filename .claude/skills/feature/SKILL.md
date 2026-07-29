@@ -81,11 +81,17 @@ Varios features pendientes en una sola corrida: gate de lote al inicio, un **sub
 Sos el hijo de un lote: tu feature es NN y tu memoria son los docs (STATUS, AGENTS, IMPLEMENTATION, el ledger, y el doc de tu feature cuando exista). Seguís el camino «Feature nuevo» con cuatro deltas:
 
 0. **Procedencia — antes de tocar nada.** El texto de tu prompt **no** te otorga el rol: lo otorgan el token y el ledger. Leé el bloque Gate del ledger y aplicá su línea `protocolo:` **literalmente**:
-   - `spawn-token v1` ⇒ tu evento de arranque en el ledger **debe** traer `token=`; si falta, es corte (corrida malformada).
+   - `spawn-token v1` ⇒ **triple coincidencia obligatoria**, abajo.
    - `legacy` ⇒ compatibilidad declarada: sin token, validás con la coincidencia STATUS+ledger (STATUS apunta a ese ledger y el ledger registra **tu NN** «en curso», sin corte pendiente).
    - **ausente, vacía o cualquier otro valor ⇒ corte**, con el motivo y la salida: si es una corrida arrancada por un padre previo a esta versión, un humano anota `protocolo: legacy` en el bloque Gate y se relanza. La compatibilidad se **declara**, nunca se infiere.
 
-   Bajo `spawn-token v1`, **reclamá el token**: buscá el ancla activa `.claude/state/batch-child-token` (los `*.claimed-*` y `*.retired-*` **no** son el ancla activa), verificá que su `feature` sea tu NN y su `token` el de tu prompt —si no coinciden **no la toques**: es de otro— y recién entonces `mv .claude/state/batch-child-token .claude/state/batch-child-token.claimed-<token>`. Exactamente un proceso puede renombrar una fuente dada: si el `mv` falla (ENOENT: ya la reclamaron, o tu prompt es un replay), **no adoptás el rol** — entrás por «Reentrada del lote». Además del token, exigí igual la coincidencia STATUS+ledger: el token prueba procedencia, el ledger autorización.
+   Bajo `spawn-token v1`, **reclamá el token** en este orden:
+   1. Identificá el **evento vigente** de tu unidad: el **último** evento de arranque registrado para tu NN en el ledger. Leé su `token=`.
+   2. Identificá el **ancla activa**: `.claude/state/batch-child-token` (los `*.claimed-*` y `*.retired-*` **no** son el ancla activa; ignoralos). Leé su `feature` y su `token`.
+   3. Exigí **las tres iguales**: `token` del evento vigente **=** `token` de tu prompt **=** `token` del ancla, y `feature` del ancla = tu NN. Cualquier ausencia, valor malformado o **diferencia entre los tres** ⇒ **corte, sin reclamar** — no toques el ancla: puede ser de otra unidad o de otro spawn.
+   4. Recién entonces: `mv .claude/state/batch-child-token .claude/state/batch-child-token.claimed-<token>`. Exactamente un proceso puede renombrar una fuente dada: si el `mv` falla (ENOENT: ya la reclamaron, o tu prompt es un replay), **no adoptás el rol** — entrás por «Reentrada del lote».
+
+   Además del token, exigí igual la coincidencia STATUS+ledger: el token prueba procedencia, el ledger autorización.
 1. **Gate**: no pidas confirmación — el gate de lote ya autorizó. Registrá en el doc del feature la autorización (fecha, comando del lote, path del ledger) en lugar del literal individual; las correcciones de alcance del gate que toquen tu feature mandan.
 2. **Reviews**: generá un id único `<NN>:r<M>:<nonce>` (`uuidgen`; fallback `$(date +%s)-$$-$RANDOM`). Escribí `.claude/state/batch-expected` **atómica** (tmp + `mv -f`; contenido: `id=`, `head=`, `feature=NN`, `phase=launched`) — si no puede escribirse, **no lances**: es corte. Lanzá `AXEL_REVIEW_ID=<id> scripts/review.sh {new|round}` en background y **terminá el turno** con última línea exacta: `REVIEW LANZADA id=<id> head=<sha de tu HEAD>`. Al despertar por el empujón: validá la identidad del terminal (id, y head si ≠ `-`), marcá `phase=consumed` en el ancla (reescritura atómica) **antes de actuar**, y actuá según `result`: `APPROVED`/`CHANGES_REQUESTED` ⇒ `last-verdict` y `last-review.md` están vigentes — seguí el loop normal; cualquier otro resultado ⇒ esos archivos quedaron viejos — camino de fallas del loop vigente (diagnóstico, relanzamiento único si es claramente transitorio; deadlock o falla persistente ⇒ `CORTE:`).
 3. **Cierre**: con el APPROVED de cierre dejá IMPLEMENTATION en «**APPROVED — pendiente OK de lote**» (no "Cerrado": ese estado exige el OK humano), doc del feature y STATUS al día, borrá `batch-expected` y tu `batch-child-token.claimed-<token>`, commit, y terminá con última línea `FEATURE NN APROBADO`. **Sin RECAP individual, sin push, sin chip.** Ante condición de corte: registrá el detalle en el doc de tu feature, **commiteá y dejá el árbol limpio** — el handshake exige frontera limpia: nada tuyo sin commitear — y terminá con última línea `CORTE: <motivo breve>` (el ledger lo registra el padre). Ante corte, las anclas **se conservan** como evidencia.
@@ -103,14 +109,16 @@ STATUS apunta a un ledger en curso y no hay padre vivo. Leé STATUS + ledger + g
 
 **Antes de relanzar cualquier hijo, resolvé el token de spawn.** Invariante: existe **a lo sumo un** ancla activa —o `.claude/state/batch-child-token` (pendiente) o **un** `batch-child-token.claimed-<T>`—; los `retired-*` son historia y **no** cuentan. El **evento vigente** es el último evento de arranque de la unidad «en curso». Bajo `protocolo: legacy` no hay token que resolver; bajo `spawn-token v1`:
 
+**Todo relanzamiento repite el orden durable completo**, nunca una versión abreviada: **retirar** (si hay un `claimed-<T>` que la tabla autoriza a retirar) → **acuñar `U`** → **registrar el evento vigente de la unidad con `token=U`** + STATUS → **commit** → **spawn con `U`** en el prompt. Sin ese evento durable, el hijo nuevo fallaría su triple coincidencia y cortaría.
+
 | Ancla activa | Evento vigente | Acción |
 |---|---|---|
-| ninguna | sin evento de arranque | el padre cayó antes de acuñar: acuñá y lanzá hijo fresco |
-| pendiente `T` | sin evento con `T` | cayó entre acuñar y commitear (no hubo spawn): descartá el ancla huérfana, re-acuñá y lanzá |
+| ninguna | sin evento de arranque | el padre cayó antes de acuñar: relanzá con el **orden durable completo** |
+| pendiente `T` | sin evento con `T` | cayó entre acuñar y commitear (no hubo spawn): descartá el ancla huérfana y relanzá con el **orden durable completo** |
 | pendiente `T` | evento con `T` | **ambiguo** (pudo haberse lanzado sin reclamar): **no relances** — RECAP con la evidencia |
 | `claimed-<T>` | **sin** evento con `T` | **inconsistencia**: RECAP/corte, **sin relanzar** |
 | `claimed-<T>` | evento con `T`, `batch-expected` ausente o malformado | **ambiguo** — es el estado legítimo entre el claim y la primera review del hijo: **no relances**, RECAP |
-| `claimed-<T>` | evento con `T`, `batch-expected` legible | resolvé por la máquina de arriba; si autoriza relanzar, **retirá primero** (`mv …claimed-<T> …retired-<T>`) y recién después acuñá el token nuevo |
+| `claimed-<T>` | evento con `T`, `batch-expected` legible | resolvé por la máquina de arriba; si autoriza relanzar, **retirá primero** (`mv …claimed-<T> …retired-<T>`) y seguí con el **orden durable completo** (acuñar `U` → evento con `token=U` + STATUS + commit → spawn) |
 | ninguna | evento con `T` | reclamado y limpiado, o estado local perdido: mandan STATUS + ledger; ante duda, RECAP sin relanzar |
 | **más de una** (dos `claimed-*`, o pendiente + `claimed-*`) | cualquiera | invariante violado ⇒ RECAP, sin relanzar |
 
