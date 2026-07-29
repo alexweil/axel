@@ -22,7 +22,7 @@ Los comandos explícitos no cambian: la entrada implícita es una capa encima, n
 
 El despacho se evalúa **en este orden**; el primer caso que aplica gana. Los casos de estado pendiente preceden siempre a la clasificación del pedido: un pedido multifase no puentea una espera.
 
-1. **Consulta** («¿dónde estamos?», «¿qué falta?») → `/status` o `/recap`. Disponible en cualquier estado; no cambia el trabajo.
+1. **Consulta** («¿dónde estamos?», «¿qué falta?») → **solo `/status`**: lectura pura, disponible en cualquier estado, no cambia el trabajo. `/recap` **no es consulta**: su skill fija «esperando OK», commitea y frena el turno — el ruteo nunca lo elige para una pregunta genérica. Un pedido **explícito** de RECAP del humano sí llega ahí, con esa semántica de checkpoint: a mitad de loop equivale a pedir un checkpoint temprano. *(Alcance de implementación: corregir la línea de `AGENTS.md` que presenta `/recap` como consulta que «no cambia el trabajo», con su espejo en plantilla.)*
 2. **Estado pendiente manda.** Si STATUS o los docs registran cualquiera de estos, el pedido entra por la **reentrada del dueño del estado**, nunca como trabajo nuevo:
    - adopción pendiente (`docs/ADOPTION.md` sin cerrar) → `/adopt`;
    - corte de lote/pipeline registrado, OK humano pendiente, confirmación de arranque pendiente, review en curso, o fase/feature/lote/pipeline activo → la reentrada de la skill dueña.
@@ -34,7 +34,7 @@ El despacho se evalúa **en este orden**; el primer caso que aplica gana. Los ca
    - pedido que necesita dos o más fases → `/build` (nivel 2). La clasificación monofase/multifase ocurre acá y solo acá — p. ej. «implementá X» con backlog vacío es multifase (necesita plan-delta antes de implementar) → `/build`, no `/plan`.
 4. **Ambigüedad en cualquier paso** → preguntar en una línea; no adivinar.
 
-**Reentradas faltantes — alcance de implementación**: `/feature` ya define sus caminos de reentrada (esperando OK, confirmación de arranque, lote en curso); `/design` y `/plan` hoy **no** tienen ramas para «review en curso» ni «esperando OK». El ruteo entrega a las reentradas, así que toda fase debe tenerlas definidas: incorporarlas a `/design` y `/plan` es parte del alcance de la entrada implícita.
+**Reentradas — inventario real y alcance de implementación**: el ruteo entrega a las reentradas, así que toda fase debe tener las suyas definidas. Hoy `/feature` cubre «esperando OK», «esperando confirmación de arranque» y el lote (autorización pendiente, reentrada por ledger), pero **no** el feature individual **activo** — en bajada, implementación o con review en vuelo; y `/design` y `/plan` no tienen ramas para «review en curso» ni «esperando OK». Incorporar todas es alcance de la entrada implícita, con la misma semántica fail-closed de la reentrada del lote: reconstrucción desde STATUS, el doc de la fase o feature (Review log incluido) y el estado de review en `.claude/state/` (ronda, señal terminal), **sin relanzar ni duplicar una review en vuelo**; ante inconsistencia, RECAP sin adivinar.
 
 ### Regla de confirmación
 
