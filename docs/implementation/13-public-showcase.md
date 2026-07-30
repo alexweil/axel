@@ -663,6 +663,15 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 
 ## Review log
 
+### r14 (base `61a6c32`, HEAD `2289975`) — CHANGES_REQUESTED · 2 puntos · 1 corregido, 1 ya resuelto fuera del snapshot
+
+Codex dio por cerrados **todos los artefactos**: «no dejo observaciones de preferencia ni defectos en los artefactos». C14 `rc=0` con 7/6 paths y `rc=1` con `FAIL` y `diff`; 45/45 tokens; **23 links sin roturas**; **7/7 anclas**; 15 secciones; tamaños correctos; lint limpio, `loop.sh` 287/0, `install.sh` 460/0. Lo que queda es bookkeeping de estado.
+
+1. **STATUS no había consumido la r13**: anunciaba la r14 y racha 3, pero declaraba como último veredicto la **r12**, salteándose una ronda entera. **Aceptado y corregido.** Es la **tercera** vez en esta unidad que STATUS queda atrás del review log versionado —el review log siempre estuvo bien—, así que el patrón queda anotado: mi bookkeeping de STATUS es el punto flojo del ciclo, y el review log es la fuente confiable para reconstruirlo.
+2. **El compromiso falso del ledger** — **ya estaba resuelto cuando la review corrió, y Codex no podía verlo**: `a24abac` es posterior a su snapshot `2289975` (verificado con `git merge-base --is-ancestor`). El padre lo reenunció como **regla** —no commitea durante el ciclo *salvo para corregir una falsedad vigente*, y en ese caso el SHA entra a `AUTORIZADOS` en la misma ronda—, `a24abac` entró a C14 como séptimo SHA y STATUS ancló el compromiso posterior a él.
+
+   Vale registrarlo porque es el **caso inverso** del que motivó el criterio de cierre de esta unidad: si un `APPROVED` clavado a un head viejo no cubre lo posterior, un `CHANGES_REQUESTED` clavado a un head viejo puede **pedir algo ya hecho**. Las dos caras son la misma propiedad del worktree snapshot, y las dos se resuelven igual: declarando explícitamente qué commits quedaron fuera de la review.
+
 ### r13 (base `61a6c32`, HEAD `45cc35f`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 escalado
 
 Codex verificó que el bloque de C14 funciona con el conjunto de seis —`rc=0`, 7 paths totales y 6 del hijo; quitando `f6fce39`, `rc=1` con el `diff`— y dio por coincidentes 28 pedidos, seis SHA autorizados, 15 secciones, los tamaños `21/1065`, `183/10989` y `374/21148`, el alcance por commit y `git diff --check` limpio. Sin observaciones de preferencia. Los tres puntos son de la misma familia otra vez, y esta vez la ironía es completa: **el commit que arregló una cifra dejó desincronizadas otras tres**.
