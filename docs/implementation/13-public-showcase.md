@@ -518,7 +518,7 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 4. **Traducir mientras se muda puede perder un caso en silencio.** Mitigación: la partición (A)/(B) — lo invariante de idioma se chequea con una lista de **45 tokens** producida por un extractor versionado, y la prosa contra un mapa que cubre las **36 líneas con contenido** del baseline, con la cobertura derivada y no afirmada.
 5. **El one-liner probado corre contra el remoto, que está detrás del local.** Mitigación: declarado en §4; el README no afirma nada sobre el contenido no pusheado.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Es una línea y está a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
-7. **«No perder nada» no es «entregar lo diseñado».** Riesgo que la r1 encontró y que no estaba en esta lista: un manual podía pasar C3 y C5 con la mitad del contenido nuevo ausente. Mitigación: C6–C9, que verifican completitud contra listas cerradas —14 secciones, 3 problemas conocidos, el aviso MIT, 6 objeciones— en vez de contra el criterio de quien revisa.
+7. **«No perder nada» no es «entregar lo diseñado».** Riesgo que la r1 encontró y que no estaba en esta lista: un manual podía pasar C3 y C5 con la mitad del contenido nuevo ausente. Mitigación: C6–C9, que verifican completitud contra listas cerradas —**15** secciones, 3 problemas conocidos, el aviso MIT, 6 objeciones— en vez de contra el criterio de quien revisa. (El «14» que decía acá era el conteo de la bajada; §Language entró durante la implementación y C6 se actualizó, pero esta mitigación había quedado atrás. Las menciones de 14 dentro del Review log **se conservan**: describen el estado de su ronda.)
 8. **Un procedimiento que verifica su propio enunciado en vez del artefacto.** Es el patrón común de los tres puntos de la r1 y de dos de la r2: el mapa escrito no prueba que el mapa se haya implementado, y un reductor que cuenta filas no prueba que cuente rondas. Mitigación: C5 recorre los artefactos finales fila por fila, el normalizador tiene su prueba sintética con reintento, y la reconstrucción del corte tiene sus cuatro modos de falla probados.
 
 ## Verificación del cierre
@@ -621,13 +621,50 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests. El reviewer obtuvo **287** en `loop.sh` por la causa conocida —su sandbox saltea los seis asserts del smoke no contractual de `caffeinate`—, no por una divergencia.
 
-**C14 — alcance.** El diff de **mis** commits, `git diff --stat ee1e8ca..HEAD`, toca exactamente seis archivos: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**.
+**C14 — alcance, demostrado sobre el estado real.** La versión anterior publicaba «seis archivos, un commit del padre» y hoy sus propios comandos devuelven **siete** y **cinco**: el padre commiteó al ledger cinco veces a lo largo del ciclo —arranque, dos registros de anomalía, el corte y el desempate—. El alcance real nunca dejó de ser válido; lo que estaba mal era la evidencia, que se contradecía al ejecutarla. Se reescribe para demostrar el estado **tal como es**, y con una partición **mecánica** —«toca el ledger o no»— que no depende de leer mensajes de commit ni de confiar en la autoría.
 
-Precisión que conviene dejar escrita: el rango desde el SHA de arranque de la unidad, `284ace4..HEAD`, muestra **además** el ledger `pipeline-2026-07-29-3.md`. No es mío — es el commit `ee1e8ca` con que el **padre** registró el arranque de esta unidad, y cae dentro del rango porque el SHA de inicio precede a ese commit. Verificado con `git log 284ace4..HEAD -- docs/implementation/pipeline-2026-07-29-3.md`, que devuelve ese único commit. **El hijo no editó territorio del padre.**
+Las cifras que siguen son **invariantes bajo mis propios commits siguientes**, a propósito: el total de commits del rango crece con cada corrección mía y por eso no se publica —es la misma trampa que envejeció la versión anterior—. Lo que se publica son los paths y la partición, que no se mueven.
+
+```sh
+L=docs/implementation/pipeline-2026-07-29-3.md; R=284ace4..HEAD
+
+# 1) unión de paths del rango ⇒ 7, todos autorizados
+git log --format= --name-only $R | grep -v '^$' | sort -u
+
+# 2) mis commits son los que NO tocan el ledger; su unión de paths ⇒ los 6 autorizados
+git log --format=%H $R | while read -r c; do
+  git show --format= --name-only "$c" | grep -qx "$L" || git show --format= --name-only "$c"
+done | grep -v '^$' | sort -u
+
+# 3) los commits que tocan el ledger, enumerados ⇒ 5, todos del padre
+git log --format='%h %s' $R -- "$L"
+
+# 4) ninguno de ellos es mío ⇒ 0
+git log --format='%s' $R -- "$L" | grep -c '^feature 13'
+```
+
+| Comprobación | Resultado |
+|---|---|
+| paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
+| paths de **mis** commits (todos los que no tocan el ledger) | **6** — los mismos menos el ledger, que no aparece |
+| commits que tocan el ledger | **5**, todos del padre: `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) |
+| de esos, míos | **0** |
+| qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
+
+Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**. El padre se comprometió, y lo dejó escrito en el ledger y en STATUS, a no commitear a ese archivo mientras este ciclo esté abierto, así que a partir de `573814d` el rango solo lo mueve el hijo y esta evidencia deja de envejecer sola.
 
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r10 (base `61a6c32`, HEAD `c826776`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados · **la que llegó al tope**
+
+Fue la quinta ronda sin converger, así que el padre **cortó la unidad** y llevó las dos posturas al humano. El desempate fue **«a)»**: se autorizan las dos correcciones, la unidad se reanuda con la racha reseteada por el camino contractual (`scripts/review.sh reset-deadlock`, no edición del contador), la numeración **no** se reinicia, y el alcance queda acotado a estos dos puntos — ampliar es divergencia. No es el OK consolidado del pipeline: `design` y `plan` siguen esperándolo.
+
+Vale registrar qué clase de deadlock fue, porque no fue de desacuerdo: **los diez puntos de las cinco rondas se aceptaron sin argumentar ninguno**, y Codex verificó el correctivo de la r9 ejecutando el script publicado —camino feliz con Python y Gradle positivos, seis negativos y `rc=0`; falla con `rc=1`, salida estándar vacía, diagnóstico explícito y limpieza del temporal—. Dio además por cerrados 45/45 tokens, cero links rotos, tamaños, 35,0 %, 15 secciones, lint, `loop.sh` 287/0 e `install.sh` 460/0, y **sin observaciones de preferencia**. El tope se alcanzó por acumulación de bookkeeping, no por dos posturas irreconciliables.
+
+1. **C14 publicaba evidencia de alcance que ya no coincidía con sus propios comandos.** `git diff --name-only ee1e8ca..HEAD` devuelve **siete** archivos y no seis, y los commits del padre sobre el ledger son **cinco** y no uno. El alcance real siguió siendo válido en todo momento —los siete paths están autorizados y los cambios del ledger son del padre—, pero una evidencia que se contradice al ejecutarla no es evidencia. **Aceptado**: C14 reescrito para demostrar el **estado real**, con una partición **mecánica** («toca el ledger o no») que no depende de leer mensajes de commit ni de confiar en la autoría, y con los cuatro comandos corridos literales. Corrección propia agregada encima: **se quitó el total de commits del rango**, porque crece con cada corrección mía y habría vuelto a envejecer la evidencia por tercera vez; lo que se publica son los paths y la partición, invariantes bajo mis commits siguientes.
+2. **Un conteo vigente desincronizado**: el riesgo 7 seguía diciendo que C6–C9 cubren **14** secciones cuando C6, la lista cerrada y el manual tienen **15**. **Aceptado**, con su acotación de que las menciones de 14 **dentro del Review log se conservan** porque describen el estado de su ronda.
 
 ### r9 (base `61a6c32`, HEAD `30766b3`) — CHANGES_REQUESTED · 1 punto, aceptado · **sin observaciones de preferencia**
 
