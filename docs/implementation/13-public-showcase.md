@@ -527,7 +527,7 @@ Los tres artefactos existen. Tamaños **medidos con `wc -l` / `wc -c` sobre el c
 
 | Artefacto | Líneas | Bytes |
 |---|---|---|
-| `LICENSE` | 21 | 1071 |
+| `LICENSE` | 21 | 1065 |
 | `README.md` | 183 | 11 002 |
 | `docs/install.md` | 342 | 19 533 | Evidencia por criterio.
 
