@@ -529,7 +529,9 @@ Los tres artefactos existen. Tamaños **medidos con `wc -l` / `wc -c` sobre el c
 |---|---|---|
 | `LICENSE` | 21 | 1065 |
 | `README.md` | 183 | 11 002 |
-| `docs/install.md` | 342 | 19 533 | Evidencia por criterio.
+| `docs/install.md` | 342 | 19 533 |
+
+Evidencia por criterio.
 
 **C1 — `LICENSE`.** MIT estándar, sin modificar, `Copyright (c) 2026 alexweil`, con las dos derivaciones ancladas de §1 corridas al corte.
 
