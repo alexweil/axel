@@ -529,7 +529,7 @@ Los tres artefactos existen. Tamaños **medidos con `wc -l` / `wc -c` sobre el c
 |---|---|---|
 | `LICENSE` | 21 | 1 065 |
 | `README.md` | 183 | 10 989 |
-| `docs/install.md` | 358 | 20 064 |
+| `docs/install.md` | 374 | 21 148 |
 
 Evidencia por criterio.
 
@@ -549,7 +549,7 @@ Evidencia por criterio.
 | «closing the lid still sleeps the machine, unless it is on power *and* driving an external display» | **limitación declarada** | `AGENTS.md` §Convenciones, «límite físico» |
 | «two subscriptions, from two different vendors» | hecho derivable | `scripts/review.sh` invoca `codex`; la sesión es Claude Code |
 | «two things are known to degrade cleanly» fuera de macOS, y **nada más** | hecho derivable | `scripts/awake.sh` imprime `caffeinate no disponible (no es macOS): nada que hacer` y retorna sin error; `review.sh` llama a `codex` sin envolver. **Corregido en la r6**: yo había escrito «everything else works» y «portable shell», que esas dos ramas **no** demuestran. Ahora dice que el resto está *untested*, no *supported* |
-| «GitHub's Python and Gradle templates both do» (ignorar `build/`) | hecho derivable | verificado el 2026-07-30 corriendo `git check-ignore -v .claude/skills/build/SKILL.md` contra cada template. **Corregido dos veces**: en la r6 cayó la versión del pedido —«every Python, Node, Java, Gradle, Maven and C template»—, y en la **r7** cayó mi propia corrección, que decía «solo Python». **Gradle sí ignora**, con `**/build/`, y mi verificación de la r6 no lo vio porque grepeé un patrón que no cubría `**/`. Node tiene `build/Release`, que no matchea; Java, C, Maven, Go y Rust no tienen regla que matchee |
+| «GitHub's Python and Gradle templates both do» (ignorar `build/`) | hecho derivable, **con evidencia fail-closed** | verificado el 2026-07-30 corriendo `git check-ignore -v .claude/skills/build/SKILL.md` contra cada template. **Corregido dos veces**: en la r6 cayó la versión del pedido —«every Python, Node, Java, Gradle, Maven and C template»—, y en la **r7** cayó mi propia corrección, que decía «solo Python». **Gradle sí ignora**, con `**/build/`, y mi verificación de la r6 no lo vio porque grepeé un patrón que no cubría `**/`. Node tiene `build/Release`, que no matchea; Java, C, Maven, Go y Rust no tienen regla que matchee. **Tercera corrección, en la r9**: el script que publiqué como evidencia **fallaba abierto** — sin guarda en el `curl`, una descarga fallida dejaba el template anterior en `.gitignore` y el loop atribuía ese resultado al siguiente. Reproducido con un SHA inválido: `curl` devolvió 56 y el script informó que **Node** ignora `build/`, que es la regla de Python, saliendo 0. Ahora lleva `set -euo pipefail`, `rm -f .gitignore` por iteración y descarga-a-temporal-y-`mv`, sobre un `mktemp -d`: una falla de transporte o un template ausente **abortan** en vez de producir una matriz verosímil. Verificado el camino feliz (Python y Gradle ignoran, seis negativos, `rc=0`) y el de falla (`rc=1`, `FAIL: could not fetch …`), corriendo el script **tal como queda publicado** |
 | «una sesión reconstruye leyendo **cuatro** archivos» | hecho derivable | `AGENTS.md` §«Cómo ubicarte rápido» enumera cuatro. **Corregido en la r6**: decía tres |
 | «readable in an afternoon», «that is the point, not an apology», «expensive and unhurried on purpose» | **opinión marcada** | van en «What this is not», que es la sección declarada de juicio |
 | «the worst thing we could do» (sobre publicar un chat reconstruido) | **opinión marcada** | argumento del diseño, presentado como tal |
@@ -628,6 +628,12 @@ Precisión que conviene dejar escrita: el rango desde el SHA de arranque de la u
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r9 (base `61a6c32`, HEAD `30766b3`) — CHANGES_REQUESTED · 1 punto, aceptado · **sin observaciones de preferencia**
+
+Le pedí explícitamente que separara lo bloqueante de la preferencia, porque la racha iba en 3 y quedaban pocas rondas. Respondió con **un solo punto, bloqueante, y ninguna preferencia**; todo lo demás lo dio por cerrado: la matriz con sus dos positivos y seis negativos, los tamaños 21/1065 · 183/10 989 · 358/20 064, el aumento de 35,0 %, la racha 3, C5(A) 45/45, C5(B), C6–C9, links y alcance. Suites: lint limpio, `install.sh` 460/0, `loop.sh` 287/0 con el smoke no contractual omitido.
+
+1. **El script que publiqué como evidencia de la matriz externa fallaba abierto** — la misma clase de defecto que la reconstrucción del corte en la r1, ahora en el artefacto publicado y después de nueve rondas persiguiéndola. Cada `curl` iba sin guarda, así que una descarga fallida dejaba **el template anterior** en `.gitignore`, el loop seguía y `git check-ignore` atribuía ese resultado al template siguiente. Lo **reprodujo**: `curl` devolvió 56, el `.gitignore` conservó el mismo hash y el script informó «ignored» para el template equivocado, saliendo **0**. Evidencia que puede fallar abierta no es evidencia. **Aceptado con las tres guardas que sugirió y una cuarta**: `set -euo pipefail`, `curl … || exit 1`, repositorio de prueba en `mktemp -d` con `trap` de limpieza, y —agregada por mí— `rm -f .gitignore` en cada iteración más descarga a temporal y `mv` recién al cerrar bien, de modo que un `.gitignore` heredado sea **estructuralmente imposible** y no solo esté vigilado. Verificados los dos caminos corriendo el script **tal como queda publicado en el manual**: feliz ⇒ Python y Gradle ignoran, seis negativos, `rc=0`; falla ⇒ `rc=1` con `FAIL: could not fetch …`. El manual publica además **por qué** están las guardas, con el fallo reproducido, para que nadie las quite por parecer decorativas.
 
 ### r8 (base `61a6c32`, HEAD `b94e6e7`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
 

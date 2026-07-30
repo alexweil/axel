@@ -271,13 +271,29 @@ each installed as the `.gitignore` of an empty repo containing `.claude/skills/b
 asked directly instead of pattern-matched by eye:
 
 ```bash
+#!/usr/bin/env bash
+set -euo pipefail                        # a failed download must stop the run, not skew it
 SHA=57286c3887203259752b747db94e6c3ad10ec53d
-git init -q probe && cd probe && mkdir -p .claude/skills/build
+probe="$(mktemp -d)"; trap 'rm -rf "$probe"' EXIT
+git init -q "$probe"; mkdir -p "$probe/.claude/skills/build"
+touch "$probe/.claude/skills/build/SKILL.md"; cd "$probe"
 for t in Python Gradle Node Java C Maven Go Rust; do
-  curl -fsSL "https://raw.githubusercontent.com/github/gitignore/$SHA/$t.gitignore" -o .gitignore
+  rm -f .gitignore                       # no leftover from the previous template can survive
+  curl -fsSL "https://raw.githubusercontent.com/github/gitignore/$SHA/$t.gitignore" -o tmpl \
+    || { echo "FAIL: could not fetch $t" >&2; exit 1; }
+  mv -f tmpl .gitignore                  # .gitignore exists only if the download completed
   printf '%-8s %s\n' "$t" "$(git check-ignore -v .claude/skills/build/SKILL.md || echo 'not ignored')"
 done
 ```
+
+The three guards are the point, not decoration. A first version of this script wrote each template
+straight to `.gitignore` with no check, so a failed download left the **previous** template in place
+and the loop happily attributed that result to the next one — reproduced with a bad SHA: `curl`
+returned 56 and the script reported Node as ignoring `build/`, which is Python's rule, exiting 0.
+Evidence that can fail open is not evidence. With `set -euo pipefail`, the `rm -f` and the
+download-then-`mv`, a transport failure or a missing template aborts with a non-zero exit instead of
+producing a plausible-looking matrix.
+
 
 | Template | Ignores the skill? |
 |---|---|
