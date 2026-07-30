@@ -300,26 +300,42 @@ El log de hoy no tiene reintentos (las 88 filas son intento 1 y todas con veredi
 # GUARDA DE TOPOLOGÍA, fail-closed (r3): el `rounds-log` es best-effort, así que una fila
 # `new` que no llegó a escribirse fusionaría dos ciclos y sobreescribiría sus rondas en
 # silencio. Se rechaza lo que es detectable desde el propio log.
-function die(msg) { printf "FAIL: línea %d: %s\n", NR, msg > "/dev/stderr"; exit 1 }
-BEGIN { FS = "\t"; OFS = "\t"; cyc = 0; prev = 0 }
+function die(msg) { printf "FAIL: línea %d: %s\n", NR, msg > "/dev/stderr"; failed = 1; exit 1 }
+BEGIN { FS = "\t"; OFS = "\t"; cyc = 0; prev = 0; failed = 0 }
 $2 == "new" && ($4 == "1" || $4 == "-") { cyc++; prev = 0 }
 $3 ~ /^[0-9]+$/ {
-  cur = $3 + 0
+  cur = $3 + 0; att = $4 + 0
   if (cyc >= 1 && prev == 0 && cur != 1)
     die("el ciclo " cyc " abre en la ronda " cur " y no en la 1")
   if (prev > 0 && cur < prev)
     die("la ronda retrocede de " prev " a " cur " sin frontera de ciclo (¿fila `new` perdida?)")
   if (prev > 0 && cur > prev + 1)
     die("la ronda salta de " prev " a " cur " (¿fila de ronda perdida?)")
+  if (prev > 0 && cur == prev) {          # una ronda solo se repite por retry, y el retry
+    if (pverd != "PROC_FAIL" || $2 != pmode || $6 != psha || att != patt + 1)
+      die("la ronda " cur " se repite sin ser un retry válido (exige intento " patt + 1 \
+          " tras un PROC_FAIL del mismo modo y SHA; vino intento " att " tras " pverd \
+          " modo " $2 " sha " $6 ")")
+  }
   key = cyc SUBSEP cur
   if (!(key in seen)) { seen[key] = 1; order[++n] = key; c[key] = cyc; r[key] = cur }
   v[key] = $5; s[key] = $6
-  prev = cur
+  prev = cur; patt = att; pverd = $5; pmode = $2; psha = $6
 }
-END { for (i = 1; i <= n; i++) { k = order[i]; print c[k], r[k], v[k], s[k] } }
+END { if (failed) exit 1        # fail-closed de verdad: ante rechazo no se emite NADA (r4),
+      for (i = 1; i <= n; i++)  # porque `exit` en una regla igual pasa por END y dejaba un
+        { k = order[i]; print c[k], r[k], v[k], s[k] } }   # artefacto parcial consumible
 ````
 
-**Qué valida la guarda y qué no.** Valida las tres violaciones **detectables desde el log**: que un ciclo abierto por `new` empiece en una ronda distinta de 1; que la ronda retroceda sin frontera (el síntoma de la fila `new` perdida); y que salte más de uno (el síntoma de una fila de ronda perdida). El ciclo `0` queda exento de la primera regla, porque arrancar en la ronda 6 es precisamente lo que le pasa al tramo parcial. Lo que **no** hace es rechazar un ciclo **incompleto**: un ciclo sin `APPROVED` final es un estado legítimo —el ciclo en curso— y aparece como observable pero no cerrado, que es justo la distinción que la tabla de abajo cuenta por separado.
+```sh
+awk -f normaliza.awk snapshot.tsv > rondas.tsv   # rc DEBE ser 0: es postcondición, no cortesía
+```
+
+**Qué valida la guarda y qué no.** Valida las **cuatro** violaciones detectables desde el log: que un ciclo abierto por `new` empiece en una ronda distinta de 1; que la ronda retroceda sin frontera (síntoma de la fila `new` perdida); que salte más de uno (síntoma de una fila de ronda perdida); y —la que agregó la r4— que una ronda **se repita sin ser un retry válido**. El ciclo `0` queda exento de la primera regla, porque arrancar en la ronda 6 es precisamente lo que le pasa al tramo parcial.
+
+**La gramática del retry, que es lo que cierra el último agujero.** Yo mismo había preguntado por el caso de dos ciclos de una sola ronda con el `new` del segundo perdido: ahí no hay retroceso ni salto, así que las tres guardas anteriores lo dejaban pasar y el normalizador **sobreescribía un `APPROVED`** en silencio. Codex lo reprodujo (`new/1/1 APPROVED` → `round/1/1 CHANGES_REQUESTED` daba `rc=0`) y señaló que **sí** es detectable, porque una ronda repetida solo es legítima si es un reintento, y un reintento tiene forma fija: mismo número de ronda, **mismo modo**, **mismo SHA**, intento que **incrementa**, y verdicto anterior **`PROC_FAIL`**. Dos filas con `attempt=1` no son eso. Verificado contra `scripts/review.sh` antes de implementarlo: las filas `PROC_FAIL` **sí llevan el SHA** (`log_event PROC_FAIL "$ROUND" "$ATTEMPT" "$REVIEW_HEAD_SHORT"`), así que la identidad de SHA es chequeable y no hubo que debilitar la regla.
+
+Lo que la guarda **no** hace es rechazar un ciclo **incompleto**: un ciclo sin `APPROVED` final es un estado legítimo —el ciclo en curso— y aparece como observable pero no cerrado, que es justo la distinción que la tabla de abajo cuenta por separado.
 
 ```sh
 awk -f normaliza.awk snapshot.tsv > rondas.tsv    # 88 líneas; ciclo 0 = el parcial del arranque
@@ -327,26 +343,35 @@ mediana() { sort -n | awk '{a[NR]=$1} END{ if(NR%2) m=a[(NR+1)/2]; else m=(a[NR/
              print "n="NR" mediana="m" min="a[1]" peor="a[NR] }'; }
 ```
 
-**Prueba sintética positiva, corrida** — 9 filas que juntan los seis casos que el log real no tiene (la r3 pidió sumar el prefijo parcial, `NO_VERDICT` y un retry de `round`):
+**Prueba sintética positiva, corrida** — 10 filas crudas que juntan los siete casos que el log real no tiene:
 
-| Fila | Qué caso cubre |
+| Fila(s) | Qué caso cubre |
 |---|---|
-| `round/4/1 CR`, `round/5/1 APPROVED` | **prefijo parcial**: el log arranca a mitad de un ciclo ⇒ ciclo `0` |
-| `new/1/1 PROC_FAIL` + `new/1/2 CR` | **retry de `new`**: los dos intentos son `mode=new` y no deben abrir dos ciclos |
-| `round/2/1 NO_VERDICT` + `round/2/2 CR` | **retry de `round`** y **«último registro gana»**: la ronda 2 vale `CHANGES_REQUESTED`, no `NO_VERDICT` |
-| `round/3/1 APPROVED` | cierre del ciclo 1 |
+| `round/4/1 CR p1`, `round/5/1 APPROVED p2` | **prefijo parcial**: el log arranca a mitad de un ciclo ⇒ ciclo `0` |
+| `new/1/1 PROC_FAIL a1` + `new/1/2 CR a1` | **retry de `new`**: los dos intentos son `mode=new` y no deben abrir dos ciclos |
+| `round/2/1 NO_VERDICT a2` | **veredicto inválido como desenlace propio**: `review.sh` **no lo reintenta**, así que es la ronda entera y el ciclo sigue en la ronda 3 (corrección de la r4: mi fixture anterior lo usaba como si se reintentara, que es un estado que la maquinaria no produce) |
+| `round/3/1 PROC_FAIL a3` + `round/3/2 CR a3` | **retry de `round`** y **«último registro gana»**: la ronda 3 vale `CHANGES_REQUESTED` |
+| `round/4/1 APPROVED a4` | cierre del ciclo 1 |
 | `round/-/- DEADLOCK` | **evento pre-invocación**: no es ronda |
-| `new/1/1 CR` | **ciclo incompleto**: observable, no cerrado |
+| `new/1/1 CR b1` | **ciclo incompleto**: observable, no cerrado |
 
 | | reductor viejo | normalizador |
 |---|---|---|
 | ciclos | **3** | **2** observables (más el parcial `0`) |
 | veredictos de «r1» | **3**, uno de ellos `PROC_FAIL` | **2**, los dos `CHANGES_REQUESTED` |
-| rondas | 9 filas contadas como tales | **6** rondas contractuales |
-| ronda (1,2) | dos entradas | una, con `sha=a2` — el retry supera al `NO_VERDICT` |
+| rondas | 10 filas contadas como tales | **7** rondas contractuales |
+| ronda (1,3) | dos entradas | una, con `sha=a3` — el retry supera al `PROC_FAIL` |
+| ronda (1,2) | — | `NO_VERDICT`, que es una ronda pero **ni rechazo ni aprobación** |
 | ciclos cerrados | no distinguía | **1** de 2 — el incompleto no se rechaza ni se cuenta como cerrado |
 
-**Prueba sintética negativa, corrida** — dos ciclos con la fila `new` del segundo perdida (`new/1`, `round/2 APPROVED`, `round/1`, `round/2 APPROVED`): sin guarda, el normalizador los fusionaba y **sobreescribía en silencio** las rondas 1 y 2 del primero. Con guarda: `rc=1`, `FAIL: línea 3: la ronda retrocede de 2 a 1 sin frontera de ciclo (¿fila `new` perdida?)`.
+**Dos pruebas sintéticas negativas, corridas**, y ninguna emite una sola fila:
+
+| Caso | Resultado |
+|---|---|
+| dos ciclos con el `new` del segundo perdido (`new/1`, `round/2 APPROVED`, `round/1`, `round/2 APPROVED`) — sin guarda, el normalizador los fusionaba y sobreescribía las rondas 1 y 2 del primero | `rc=1`, `FAIL: línea 3: la ronda retrocede de 2 a 1 sin frontera de ciclo…`, **0 filas emitidas** |
+| **dos ciclos de una sola ronda** con el `new` perdido (`new/1/1 APPROVED x1`, `round/1/1 CR x2`) — el caso que las tres guardas anteriores dejaban pasar, porque no hay retroceso ni salto | `rc=1`, `FAIL: línea 2: la ronda 1 se repite sin ser un retry válido (exige intento 2 tras un PROC_FAIL del mismo modo y SHA; vino intento 1 tras APPROVED modo round sha x2)`, **0 filas emitidas** |
+
+**«0 filas emitidas» es parte de la prueba, no una observación al pasar** (r4): `exit` dentro de una regla de awk **igual pasa por `END`**, así que la versión anterior rechazaba el input con `rc=1` y a la vez dejaba un `rondas.tsv` parcial de dos filas, perfectamente consumible por el comando siguiente. Un normalizador fail-closed no puede dejar un artefacto detrás de un rechazo: de ahí la bandera `failed` y el `rc=0` como postcondición declarada de la invocación.
 
 #### Cifras derivadas, todas sobre `rondas.tsv`
 
@@ -489,6 +514,14 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 8. **Un procedimiento que verifica su propio enunciado en vez del artefacto.** Es el patrón común de los tres puntos de la r1 y de dos de la r2: el mapa escrito no prueba que el mapa se haya implementado, y un reductor que cuenta filas no prueba que cuente rondas. Mitigación: C5 recorre los artefactos finales fila por fila, el normalizador tiene su prueba sintética con reintento, y la reconstrucción del corte tiene sus cuatro modos de falla probados.
 
 ## Review log
+
+### r4 (base `284ace4`, HEAD `aa6c910`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados
+
+**Dos cierres explícitos**, que es lo que esta ronda aporta además de los tres puntos: el **extractor quedó cerrado** —45 tokens, lista publicada idéntica byte a byte, `CLAUDE.md` incluido, y «no encontré otra clase invariante perdida; los encabezados y demás prosa corresponden al mapa semántico»—, y **C3 y el recorrido de C5 quedaron aceptados como verificaciones humanas legítimas**, «porque operan contra los artefactos finales y listas cerradas». Las dos eran preguntas mías. Cifras reproducidas sin cambios, alcance en los dos docs, `lint.sh` limpio.
+
+1. **La guarda de topología todavía aceptaba el caso que yo mismo había marcado.** Le había preguntado por dos ciclos de una sola ronda con el `new` perdido —donde no hay retroceso ni salto—, y en vez de opinar lo **reprodujo**: `new/1/1 APPROVED` → `round/1/1 CHANGES_REQUESTED` devolvía `rc=0`, fusionaba los ciclos y **sobreescribía el `APPROVED`**. Y mostró que sí es detectable, por un camino que yo no había visto: una ronda repetida solo es legítima si es un **retry**, y el retry tiene forma fija —mismo número, **mismo modo**, **mismo SHA**, intento que **incrementa**, `PROC_FAIL` previo—; dos filas con `attempt=1` no son eso. **Aceptado**: cuarta guarda con esa gramática. Verificado antes de implementarla que las filas `PROC_FAIL` **llevan el SHA** (`log_event PROC_FAIL … "$REVIEW_HEAD_SHORT"` en `scripts/review.sh`), así que la identidad de SHA es chequeable y no hubo que debilitar la regla. **Segundo hallazgo del mismo punto, y es un error factual mío sobre la maquinaria**: mi prueba positiva usaba `NO_VERDICT → intento 2` como retry de `round`, y `review.sh` **no reintenta un veredicto inválido** (`TERMINAL_RESULT="NO_VERDICT"`, sin relanzar). O sea, había escrito un fixture de un estado que la maquinaria no produce. **Aceptado**: `NO_VERDICT` pasa a ser desenlace propio de su ronda —el ciclo sigue en la ronda siguiente— y el retry de `round` se prueba con `PROC_FAIL → intento 2`.
+2. **`die()` dejaba salida parcial.** Cierto y es el tipo de defecto que este mismo doc viene persiguiendo: `exit` dentro de una regla de awk **igual pasa por `END`**, así que la prueba negativa devolvía `rc=1` **y a la vez** escribía dos filas en `rondas.tsv` — un artefacto perfectamente consumible por el comando siguiente, detrás de un rechazo. Fail-closed a medias no es fail-closed. **Aceptado**: bandera `failed` verificada en `END`, `rc=0` declarado como **postcondición** de la invocación, y «0 filas emitidas» incorporado a las dos pruebas negativas como aserción, no como comentario.
+3. **`STATUS.md` había quedado con dos campos de veredicto**: r3 como «Veredicto anterior» y una línea «Último veredicto: —» que además arrastraba pegado el relato obsoleto de r2. **Aceptado**: un único «Último veredicto», el de r3 —ahora el de r4—, más una línea de racha explícita.
 
 ### r3 (base `284ace4`, HEAD `528a4e0`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
 
