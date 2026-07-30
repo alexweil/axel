@@ -621,47 +621,54 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests. El reviewer obtuvo **287** en `loop.sh` por la causa conocida —su sandbox saltea los seis asserts del smoke no contractual de `caffeinate`—, no por una divergencia.
 
-**C14 — alcance, demostrado sobre el estado real.** La versión anterior publicaba «seis archivos, un commit del padre» y hoy sus propios comandos devuelven **siete** y **cinco**: el padre commiteó al ledger cinco veces a lo largo del ciclo —arranque, dos registros de anomalía, el corte y el desempate—. El alcance real nunca dejó de ser válido; lo que estaba mal era la evidencia, que se contradecía al ejecutarla. Se reescribe para demostrar el estado **tal como es**, y con una partición **mecánica** —«toca el ledger o no»— que no depende de leer mensajes de commit ni de confiar en la autoría.
+**C14 — alcance, verificado fail-closed contra una lista cerrada.** Tercera versión de este criterio, y las dos anteriores fallaron por la misma razón de fondo: **la evidencia se apoyaba en algo que se mueve**. La primera publicaba «seis archivos, un commit del padre» y envejeció cuando el padre commiteó al ledger. La segunda —r11— particionaba por «toca el ledger o no» y afirmaba no depender de mensajes de commit, pero su cuarto comando decidía la autoría con `grep -c '^feature 13'`: leía el mensaje, se contradecía con su propia afirmación, **habría reclasificado como «del padre» un commit del hijo sobre el ledger con otro asunto** —dando 0 igual— y encima ese `grep -c` imprime 0 con `rc=1`.
 
-Las cifras que siguen son **invariantes bajo mis propios commits siguientes**, a propósito: el total de commits del rango crece con cada corrección mía y por eso no se publica —es la misma trampa que envejeció la versión anterior—. Lo que se publica son los paths y la partición, que no se mueven.
+La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los cinco SHA autorizados del padre**. Esa lista no envejece con commits nuevos del hijo, y un sexto commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**.
 
 ```sh
-L=docs/implementation/pipeline-2026-07-29-3.md; R=284ace4..HEAD
+#!/usr/bin/env bash
+set -euo pipefail
+L=docs/implementation/pipeline-2026-07-29-3.md
+R=284ace4..HEAD
+# Lista CERRADA de los commits del padre autorizados a tocar el ledger.
+AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d"
 
-# 1) unión de paths del rango ⇒ 7, todos autorizados
-git log --format= --name-only $R | grep -v '^$' | sort -u
+esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
+observado=$(git log --format=%H "$R" -- "$L" | sort)
+[ "$esperado" = "$observado" ] || { echo "FAIL: commits sobre el ledger fuera del conjunto autorizado" >&2; exit 1; }
 
-# 2) mis commits son los que NO tocan el ledger; su unión de paths ⇒ los 6 autorizados
-git log --format=%H $R | while read -r c; do
-  git show --format= --name-only "$c" | grep -qx "$L" || git show --format= --name-only "$c"
-done | grep -v '^$' | sort -u
-
-# 3) los commits que tocan el ledger, enumerados ⇒ 5, todos del padre
-git log --format='%h %s' $R -- "$L"
-
-# 4) ninguno de ellos es mío ⇒ 0
-git log --format='%s' $R -- "$L" | grep -c '^feature 13'
+git log --format= --name-only "$R" | grep -v '^$' | sort -u                    # 7 paths
+git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         # los del hijo:
+  git show --format= --name-only "$c"; done | grep -v '^$' | sort -u           # el rango menos la lista
 ```
 
 | Comprobación | Resultado |
 |---|---|
+| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
-| paths de **mis** commits (todos los que no tocan el ledger) | **6** — los mismos menos el ledger, que no aparece |
-| commits que tocan el ledger | **5**, todos del padre: `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) |
-| de esos, míos | **0** |
+| paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
 
-Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**. El padre se comprometió, y lo dejó escrito en el ledger y en STATUS, a no commitear a ese archivo mientras este ciclo esté abierto, así que a partir de `573814d` el rango solo lo mueve el hijo y esta evidencia deja de envejecer sola.
+**Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` y el `diff` del conjunto.
+
+Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**. Y **no se publica el total de commits del rango**: crece con cada corrección del hijo, y publicarlo es lo que envejeció la primera versión.
 
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
 
+### r11 (base `61a6c32`, HEAD `64c96e8`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados · primera tras el desempate
+
+Alcance acotado por el desempate a los dos puntos de la r10; Codex se mantuvo dentro y no dejó observaciones de preferencia. Dio por buena la corrección de 14→15 secciones.
+
+1. **La partición de C14 seguía pudiendo fallar abierta, y por una razón que yo no vi.** Los cuatro comandos imprimían 7, 6, 5 y 0 como declaraba, pero: el comando 2 definía «míos» de forma **circular** (los que no tocan el ledger), el comando 4 decidía la autoría con `grep -c '^feature 13'` —o sea **leía el mensaje**, contradiciendo la afirmación central de que la partición no lo hacía—, **un commit del hijo sobre el ledger con otro asunto habría quedado reclasificado como del padre** dando 0 igual, y ese `grep -c` imprime 0 con `rc=1`. Tercera versión de C14 y la tercera falla de la misma familia: la evidencia se apoyaba en algo que se mueve o que se puede eludir. **Aceptado con su salida**: comparar el conjunto de commits que tocan el ledger contra una **lista cerrada de los cinco SHA autorizados del padre**, que no envejece con commits del hijo y donde un sexto commit falla sea cual sea su mensaje. Los commits del hijo pasan a definirse como **el rango menos esa lista**, sin circularidad. **Los dos caminos probados**: lista completa ⇒ `rc=0` con las dos listas de paths; con un SHA fuera de la lista ⇒ `rc=1` y el `diff` del conjunto. El bloque publicado corrido literal da 7 paths en el rango y 6 en los del hijo, sin el ledger.
+2. **El barrido de conteos encontró dos cifras vigentes incorrectas**, las dos derivables de mis propios encabezados de ronda: la implementación r6–r10 suma `4+4+4+1+2 = 15` puntos y yo publicaba **10**; y el total del ciclo es `13 + 15 = 28`, no 29. **Aceptado y corregido en lo mío** —STATUS y este review log pasan a 15, con el desglose por ronda escrito para que la cifra sea re-derivable y no haya que confiar en ella—. **La tercera ocurrencia vive en el ledger** (`pipeline-2026-07-29-3.md`, «los veintinueve pedidos»), que es **territorio del padre**: no la toco y la reporto, con la derivación, para que la corrija quien es dueño del archivo.
+
 ### r10 (base `61a6c32`, HEAD `c826776`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados · **la que llegó al tope**
 
 Fue la quinta ronda sin converger, así que el padre **cortó la unidad** y llevó las dos posturas al humano. El desempate fue **«a)»**: se autorizan las dos correcciones, la unidad se reanuda con la racha reseteada por el camino contractual (`scripts/review.sh reset-deadlock`, no edición del contador), la numeración **no** se reinicia, y el alcance queda acotado a estos dos puntos — ampliar es divergencia. No es el OK consolidado del pipeline: `design` y `plan` siguen esperándolo.
 
-Vale registrar qué clase de deadlock fue, porque no fue de desacuerdo: **los diez puntos de las cinco rondas se aceptaron sin argumentar ninguno**, y Codex verificó el correctivo de la r9 ejecutando el script publicado —camino feliz con Python y Gradle positivos, seis negativos y `rc=0`; falla con `rc=1`, salida estándar vacía, diagnóstico explícito y limpieza del temporal—. Dio además por cerrados 45/45 tokens, cero links rotos, tamaños, 35,0 %, 15 secciones, lint, `loop.sh` 287/0 e `install.sh` 460/0, y **sin observaciones de preferencia**. El tope se alcanzó por acumulación de bookkeeping, no por dos posturas irreconciliables.
+Vale registrar qué clase de deadlock fue, porque no fue de desacuerdo: **los quince puntos de las cinco rondas —4 en r6, 4 en r7, 4 en r8, 1 en r9 y 2 en r10— se aceptaron sin argumentar ninguno**, y Codex verificó el correctivo de la r9 ejecutando el script publicado —camino feliz con Python y Gradle positivos, seis negativos y `rc=0`; falla con `rc=1`, salida estándar vacía, diagnóstico explícito y limpieza del temporal—. Dio además por cerrados 45/45 tokens, cero links rotos, tamaños, 35,0 %, 15 secciones, lint, `loop.sh` 287/0 e `install.sh` 460/0, y **sin observaciones de preferencia**. El tope se alcanzó por acumulación de bookkeeping, no por dos posturas irreconciliables.
 
 1. **C14 publicaba evidencia de alcance que ya no coincidía con sus propios comandos.** `git diff --name-only ee1e8ca..HEAD` devuelve **siete** archivos y no seis, y los commits del padre sobre el ledger son **cinco** y no uno. El alcance real siguió siendo válido en todo momento —los siete paths están autorizados y los cambios del ledger son del padre—, pero una evidencia que se contradice al ejecutarla no es evidencia. **Aceptado**: C14 reescrito para demostrar el **estado real**, con una partición **mecánica** («toca el ledger o no») que no depende de leer mensajes de commit ni de confiar en la autoría, y con los cuatro comandos corridos literales. Corrección propia agregada encima: **se quitó el total de commits del rango**, porque crece con cada corrección mía y habría vuelto a envejecer la evidencia por tercera vez; lo que se publica son los paths y la partición, invariantes bajo mis commits siguientes.
 2. **Un conteo vigente desincronizado**: el riesgo 7 seguía diciendo que C6–C9 cubren **14** secciones cuando C6, la lista cerrada y el manual tienen **15**. **Aceptado**, con su acotación de que las menciones de 14 **dentro del Review log se conservan** porque describen el estado de su ronda.
