@@ -1,8 +1,8 @@
 # Installing axel
 
-The complete install manual: every path, every failure mode, every known issue. If you are still
-deciding whether axel is for you, read the [README](../README.md) first — this page assumes you
-already decided.
+The install manual: the supported paths, the failure modes the installer reports, and the known
+issues. If you are still deciding whether axel is for you, read the [README](../README.md) first —
+this page assumes you already decided.
 
 This document is in English because its audience is the same person the README speaks to, one step
 further along. The method documents (`AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`,
@@ -28,8 +28,9 @@ deliberate: a model reviewing itself is not a reviewer.
 calls Codex directly instead of wrapping it in `caffeinate`. What you lose is the guarantee that the
 machine stays awake through a long unattended run.
 
-That is the extent of what has been verified. axel has only ever been run on macOS, so the rest —
-the installer, the loop, the review contract — is untested elsewhere rather than known to work.
+That is the extent of what has been verified, and every recorded run of axel has been on macOS. The
+rest — the installer, the loop, the review contract — is untested elsewhere rather than known to
+work.
 
 **Review rounds are slow.** At `xhigh` effort a round can take more than 10 minutes, which is why
 the generator launches them in the background. This is a declared property of the setup, not a bug
@@ -49,8 +50,9 @@ Standing inside the destination repo, with no prior clone of axel:
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-If your destination's `.gitignore` ignores `build/`, this will refuse to install. That is
-[known issue 1](#1-the-build-collision); it takes one line to fix.
+If your destination's `.gitignore` ignores `build/` — as GitHub's Python and Gradle templates do —
+this will refuse to install. That is [known issue 1](#1-the-build-collision); it takes one line to
+fix.
 
 ### What the defaults assume
 
@@ -263,12 +265,14 @@ rechazo: .claude/skills/build/SKILL.md: nacería ignorado por las reglas del des
 `.gitignore` pattern. The preflight is behaving **correctly**: nothing the installer writes may fall
 outside the diff. What is wrong is a directory name. No other skill collides.
 
-*Checked against [github/gitignore](https://github.com/github/gitignore) on 2026-07-30, because a
-looser version of this claim did not survive review:* the **Python** template ignores `build/`. The
-**Node** template ignores `build/Release`, which does **not** match. The **Java**, **C**, **Maven**
-and **Gradle** templates carry no `build/` rule at all. So the accurate statement is conditional —
-this bites you when your `.gitignore` ignores `build/`, whether that came from a template or from
-your own hand — and not a list of ecosystems.
+*Checked against [github/gitignore](https://github.com/github/gitignore) on 2026-07-30, by running
+`git check-ignore -v .claude/skills/build/SKILL.md` against each template rather than by reading the
+patterns — two successively looser versions of this claim did not survive review:* the **Python**
+template ignores it via `build/`, and the **Gradle** template via `**/build/`. The **Node** template
+has `build/Release`, which does **not** match. **Java**, **C**, **Maven**, **Go** and **Rust** carry
+no matching rule. So the accurate statement is conditional — this bites you when your `.gitignore`
+ignores `build/`, whether that came from a template or from your own hand — rather than a list of
+ecosystems.
 
 **Fix.** Add this to the destination's `.gitignore`, **after** the pattern that excludes it:
 

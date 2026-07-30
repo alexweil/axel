@@ -79,8 +79,8 @@ Honest scope: **one repo, same author, and an adoption rather than a full review
   cross-vendor review and it is deliberate: a model reviewing itself is not a reviewer.
 - **macOS** — `scripts/awake.sh` and the wrapper around each review call use `caffeinate`. Both
   degrade cleanly where it is absent: `awake.sh` reports it and returns without error, and reviews
-  run uncaffeinated. That is what has been verified — axel has only ever been run on macOS, so treat
-  anything else as untested rather than as supported.
+  run uncaffeinated. That is what has been verified, and every recorded run of axel has been on
+  macOS — so treat anything else as untested rather than as unsupported.
 - **git, `python3`, `curl`** — the destination must be a git repo with a clean tree.
 - **Reviews are slow.** At `xhigh` effort a round can take more than 10 minutes.
 
@@ -94,9 +94,9 @@ Standing inside the destination repo:
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-**If your `.gitignore` ignores `build/`** — GitHub's Python template does, out of the box — the
-install is refused, because the `/build` skill lives in `.claude/skills/build/`. One line in your
-`.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
+**If your `.gitignore` ignores `build/`** — GitHub's Python and Gradle templates both do, out of
+the box — the install is refused, because the `/build` skill lives in `.claude/skills/build/`. One
+line in your `.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
 [known issues](docs/install.md#known-issues).
 
 Everything else — explicit forms, forks, the `~/.axel` cache, exit codes, what to do if you installed
@@ -152,9 +152,10 @@ Five principles hold it together:
 
 ## What this is not
 
-- **Not a framework.** It is a pile of markdown and two shell scripts. No dependencies, no lock-in,
-  readable in an afternoon — and that is the point, not an apology. Deleting it is as easy as
-  installing it.
+- **Not a framework.** It is a pile of markdown and two shell scripts. It adds no packages to your
+  project and there is nothing to import — the requirements above are the two agent CLIs and stock
+  Unix tools. No lock-in, readable in an afternoon, and that is the point rather than an apology:
+  deleting it is as easy as installing it.
 - **Not cheap.** Two paid subscriptions, and review rounds measured in tens of minutes.
 - **Not autonomous.** It stops and waits for you at every checkpoint, by design.
 - **Not proven at scale.** One repo built itself with this, and one external install exists. That is
