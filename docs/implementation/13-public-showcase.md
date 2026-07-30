@@ -633,7 +633,7 @@ set -euo pipefail
 L=docs/implementation/pipeline-2026-07-29-3.md
 R=284ace4..HEAD
 # Lista CERRADA de los commits del padre autorizados a tocar el ledger.
-AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39 a24abac 62f4468 a2b3b5a 33dd1d4 20c0f79"
+AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39 a24abac 62f4468 a2b3b5a 33dd1d4 20c0f79 99e6b73"
 
 esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
 observado=$(git log --format=%H "$R" -- "$L" | sort)
@@ -650,7 +650,7 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 
 | Comprobación | Resultado |
 |---|---|
-| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) `33dd1d4` (correcciones del ledger tras la auditoría de la r16) y `20c0f79` (eliminación de los contadores móviles del ledger) |
+| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) `33dd1d4` (correcciones del ledger tras la auditoría de la r16) `20c0f79` (eliminación de los contadores móviles del ledger) y `99e6b73` (el diagnóstico refutado de la r16, tachado y rotulado) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
@@ -724,6 +724,8 @@ done
 ```
 
 Al corte `3bfed8c` devuelve **106** cifras en negrita, de las cuales una sola es un `único` (línea 425 de este doc), y está **anclada** con «al corte».
+
+**Segunda prueba, al incorporar `99e6b73`**: `git diff --numstat` sobre los dos docs dio **2 insertions / 2 deletions**, y las dos líneas son las de datos —`AUTORIZADOS` y la fila de enumeración—. Cero prosa desincronizada, por segunda vez consecutiva.
 
 **Límite conocido del extractor, declarado porque la r18 lo encontró**: solo ve cifras **en negrita**, así que **no vio** el «hoy con un único consumidor» de `docs/STATUS.md` — que era un contador móvil real y lo encontró Codex, no el barrido. La extracción es mecánica y su clasificación es declarada, pero **su cobertura no es exhaustiva**, y publicarla como si lo fuera sería el mismo defecto que este doc viene persiguiendo. El de STATUS quedó anclado al cierre del feature 12.
 
