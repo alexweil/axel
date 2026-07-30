@@ -17,13 +17,28 @@ SHA de arranque de la unidad: `6ec4b48`.
 | `6ec4b48..2985447` | **padre** — registro del arranque | `docs/STATUS.md` y el ledger |
 | `2985447..HEAD` | **hijo** — el trabajo de esta unidad | la lista cerrada de §Alcance, **sin el ledger** |
 
-El baseline del trabajo del hijo es **`2985447`**, no `6ec4b48`. C12 audita el segundo rango; el primero se audita aparte y ya está verificado arriba.
+El baseline del trabajo del hijo es **`2985447`**, no `6ec4b48`. El primero se audita aparte y ya está verificado arriba.
 
-**`AUTORIZADOS` — lista cerrada de commits del padre dentro del rango del hijo.** Si el padre commitea al ledger durante este ciclo (el contrato le deja una sola excepción: corregir una falsedad vigente), su SHA entra acá **en la misma ronda**, y C12 lo exige declarado. Sin esa lista, un commit del padre haría fallar el criterio de alcance del hijo o —peor— pasaría inadvertido.
+### El alcance se audita **por commit**, no por diff agregado
 
-- `2985447` — arranque de la unidad. *(Es la frontera del rango, no un commit interior; se lista para que la lista sea legible sola.)*
+La r2 encontró que mi mecanismo anterior seguía contradiciéndose justo en el caso que decía admitir: si el padre commiteaba al ledger dentro del rango, agregar su SHA a `AUTORIZADOS` hacía pasar el segundo chequeo, pero `git diff --name-only 2985447..HEAD` **seguía** incluyendo el ledger y hacía fallar la primera cláusula, que exige «sin el ledger». Dos chequeos que no podían ser verdaderos a la vez.
 
-Cualquier SHA que aparezca en `2985447..HEAD` tocando el ledger y **no** esté en esta lista es una divergencia y se reporta, no se absorbe.
+La causa es el **diff agregado**: aplana commits de dos autores con permisos distintos en una sola lista de paths, y ahí ya no hay forma de distinguir una violación de una excepción. El mecanismo pasa a ser uno solo, por commit:
+
+**Cada commit de `2985447..HEAD` se atribuye a un autor, y cada autor tiene su lista cerrada de paths.**
+
+| Autor | Cómo se identifica | Paths permitidos |
+|---|---|---|
+| **padre** | su SHA está en `AUTORIZADOS` | el ledger y/o `docs/STATUS.md` — nada más |
+| **hijo** | cualquier otro commit del rango | la lista cerrada de §Alcance, que **no** incluye el ledger |
+
+Un commit del hijo que toque el ledger **falla**. Un commit no declarado que toque el ledger **falla**. Un commit del padre declarado que toque, digamos, `README.md`, **falla**. No hay estado en que las dos cláusulas se contradigan, porque ya no hay dos cláusulas: hay una, aplicada commit por commit.
+
+**`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango.** El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
+
+- *(vacía — ningún commit del padre interior al rango todavía)*
+
+`2985447` **no** es miembro: es la frontera del rango y `git rev-list 2985447..HEAD` no lo incluye. Se nombra acá solo para que no se lo busque en la lista.
 
 ## Alcance
 
@@ -203,6 +218,8 @@ El chequeo que la vuelve mecánica, **con su alcance dicho** (la r1 marcó que l
 
 Los docs del **método** (`docs/implementation/*.md`, `docs/design/*.md`) quedan explícitamente fuera de la regla: son la memoria del loop, ahí las derivaciones **deben** estar, y confundir los dos planos es lo que volvía incumplible el enunciado anterior. El chequeo recorre el conjunto público **completo**, no solo el inventario del README.
 
+**Relación con la matriz de C3, para que no se lean como la misma lista**: la matriz es el universo **completo** de cifras que `docs/metrics.md` publica; esta lista de «sujetas» es el subconjunto que además **aparece en la superficie pública** y por lo tanto puede desincronizarse. Las que solo viven en el informe —medianas, peor caso, el hito sin rechazo— están en la matriz y no en esta lista, y cumplen la regla por construcción: no hay segundo lugar del que puedan divergir.
+
 ## Enfoque
 
 ### `docs/metrics.md` — el informe
@@ -211,14 +228,30 @@ Inglés. Estructura:
 
 1. **Qué es y qué no** — la foto y su corte; que no incluye las rondas de los features 13 y 14, declarado y no escondido.
 2. **Las tres unidades que no se mezclan** — ronda, hito, ciclo, con la advertencia de que los `APPROVED` son **hitos y no features**, y que enunciarlo mal es lo que destruye la credibilidad.
-3. **Las cifras, como matriz** `cifra → fuente autoritativa → corte → comando → límite de auditabilidad`. La forma la impuso la r1, y con razón: **no todas las cifras se derivan del snapshot**, así que prometer «se re-derivan sobre el snapshot versionado» era incumplible. Hay tres familias, y la matriz las distingue en vez de aplanarlas:
+3. **Las cifras, como matriz** `cifra → fuente(s) autoritativa(s) → corte → comando → límite de auditabilidad`. La forma la impuso la r1 —**no todas las cifras se derivan del snapshot**, así que prometer «se re-derivan sobre el snapshot versionado» era incumplible—, y la r2 la corrigió dos veces más: mi resumen decía «tres familias» y enumeraba **cuatro**, y ninguna fila expresaba las cifras **compuestas**, que necesitan el snapshot **más** las fuentes previas a la instrumentación.
 
-   | Familia | Fuente autoritativa | ¿Auditable desde un clon de axel? |
-   |---|---|---|
-   | rondas, rechazos, hitos, ciclos, medianas | el snapshot versionado | **sí**, con `cut.awk` + `normalize.awk` |
-   | gancho (commits, días, features al corte) | la historia git de **este** repo, anclada a `b0bdf4d` | **sí** |
-   | 35 previas a la instrumentación | review logs versionados + commits y STATUS histórico | **sí** |
-   | instalación externa (185 commits, 20 y 8 archivos) | la historia git de **`alexweil/inquirylab`** | **no** — ver abajo |
+   Entonces la matriz no se resume por familia: es **exhaustiva por cifra**, que es lo que C3 puede recorrer fila por fila. El universo completo, con la fuente de cada una:
+
+   | Cifra | Fuente(s) | Corte | ¿Auditable desde un clon de axel? |
+   |---|---|---|---|
+   | 88 rondas registradas | snapshot | `b0bdf4d` | sí |
+   | 59 rechazos | snapshot | `b0bdf4d` | sí |
+   | 29 hitos aprobados | snapshot | `b0bdf4d` | sí |
+   | 18 ciclos observables · 18 cerrados | snapshot | `b0bdf4d` | sí |
+   | mediana 4 por ciclo · 3 por hito | snapshot | `b0bdf4d` | sí |
+   | peor caso 11 por ciclo · 5 por hito | snapshot | `b0bdf4d` | sí |
+   | 1 hito sin rechazo (`2dbbdfc`) | snapshot | `b0bdf4d` | sí |
+   | 25 rondas de los features 00–02 | tabla del plan al corte (ronda de cierre) | `b0bdf4d` | sí |
+   | 5 rondas del feature 03 previas al log | `03-loop-hardening.md`; contra-chequeo: primera fila del snapshot | `b0bdf4d` | sí |
+   | 5 rondas del ciclo de plan | commits + STATUS histórico (`2f7c814`) | `2f7c814` | sí |
+   | **35 previas** — *compuesta* | 25 + 5 + 5, tres fuentes de arriba | `b0bdf4d` | sí |
+   | **123 histórico** — *compuesta* | 88 (snapshot) + 35 (compuesta de arriba) | `b0bdf4d` | sí |
+   | **23 ciclos** — *compuesta* | 18 (snapshot) + 5 ciclos previos a la instrumentación | `b0bdf4d` | sí |
+   | **cero aprobados en ronda 1** — *compuesta* | 18/18 del snapshot **+** la r1 de los 5 ciclos previos, verificada en sus propios docs | `b0bdf4d` | sí |
+   | gancho: 212 commits · 3 días · 13 features | historia git de **este** repo | `b0bdf4d` | sí |
+   | 185 commits, 20 archivos, 8 archivos | historia git de **`alexweil/inquirylab`** | `4908bfb` · `846308f` | **no** — ver abajo |
+
+   Las cuatro filas rotuladas *compuesta* son las que la r2 echó en falta: **no tienen un único comando** que las produzca, y publicarlas como si lo tuvieran sería otra afirmación más ancha que su evidencia. Cada una declara sus sumandos y el comando de cada sumando; el total es la suma declarada, no una derivación oculta.
 
 4. **Cómo re-derivarlas** — el esquema de los siete campos del snapshot, `cut.awk`, `normalize.awk` (versionados, no transcritos), y las postcondiciones como postcondiciones (`rc=0` obligatorio), no como cortesía.
 5. **Qué no prueba esta evidencia**, en dos límites distintos y ambos declarados:
@@ -245,7 +278,23 @@ Inglés, orientado a **qué feedback busca esta ronda**:
 - `friction-or-question.yml` — qué estabas haciendo, qué esperabas, qué pasó, dónde buscaste primero. El último campo es el que dice si el problema es el producto o el manual.
 - `config.yml` — `blank_issues_enabled: true` y un `contact_links` con las tres claves que el esquema exige (`name`, `url`, `about`). El `url` tiene que ser **absoluto**, así que queda fijado acá y no se decide al implementar: `https://github.com/alexweil/axel/blob/main/CONTRIBUTING.md`.
 
-**Los dos formularios llevan `name`, `description` y `body`**, que el esquema de GitHub exige a nivel raíz, y cada elemento de `body` su propia sintaxis (`type`, y `attributes.label` en los que lo requieren). Es lo que C6 verifica; ver el punto siguiente.
+**Las invariantes del esquema que el chequeo valida — lista cerrada.** La r2 marcó que enumerar `name`/`description`/`body` y llamarlo «cumple el esquema» era otra promesa más ancha que su chequeo: GitHub documenta más causas de descarte que ésas. Se enumeran, entonces, y la afirmación se acota a lo enumerado:
+
+| # | Invariante |
+|---|---|
+| E1 | Raíz con `name`, `description` y `body`, los tres presentes y no vacíos |
+| E2 | Claves de raíz dentro de la **allowlist** (`name`, `description`, `title`, `body`, `labels`, `assignees`, `projects`, `type`); cualquier otra falla |
+| E3 | `body` es una **lista no vacía** |
+| E4 | Todo elemento tiene `type` ∈ `markdown` · `input` · `textarea` · `dropdown` · `checkboxes` |
+| E5 | **Al menos un elemento no-`markdown`**: un formulario que solo muestra texto no recoge nada y GitHub lo descarta |
+| E6 | `markdown` exige `attributes.value`; los otros cuatro exigen `attributes.label` |
+| E7 | `dropdown` y `checkboxes` exigen `attributes.options` como lista no vacía, **sin opciones repetidas** |
+| E8 | Los `id` presentes son **únicos dentro del archivo** |
+| E9 | Tipos de dato correctos: strings donde van strings, listas donde van listas, `validations.required` booleano |
+| E10 | `validations` no se usa en elementos `markdown` |
+| E11 | `config.yml`: `blank_issues_enabled` booleano, y cada `contact_links` con `name`, `about` y `url` **absoluto** (`http`/`https`) |
+
+**Límite declarado**: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa que esta unidad tiene prohibida. El chequeo cubre las causas de descarte documentadas que están enumeradas arriba — **no el esquema en su totalidad**, y C6 se enuncia así y no de otra manera.
 
 ### `README.md` — edición acotada
 
@@ -262,17 +311,17 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 |---|---|---|
 | C1 | El snapshot es la **reconstrucción exacta** del corte `b0bdf4d` que declaró el 13: `rc=0`, **88** filas, última fila con ese SHA | corrida de `cut.awk` con sus tres postcondiciones |
 | C2 | El snapshot es **prefijo literal** del `rounds-log` vivo — ni una línea editada | comparación mecánica contra las primeras 88 líneas del archivo vivo |
-| C3 | `docs/metrics.md` publica sus cifras como **matriz** `cifra → fuente autoritativa → corte → comando → límite de auditabilidad`, y **toda cifra cuya fuente sea auditable desde un clon de axel se re-deriva y coincide**. Las que no lo son —las de la instalación externa, que viven en otro repositorio— quedan **rotuladas como verificables solo contra ese repo**, nunca prometidas como re-derivables desde acá | re-corrida de la matriz, fila por fila; para las no auditables, inspección del rótulo |
+| C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen el esquema de issue forms de GitHub**: los dos formularios con `name`, `description` y `body` en la raíz y cada elemento de `body` con su `type` y los atributos que ese tipo exige; `config.yml` con `blank_issues_enabled` y cada `contact_links` con `name`, `url` **absoluto** y `about`. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` (stock de macOS) para el parseo **más** una validación estructural del esquema, contra la [sintaxis oficial](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms); los campos requeridos, uno por uno |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen las once invariantes E1–E11** de §Enfoque, que son las causas de descarte documentadas por GitHub que este chequeo cubre. **No se afirma «cumplen el esquema» a secas**: el validador de GitHub es la autoridad final, no se lo puede correr sin pushear —prohibido en esta unidad— y el límite se publica junto al criterio. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` (stock de macOS) para el parseo, **más** un validador de E1–E11 corrido sobre los tres archivos, con casos negativos que lo hagan fallar a propósito — un validador que nunca rechazó nada no está verificado. Referencias: [sintaxis de issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms), [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema) y [errores comunes de validación](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms) |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance**: el diff del **trabajo del hijo** —`2985447..HEAD`, no `6ec4b48..HEAD`— toca solo la lista cerrada de §Alcance, **sin el ledger**; cero cambios en método, skills, instalador, scripts, tests o remoto. Todo commit del padre dentro del rango está declarado en `AUTORIZADOS` | `git diff --name-only 2985447..HEAD` contra la lista cerrada, más `git log --format=%h 2985447..HEAD -- docs/implementation/pipeline-2026-07-29-3.md` contrastado contra `AUTORIZADOS`: cualquier SHA no declarado falla el criterio |
+| C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 
@@ -280,13 +329,23 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 
 1. **La regla de fuente única es interpretable, y una regla interpretable churnea.** Es el riesgo más probable de esta unidad. Mitigación: la línea está **fijada por escrito antes de implementar** (§«Fuente única»), con la clase incluida, la clase excluida y el chequeo mecánico que la aplica. Si el reviewer no acepta la línea, se discute la línea una vez — no cifra por cifra.
 2. **Contadores móviles reapareciendo en prosa.** Es la causa de las dos rachas de la unidad 13. Mitigación: la regla adoptada arriba, aplicada también a este doc; donde hace falta un número que se mueve, va el comando.
-3. **YAML que GitHub descarta en silencio.** Un formulario mal formado no avisa: simplemente no aparece. Mitigación: C6 valida con un parser real, no a ojo.
+3. **YAML que GitHub descarta en silencio.** Un formulario mal formado no avisa: simplemente no aparece. Mitigación parcial y declarada como parcial: C6 valida con un parser real **y** con las once invariantes E1–E11, que son las causas de descarte documentadas; el validador de GitHub sigue siendo la autoridad final y no se lo puede correr sin pushear. El riesgo se reduce, no se elimina, y el criterio lo dice.
 4. **Tentación de correr los comandos de GitHub** —están escritos, verificados y a un `Enter` de distancia—. Mitigación: el corte está declarado como consecuencia, y C11b **no finge** que la no-ejecución sea demostrable desde el commit: es una invariante operativa que se sostiene por el contrato del pipeline y se asienta como registro, no como prueba. Prometer una prueba mecánica que no existe habría sido peor que no prometer nada — daba una garantía falsa exactamente donde importa.
 5. **El corte envejece mientras se trabaja.** Las rondas de esta misma unidad entran al `rounds-log`. Mitigación: es exactamente lo que el corte neutraliza; la consecuencia (el snapshot no incluye las rondas de los features 13 y 14) se **publica**.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Sigue siendo una línea a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
 7. **Ampliar la edición del README.** El contrato dice «activar dos referencias», no «revisar la vidriera». Mitigación: C7 acota, y ante una tercera cosa que parezca necesaria se registra y se pregunta en vez de decidir solo.
 
 ## Review log
+
+### r2 (base `6ec4b48`, HEAD `f266844`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados sin argumentar ninguno
+
+**La pregunta de alcance quedó resuelta a favor**: versionar `cut.awk` y `normalize.awk` es «detalle legítimo y necesario para que los comandos sean ejecutables, **no scope creep**». Codex dio además por bien cerrados la partición 30+5, las cinco r1 previas a la instrumentación, la frontera pública de fuente única y el par C11/C11b. Sin contadores móviles nuevos.
+
+Los tres puntos son **la misma familia que los cuatro de la r1**, una vuelta más adentro: un criterio que promete más de lo que su chequeo entrega. Que reaparezca en las correcciones de la ronda anterior es la señal a vigilar, y está anotada abajo.
+
+1. **C12 seguía contradiciéndose exactamente en el caso que decía admitir.** Si el padre commiteaba al ledger dentro del rango, declarar su SHA en `AUTORIZADOS` hacía pasar el segundo chequeo mientras `git diff --name-only 2985447..HEAD` **seguía** incluyendo el ledger y hacía fallar la primera cláusula («sin el ledger»). Dos cláusulas que no podían ser verdaderas a la vez. **La causa era el diff agregado**, que aplana commits de dos autores con permisos distintos hasta volver indistinguible una violación de una excepción. Reemplazado por auditoría **por commit**: cada commit se atribuye a un autor y cada autor tiene su lista de paths. Una sola cláusula, sin estado contradictorio posible.
+2. **La matriz de C3 no cubría su propio universo.** Dos defectos: la prosa decía «tres familias» y la tabla enumeraba **cuatro** —cardinalidad fija mal escrita, no un contador móvil—, y ninguna fila expresaba las cifras **compuestas** (`123`, `35`, `23 ciclos`, «cero aprobados en ronda 1»), que necesitan el snapshot **más** las fuentes previas a la instrumentación y por lo tanto **no tienen un comando único**. Reemplazada por una matriz **exhaustiva por cifra** —una fila por cifra, cada una con sus fuentes y su corte—, con las compuestas rotuladas como tales, declarando sus sumandos en vez de fingir una derivación única. *(No publico acá cuántas filas tiene: es una cardinalidad que se mueve si el universo cambia, y acabo de corregir un defecto de esa forma exacta.)* C3 suma ahora una **prueba de cobertura**: una cifra publicada sin fila falla el criterio.
+3. **C6 seguía prometiendo «el esquema» con una validación parcial.** Los campos que yo enumeraba no cubren las demás causas de descarte documentadas: cuerpo vacío o solo-markdown, claves o tipos inválidos, `id` duplicados, tipos de dato incorrectos, opciones repetidas. Enumeradas como lista cerrada **E1–E11**, y la afirmación acotada a lo enumerado, con el límite publicado al lado: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa prohibida en esta unidad. Agregado además que el validador propio debe traer **casos negativos** — uno que nunca rechazó nada no está verificado.
 
 ### r1 (base `6ec4b48`, HEAD `225e5f3`) — CHANGES_REQUESTED · 6 puntos, los 6 aceptados sin argumentar ninguno
 
