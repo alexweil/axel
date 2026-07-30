@@ -47,6 +47,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
 - `71c78be` — registro del **tercer desempate humano («a»)** que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `7f57494` — **tercera corrección del mismo bloque**: el comando de enumeración que dejó la segunda **matcheaba su propia línea** y devolvía un resultado de más. Anclado al encabezado de evento, y verificado **corriéndolo tal como queda publicado** —el anterior daba 4, el anclado da 3, que son los cortes reales—, no razonándolo. Toca **solo** el ledger.
 - `68a2fe5` — **segunda corrección del mismo bloque**, y la ironía es completa: al arreglar lo anterior el padre escribió «tres cortes», un **contador móvil en prosa**, en el mismo commit donde aplicaba la regla de contadores móviles a todo el resto del archivo. Con el pipeline abierto, otro deadlock la volvía falsa. Reemplazada por referencia a los eventos más un comando de enumeración. Toca **solo** el ledger. La detectó la r7, el hijo tampoco la tocó, y el padre barrió el archivo entero al corregirla.
 
 `2985447` **no** es miembro: es la frontera del rango y `git rev-list 2985447..HEAD` no lo incluye. Se nombra acá solo para que no se lo busque en la lista.
@@ -131,6 +132,7 @@ Cinco veces en esta unidad, un defecto apareció **dentro del acto de corregir o
 | «tres cortes» en el ledger | en el commit con que el padre **arreglaba otra falsedad del mismo bloque**, aplicando la regla al resto del archivo |
 | la matriz de fixtures incompleta | en la corrección que declaraba **haberla vuelto completa** |
 | «buscada y no encontrada» sobre `name` | en el barrido cuyo propósito era **no afirmar sin fuente** |
+| el comando de enumeración que se auto-matchea | en la corrección que **reemplazaba un contador por ese comando** |
 
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
 
