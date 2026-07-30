@@ -665,6 +665,17 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 
 ## Review log
 
+### r18 (base `61a6c32`, HEAD `3bfed8c`) — CHANGES_REQUESTED · 4 puntos · 2 corregidos, 1 escalado, 1 anotado
+
+Codex confirmó C14 —11 commits observados y autorizados, 7/6 paths, `rc=1` al quitar `20c0f79` con el `diff` esperado—, los artefactos intactos y `lint` limpio, sin observaciones de preferencia.
+
+**Sobre la condición de falsación que dejé en la r17, y hay que contestarla derecho.** La predicción era específica: *un commit nuevo del padre al ledger no puede desincronizar prosa mía*. **Esa predicción se sostuvo** — `20c0f79` entró y no desincronizó ninguna frase; Codex lo verificó por su cuenta. Lo que **no** se sostuvo fue la afirmación **más ancha** que puse al lado, «quedan cero menciones vivas»: eso era una afirmación de **exhaustividad del barrido**, no la predicción, y la r18 la refutó encontrando un séptimo contador que mi extractor no veía. Es exactamente el defecto del que este doc ya tenía escrito el nombre —«una auditoría también es un artefacto»— aplicado a mi propio barrido.
+
+1. **Quedaba un contador móvil en STATUS**: «Contrato reusable (**hoy con un único consumidor**)». Bajo mi propio test —*¿cambia el valor sin que nadie edite el doc?*— la respuesta es **sí**: basta con que otra skill adopte el contrato. **Aceptado**: anclado al **cierre del feature 12**, que es la foto de ese momento. Que lo haya encontrado Codex y no mi barrido es el dato importante, no el ítem.
+2. **El barrido no era reproducible, y su evidencia tenía los defectos que denunciaba.** Publicaba «cero», «tres matches» y «el diff son dos líneas» **sin comando ni corte**; y el «dos líneas» era **falso** — `git show --numstat 0ff188d` da **6 inserciones y 2 eliminaciones**, de las cuales solo dos son la incorporación del SHA y las otras cuatro son la prosa que documenta la prueba. Encima, «quedan cero menciones vivas» **es ella misma otro conteo vivo**. **Aceptado entero**: el bloque se reescribe como **foto anclada** a `0ff188d` y a `3bfed8c`, con el comando exacto del barrido publicado, su resultado (**106** cifras en negrita) y —lo que más importa— **su límite declarado**: el extractor solo ve cifras en negrita, así que no podía ver el contador del punto 1. Se elimina la afirmación de exhaustividad y queda solo lo verificable: los seis enumerados cerrados, el séptimo anclado.
+3. **El ledger conserva una contradicción no marcada**: una línea sigue afirmando que STATUS quedó atrás tres veces y el review log ninguna, mientras las correcciones vigentes del mismo archivo dicen ocho rondas y reconocen una atribución falsa del review log. Como es historia, alcanza con tacharla o rotularla como **posteriormente refutada**. **Territorio del padre — escalado.**
+4. **No bloqueante, factual**: el rango tenía **uno** del padre (`20c0f79`) y **tres** míos, no dos y dos como decía mi pedido. Anotado.
+
 ### r17 (base `61a6c32`, HEAD `c143fd5`) — CHANGES_REQUESTED · 2 puntos · **la ronda que identificó la causa estructural**
 
 Codex confirmó que la lista de diez coincide **exactamente** con los commits que tocan el ledger, C14 en sus dos caminos, y que los tres artefactos siguen **byte a byte intactos y sin defectos pendientes**. Sin preferencias. Los dos puntos son otra vez bookkeeping, y **los dos son el mismo fenómeno**:
@@ -690,11 +701,35 @@ Codex nombró la salida en su punto 2: **«eliminar los conteos móviles y ancla
 
 **La predicción falsable que deja este cambio**: a partir de acá, un commit nuevo del padre al ledger **no puede desincronizar prosa mía**, porque ninguna frase publica ese número — solo entra un SHA a una lista. Si una ronda futura vuelve a encontrar un conteo desincronizado en mis docs, esta tesis es falsa y hay que revisarla.
 
-**Primera prueba de la predicción, y la pasó.** Al incorporar `20c0f79` —el commit con que el padre sacó los contadores móviles de su propio ledger— se barrieron los docs buscando prosa desincronizada: **cero**. Los únicos tres matches del barrido son **citas** en la columna «Antes» de la tabla de arriba, o sea el texto viejo transcrito como historia. El diff del cambio son **dos líneas**: el `AUTORIZADOS` del script y la fila de enumeración, las dos **datos con SHA** y ninguna un conteo. Antes de este cambio, ese mismo commit habría desincronizado seis frases.
+**Primera prueba de la predicción, y la pasó — con la evidencia anclada.** La r18 marcó, con razón, que la versión anterior de este párrafo publicaba «cero», «tres matches» y «el diff son dos líneas» **sin comando ni corte**, y que además el «dos líneas» era **falso**. Reescrito como foto reproducible:
+
+**Qué costó incorporar `20c0f79`** — foto al commit `0ff188d`, que es el que lo incorporó:
+
+```sh
+git show --numstat --format= 0ff188d
+#   6   2   docs/implementation/13-public-showcase.md
+```
+
+De esas **6 inserciones y 2 eliminaciones**, solo **dos líneas son la incorporación del SHA** —el `AUTORIZADOS` del script y la fila de enumeración, las dos **datos con SHA** y ninguna un conteo—; las otras cuatro son la prosa que documenta esta misma prueba. Decir «el diff son dos líneas» era falso: eran dos líneas **de datos**, no el diff. **Antes del cambio de clase, ese mismo commit habría desincronizado seis frases** — las seis de la tabla de arriba.
+
+**El barrido de contadores en prosa**, con su comando y su corte:
+
+```sh
+SNAP=3bfed8c
+for f in docs/STATUS.md docs/implementation/13-public-showcase.md; do
+  git show "$SNAP:$f" \
+    | grep -noE '\*\*(un|una|único|única|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciséis|veintiocho|[0-9]+)\*\*' \
+    | sed "s|^|$f:|"
+done
+```
+
+Al corte `3bfed8c` devuelve **106** cifras en negrita, de las cuales una sola es un `único` (línea 425 de este doc), y está **anclada** con «al corte».
+
+**Límite conocido del extractor, declarado porque la r18 lo encontró**: solo ve cifras **en negrita**, así que **no vio** el «hoy con un único consumidor» de `docs/STATUS.md` — que era un contador móvil real y lo encontró Codex, no el barrido. La extracción es mecánica y su clasificación es declarada, pero **su cobertura no es exhaustiva**, y publicarla como si lo fuera sería el mismo defecto que este doc viene persiguiendo. El de STATUS quedó anclado al cierre del feature 12.
 
 **Sobre las cifras que sí se conservan**: el criterio no es «ningún número», es **ningún número que se mueva solo**. El test es concreto: *¿cambia el valor sin que nadie edite el doc?* «Racha **5** al corte `62f4468`» no cambia nunca — es una foto de un evento y es permanentemente verdadera de él, así que se queda. «Racha: 5» a secas sí cambia, y por eso salió. La misma distinción vale para «8 commits al corte `62f4468`» frente a «diez commits al ledger».
 
-Los seis contadores estaban enumerados y cerrados en una sola pasada; **quedan cero menciones vivas** en `docs/STATUS.md` y en este doc.
+Los seis contadores de la tabla se cerraron en una sola pasada. **No se afirma «cero contadores vivos»**: esa sería otra cifra viva y además una afirmación de exhaustividad que el barrido no puede sostener — la r18 encontró un séptimo que el extractor no veía. Lo que se afirma es lo verificable: los **seis enumerados** están cerrados, y el séptimo, anclado.
 
 **Lo que queda fuera de mi alcance**: los dos conteos del punto 2 viven en el **ledger**, territorio del padre. Escalados **con la recomendación estructural**, no solo con los valores — si se corrigen como número, la corrección genera la ronda siguiente.
 
