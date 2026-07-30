@@ -633,7 +633,7 @@ set -euo pipefail
 L=docs/implementation/pipeline-2026-07-29-3.md
 R=284ace4..HEAD
 # Lista CERRADA de los commits del padre autorizados a tocar el ledger.
-AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39 a24abac 62f4468 a2b3b5a 33dd1d4"
+AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39 a24abac 62f4468 a2b3b5a 33dd1d4 20c0f79"
 
 esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
 observado=$(git log --format=%H "$R" -- "$L" | sort)
@@ -650,7 +650,7 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 
 | Comprobación | Resultado |
 |---|---|
-| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) y `33dd1d4` (correcciones del ledger tras la auditoría de la r16) |
+| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) `33dd1d4` (correcciones del ledger tras la auditoría de la r16) y `20c0f79` (eliminación de los contadores móviles del ledger) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
@@ -689,6 +689,10 @@ Codex nombró la salida en su punto 2: **«eliminar los conteos móviles y ancla
 | racha, en STATUS | «**0**» (vivo) | «**racha al lanzar la r18: 2**» — foto anclada al commit, con `.claude/state/changes-streak` nombrado como fuente |
 
 **La predicción falsable que deja este cambio**: a partir de acá, un commit nuevo del padre al ledger **no puede desincronizar prosa mía**, porque ninguna frase publica ese número — solo entra un SHA a una lista. Si una ronda futura vuelve a encontrar un conteo desincronizado en mis docs, esta tesis es falsa y hay que revisarla.
+
+**Primera prueba de la predicción, y la pasó.** Al incorporar `20c0f79` —el commit con que el padre sacó los contadores móviles de su propio ledger— se barrieron los docs buscando prosa desincronizada: **cero**. Los únicos tres matches del barrido son **citas** en la columna «Antes» de la tabla de arriba, o sea el texto viejo transcrito como historia. El diff del cambio son **dos líneas**: el `AUTORIZADOS` del script y la fila de enumeración, las dos **datos con SHA** y ninguna un conteo. Antes de este cambio, ese mismo commit habría desincronizado seis frases.
+
+**Sobre las cifras que sí se conservan**: el criterio no es «ningún número», es **ningún número que se mueva solo**. El test es concreto: *¿cambia el valor sin que nadie edite el doc?* «Racha **5** al corte `62f4468`» no cambia nunca — es una foto de un evento y es permanentemente verdadera de él, así que se queda. «Racha: 5» a secas sí cambia, y por eso salió. La misma distinción vale para «8 commits al corte `62f4468`» frente a «diez commits al ledger».
 
 Los seis contadores estaban enumerados y cerrados en una sola pasada; **quedan cero menciones vivas** en `docs/STATUS.md` y en este doc.
 
