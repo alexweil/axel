@@ -181,6 +181,13 @@ tests/install.sh
    |---|---|
    | `bash -s -- --from <url-del-fork> <destino>` | `bash -s -- --from <fork-url> <destination>` |
    | `scripts/install.sh /path/al/repo-destino` | `scripts/install.sh /path/to/target-repo` |
+   | `curl -fsSL …/install.sh \| bash -s -- --from https://github.com/alexweil/axel <repo-destino>` | idéntico, con `<repo-destino>` ⇒ `<destination>` |
+
+   La tercera fila la agregó la **r6**: el token largo de la forma explícita también lleva un
+   placeholder en español, y como el resto de la cadena es idéntica el `grep` de C5 pasaba con
+   `<repo-destino>` intacto — o sea, «cero pérdida» y la política de idioma se contradecían y el
+   conflicto se estaba resolviendo a mano, sin quedar escrito. Con la fila, la sustitución es
+   obligatoria y verificable.
 
    Cualquier otra traducción de esos dos es un fallo de C5, no una variante aceptable. Si al escribir el manual conviniera otra forma, se cambia **esta tabla primero** y queda registrado en el Review log.
 
@@ -516,13 +523,13 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 
 ## Verificación del cierre
 
-Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 10 625 caracteres) y `docs/install.md` (325 líneas). Evidencia por criterio.
+Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (182 líneas, 10 848 caracteres) y `docs/install.md` (338 líneas). Evidencia por criterio.
 
 **C1 — `LICENSE`.** MIT estándar, sin modificar, `Copyright (c) 2026 alexweil`, con las dos derivaciones ancladas de §1 corridas al corte.
 
 **C2 — estructura del README.** Las nueve secciones, en el orden aprobado y con los requisitos **antes** del comando: título+cifras (§1, sin encabezado), `The problem`, `What a session actually looks like`, `Requirements, honestly`, `Install`, `The commands`, `How it works`, `What this is not`, `Links`. Verificado con `grep -n '^## ' README.md`.
 
-**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **178**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070** caracteres; el README nuevo está wrappeado a ~100, y su línea más larga es **338**. Comparado por caracteres —que es lo invariante—, pasa de **8142** a **10 625**: un 30 % más de texto, cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
+**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **182**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070** caracteres; el README nuevo está wrappeado a ~100, y su línea más larga es **338**. Comparado por caracteres —que es lo invariante—, pasa de **8142** a **10 848**: un 30 % más de texto, cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
 
 **C3 — cero afirmación no verificable.** Pasada por oración sobre los dos artefactos, clasificando cada una en las tres clases del contrato editorial. Los casos que no son trivialmente «hecho derivable»:
 
@@ -531,11 +538,14 @@ Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 1
 | «88 logged review rounds · 59 rejections · zero first-round approvals», «29 approvals», «123», «35», «23 cycles» | hecho derivable | comandos de §«El corte de métricas», corte `b0bdf4d` |
 | «185 commits», «20 files», «8 files» de la prueba externa | hecho derivable | commits `846308f`, `4908bfb`, `98c70c0`, verificados en ese repo |
 | «a round can take more than 10 minutes» | **limitación declarada** | `AGENTS.md` §Convenciones; no se publica como cifra medida |
+| «closing the lid still sleeps the machine, unless it is on power *and* driving an external display» | **limitación declarada** | `AGENTS.md` §Convenciones, «límite físico» |
 | «two subscriptions, from two different vendors» | hecho derivable | `scripts/review.sh` invoca `codex`; la sesión es Claude Code |
-| «Elsewhere they no-op cleanly» | hecho derivable | `scripts/awake.sh` imprime `caffeinate no disponible (no es macOS): nada que hacer` y retorna sin error |
+| «two things are known to degrade cleanly» fuera de macOS, y **nada más** | hecho derivable | `scripts/awake.sh` imprime `caffeinate no disponible (no es macOS): nada que hacer` y retorna sin error; `review.sh` llama a `codex` sin envolver. **Corregido en la r6**: yo había escrito «everything else works» y «portable shell», que esas dos ramas **no** demuestran. Ahora dice que el resto está *untested*, no *supported* |
+| «GitHub's Python template does, out of the box» (regla `build/`) | hecho derivable | verificado contra `github/gitignore` el 2026-07-30. **Corregido en la r6**: la versión anterior —«every Python, Node, Java, Gradle, Maven and C template»— venía del pedido y es **falsa**: solo Python tiene `build/`; Node ignora `build/Release`, que no matchea; Java, C, Maven y Gradle no tienen la regla. El manual publica la verificación completa |
+| «una sesión reconstruye leyendo **cuatro** archivos» | hecho derivable | `AGENTS.md` §«Cómo ubicarte rápido» enumera cuatro. **Corregido en la r6**: decía tres |
 | «readable in an afternoon», «that is the point, not an apology», «expensive and unhurried on purpose» | **opinión marcada** | van en «What this is not», que es la sección declarada de juicio |
 | «the worst thing we could do» (sobre publicar un chat reconstruido) | **opinión marcada** | argumento del diseño, presentado como tal |
-| «This will be fixed» (known issue 1) | **limitación declarada** | compromiso explícito, sin fecha |
+| «Not fixed in this pipeline», y sin entrada de backlog | **limitación declarada** | **Corregido en la r6**: yo había escrito «This will be fixed», que no es una limitación sino una **promesa a futuro sin feature ni backlog que la respalde** — y contradice de frente la decisión registrada en [public-surface.md](../design/public-surface.md) §«Los tres puntos de fricción», que dejó esos arreglos afuera **y sin registrar**. La vidriera no puede prometer en nombre de un plan que no existe |
 | «not partial compliance, an open gap» (aviso MIT) | **limitación declarada** | exigido literalmente por el diseño |
 
 **C4 — cifras con corte y comando.** Re-derivadas con la reconstrucción fail-closed y el normalizador: snapshot **88**, rondas **88**, `CHANGES_REQUESTED` **59**, hitos **29**, ciclos **18**, cerrados **18**, r1 **18/18 `CHANGES_REQUESTED`**. Históricas **25+5+5 = 35** ⇒ **123**. Gancho: **212** commits, **3** días, **13** features al corte. El README publica el corte `b0bdf4d` en la propia línea de las cifras. Los **23 ciclos** de «What this is not» son los 18 del log más los 5 previos a la instrumentación.
@@ -549,9 +559,9 @@ Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 1
 |---|---|
 | V1, V2 | README §1 (título, una línea de posicionamiento, las tres cifras) |
 | V3, V4, V5 | README §Links (`AGENTS.md`, `docs/STATUS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`) |
-| V6, V7 | README §The commands (encabezado y línea de entrada) |
+| V6, V7 | README §The commands: el encabezado, y la línea de entrada «Open Claude Code in the repo and use any of these», **agregada en la r6** — el mapa la daba por conservada y no estaba en el artefacto |
 | V8 | README §The commands (tabla de 7) **y** manual §The commands in full (tabla completa con cuándo y precondición) |
-| V9 | README §How it works (loop y RECAP) **y** manual §Requirements (macOS, `caffeinate`, `scripts/awake.sh`) |
+| V9 | README §How it works (loop y RECAP) **y** manual §Requirements — macOS, `caffeinate`, `scripts/awake.sh`, más el párrafo de la **tapa cerrada** (necesita corriente y display externo), **agregado en la r6**: el mapa lo exigía y no estaba en ningún artefacto |
 | M0 | manual, título y encabezado |
 | M1 | manual §Install → *Quick install* |
 | M2 | manual §Install → *What the defaults assume*, con las tres líneas de anuncio reales |
@@ -559,7 +569,7 @@ Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 1
 | M4 | manual §Did it actually run? |
 | M5 | manual §Did it actually run? (bloque `pipefail`) |
 | M6 | manual §If you installed into the wrong repo |
-| M7 | manual §Install → *The `~/.axel` cache* |
+| M7 | manual §Install → *The `~/.axel` cache* (el cache, `AXEL_HOME`, el manejo fail-closed) **y** *From a local clone* (que el modo local no usa red) — locator corregido en la r6: el contenido está completo, pero repartido en dos secciones y yo había publicado una sola |
 | M8 | manual §Install → *From a local clone* |
 | M9 | manual §Install → *Forks* |
 | M10 | manual §What gets installed (con `AGENTS.md` + symlink `CLAUDE.md` nombrados), §The three modes y §Exit codes |
@@ -601,7 +611,7 @@ Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 1
 
 Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -e`, y los tres de la prueba externa (`846308f`, `4908bfb`, `98c70c0`) contra ese repo. El README **no** cita la frase con que el ledger enmarca el OK, solo el literal del humano.
 
-**C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests.
+**C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests. El reviewer obtuvo **287** en `loop.sh` por la causa conocida —su sandbox saltea los seis asserts del smoke no contractual de `caffeinate`—, no por una divergencia.
 
 **C14 — alcance.** El diff de **mis** commits, `git diff --stat ee1e8ca..HEAD`, toca exactamente seis archivos: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**.
 
@@ -610,6 +620,21 @@ Precisión que conviene dejar escrita: el rango desde el SHA de arranque de la u
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r6 (base `61a6c32`, HEAD `bb45c04`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
+
+Primera ronda con los artefactos delante, y es exactamente donde el reviewer dijo en la r5 que había que verificar C3 y C5. Dio por cerrados: alcance en los seis archivos, ledger tocado **solo** por `ee1e8ca` (confirmó mi lectura), 45/45 tokens, links y anclas sin roturas, 15 secciones, el workaround reproducible y suficiente, el aviso MIT inequívocamente presentado como incumplimiento abierto, y el repo externo con sus tres SHA. Corrió `lint` limpio, `install.sh` 460/0 y `loop.sh` **287/0** — la diferencia con mis 293 es la conocida: su sandbox saltea los seis asserts del smoke no contractual de `caffeinate`.
+
+Los cuatro puntos, y el patrón vuelve a ser el mismo: **declaré verificado lo que no había verificado contra el artefacto**.
+
+1. **C5(B) no estaba cumplido**, y es el criterio que la r2 me hizo reescribir justamente para que mirara los artefactos. Tres filas del mapa afirmaban cosas que no estaban: **V7** («abrí Claude Code en el repo») no aparecía en ninguna parte del README nuevo; **V9** exigía la limitación de la **tapa cerrada** —necesita corriente y display externo— y no estaba ni en el README ni en el manual, aunque la §Verificación la daba por realizada; y el contenido de **M7** sobre que el modo local no usa red sí existía, pero bajo *From a local clone* y no bajo el locator que yo había publicado. **Aceptados los tres**: agregada la línea de entrada a §The commands, agregado el párrafo de la tapa cerrada a §Requirements del manual, y corregido el locator de M7 para nombrar las dos secciones. Escribir el recorrido no es hacerlo.
+2. **C3 tenía hechos falsos o más amplios que su evidencia** — cuatro, y el primero es el peor porque lo transcribí del pedido sin verificarlo, que es literalmente el fallo contra el que existe el criterio (c):
+   - «every Python, Node, Java, Gradle, Maven and C template» ignora `build/`. **Falso.** Verificado contra `github/gitignore`: solo **Python** tiene `build/`; **Node** tiene `build/Release`, que **no** matchea; **Java**, **C**, **Maven** y **Gradle** no tienen la regla. La afirmación pasa a ser **condicional** («cuando tu `.gitignore` ignora `build/`») y el manual publica la verificación completa con su fecha.
+   - El README decía que una sesión reconstruye leyendo **tres** archivos; `AGENTS.md` enumera **cuatro**.
+   - «Everything else … is portable shell» y «everything else works» fuera de macOS: las dos ramas de `caffeinate` prueban que `awake.sh` y el wrapper **degradan limpiamente**, y nada más. Ahora el texto dice que el resto está **untested, no supported**.
+   - «This will be fixed» **no es una limitación declarada**: es una promesa a futuro sin feature ni backlog que la respalde, y contradice de frente la decisión registrada en el diseño de dejar esos arreglos afuera **y sin registrar**. Reemplazada por «**not fixed in this pipeline**», con la aclaración de que tampoco hay backlog y de que eso fue una decisión.
+3. **El manual no había quedado íntegramente en inglés**: la forma explícita conservaba `<repo-destino>`. Es una **tercera** traducción de placeholder que la tabla cerrada no exceptuaba — y como el resto de la cadena es idéntica, el `grep` de C5 pasaba con el placeholder en español intacto. O sea: «cero pérdida» y la política de idioma se contradecían, y el conflicto se estaba resolviendo a mano sin quedar escrito. **Aceptado**: `<destination>`, y la sustitución entra a la tabla cerrada.
+4. **La cronología del transcript no cerraba**: tras la corrección de la r2 quedan cinco rondas hasta el `APPROVED` de la r7, no «six more». **Aceptado** con su formulación: cinco rondas más, seis en total después del primer rechazo.
 
 ### r5 (base `284ace4`, HEAD `61a6c32`) — **APPROVED de la bajada**
 

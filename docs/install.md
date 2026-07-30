@@ -23,14 +23,21 @@ further along. The method documents (`AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEM
 Two subscriptions from two different vendors. That is the cost of cross-vendor review, and it is
 deliberate: a model reviewing itself is not a reviewer.
 
-**Outside macOS**, `scripts/awake.sh` prints `caffeinate no disponible (no es macOS): nada que hacer`
-and returns without error, and `review.sh` calls Codex directly instead of wrapping it in
-`caffeinate`. Everything else — the loop, the installer, the review contract — is portable shell.
-What you lose is the guarantee that the machine stays awake through a long unattended run.
+**Outside macOS**, two things are known to degrade cleanly: `scripts/awake.sh` prints
+`caffeinate no disponible (no es macOS): nada que hacer` and returns without error, and `review.sh`
+calls Codex directly instead of wrapping it in `caffeinate`. What you lose is the guarantee that the
+machine stays awake through a long unattended run.
+
+That is the extent of what has been verified. axel has only ever been run on macOS, so the rest —
+the installer, the loop, the review contract — is untested elsewhere rather than known to work.
 
 **Review rounds are slow.** At `xhigh` effort a round can take more than 10 minutes, which is why
 the generator launches them in the background. This is a declared property of the setup, not a bug
 to wait out.
+
+**On a laptop, `caffeinate` has a physical limit**: closing the lid still sleeps the machine, unless
+it is on power *and* driving an external display. For a long unattended run — and these runs are
+long — leave the lid open or dock it.
 
 ## Install
 
@@ -42,9 +49,8 @@ Standing inside the destination repo, with no prior clone of axel:
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-If your destination's `.gitignore` has a `build/` rule — every Python, Node, Java, Gradle, Maven and
-C template does — this will refuse to install. That is [known issue 1](#1-the-build-collision); it
-takes one line to fix.
+If your destination's `.gitignore` ignores `build/`, this will refuse to install. That is
+[known issue 1](#1-the-build-collision); it takes one line to fix.
 
 ### What the defaults assume
 
@@ -65,7 +71,7 @@ run announces them like this:
 When the destination is somewhere else, or the source is a fork:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash -s -- --from https://github.com/alexweil/axel <repo-destino>
+curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash -s -- --from https://github.com/alexweil/axel <destination>
 ```
 
 ### From a local clone
@@ -253,10 +259,16 @@ rechazo: .claude/skills/build/SKILL.md: nacería ignorado por las reglas del des
 ── axel · fin: rc=2 · rechazo del preflight (1 problema(s), nada escrito) ──
 ```
 
-**Cause.** The `/build` skill lives in `.claude/skills/build/`, and `build/` is one of the most
-common `.gitignore` patterns there is — it ships in the Python, Node, Java, Gradle, Maven and C
-templates. The preflight is behaving **correctly**: nothing the installer writes may fall outside the
-diff. What is wrong is a directory name. No other skill collides.
+**Cause.** The `/build` skill lives in `.claude/skills/build/`, and `build/` is a common
+`.gitignore` pattern. The preflight is behaving **correctly**: nothing the installer writes may fall
+outside the diff. What is wrong is a directory name. No other skill collides.
+
+*Checked against [github/gitignore](https://github.com/github/gitignore) on 2026-07-30, because a
+looser version of this claim did not survive review:* the **Python** template ignores `build/`. The
+**Node** template ignores `build/Release`, which does **not** match. The **Java**, **C**, **Maven**
+and **Gradle** templates carry no `build/` rule at all. So the accurate statement is conditional —
+this bites you when your `.gitignore` ignores `build/`, whether that came from a template or from
+your own hand — and not a list of ecosystems.
 
 **Fix.** Add this to the destination's `.gitignore`, **after** the pattern that excludes it:
 
@@ -270,8 +282,9 @@ the directory itself. You can confirm which rule is responsible with
 `git check-ignore -v .claude/skills/build/SKILL.md` — with `!.claude/` in place it still answers
 `.gitignore:3:build/`. A broader `!.claude/**` also works, but it re-includes more than you need.
 
-This will be fixed. Until then, it is the first thing that happens to anyone with a Python or Node
-repo, and without this section the refusal message is cryptic.
+**Not fixed in this pipeline**, and deliberately not filed as a backlog item either — that was an
+explicit decision, not an oversight. It is documented here because without this section the refusal
+message is cryptic.
 
 ### 2. The dirty-tree refusal does not list the files
 

@@ -20,7 +20,7 @@ settled questions or silently contradicts them.
 
 axel addresses both with structure rather than with a better prompt. **A different vendor's model
 reviews every change** and can run your tests to check for itself. **The repo is the memory** — a
-new session reconstructs everything by reading three files. And **you approve at checkpoints**, not
+new session reconstructs everything by reading four files. And **you approve at checkpoints**, not
 at every step.
 
 ## What a session actually looks like
@@ -53,8 +53,9 @@ human's answer, quoted in the ledger:
 
 That is a logic bug in the deliverable, caught by reading the diff.
 
-**4 · Correction, then agreement.** Fixed in `f85a033` (round 2). Six more rounds of narrowing
-followed; the reviewer approved in round 7, at `886fe4f`.
+**4 · Correction, then agreement.** Fixed in `f85a033`, the round-2 commit. Five more rounds of
+narrowing followed — six in all after that first rejection — and the reviewer approved at `886fe4f`
+in round 7.
 
 **5 · A checkpoint, and a human OK.** STATUS moved to "waiting for OK" in `eabd92f`, the turn ended,
 and nothing else happened until the human answered. The OK is quoted in the ledger's closing section
@@ -76,9 +77,10 @@ Honest scope: **one repo, same author, and an adoption rather than a full review
 
 - **Claude Code and Codex CLI** — two subscriptions, from two different vendors. That is the cost of
   cross-vendor review and it is deliberate: a model reviewing itself is not a reviewer.
-- **macOS** — `scripts/awake.sh` and the wrapper around each review call use `caffeinate`. Elsewhere
-  they no-op cleanly and everything else works; what you lose is the machine staying awake through a
-  long unattended run.
+- **macOS** — `scripts/awake.sh` and the wrapper around each review call use `caffeinate`. Both
+  degrade cleanly where it is absent: `awake.sh` reports it and returns without error, and reviews
+  run uncaffeinated. That is what has been verified — axel has only ever been run on macOS, so treat
+  anything else as untested rather than as supported.
 - **git, `python3`, `curl`** — the destination must be a git repo with a clean tree.
 - **Reviews are slow.** At `xhigh` effort a round can take more than 10 minutes.
 
@@ -92,9 +94,9 @@ Standing inside the destination repo:
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-**If your `.gitignore` has a `build/` rule** — every Python, Node, Java, Gradle, Maven and C template
-does — the install is refused, because the `/build` skill lives in `.claude/skills/build/`. One line
-in your `.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
+**If your `.gitignore` ignores `build/`** — GitHub's Python template does, out of the box — the
+install is refused, because the `/build` skill lives in `.claude/skills/build/`. One line in your
+`.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
 [known issues](docs/install.md#known-issues).
 
 Everything else — explicit forms, forks, the `~/.axel` cache, exit codes, what to do if you installed
@@ -102,6 +104,8 @@ into the wrong repo, and the full procedure **for agents** told to "install axel
 — is in [docs/install.md](docs/install.md).
 
 ## The commands
+
+Open Claude Code in the repo and use any of these:
 
 | Command | What it does |
 |---|---|
