@@ -623,7 +623,7 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C14 — alcance, verificado fail-closed contra una lista cerrada.** Tercera versión de este criterio, y las dos anteriores fallaron por la misma razón de fondo: **la evidencia se apoyaba en algo que se mueve**. La primera publicaba «seis archivos, un commit del padre» y envejeció cuando el padre commiteó al ledger. La segunda —r11— particionaba por «toca el ledger o no» y afirmaba no depender de mensajes de commit, pero su cuarto comando decidía la autoría con `grep -c '^feature 13'`: leía el mensaje, se contradecía con su propia afirmación, **habría reclasificado como «del padre» un commit del hijo sobre el ledger con otro asunto** —dando 0 igual— y encima ese `grep -c` imprime 0 con `rc=1`.
 
-La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los cinco SHA autorizados del padre**. Esa lista no envejece con commits nuevos del hijo, y un sexto commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**.
+La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los SHA autorizados del padre** — hoy **seis**, tras la corrección `f6fce39`. Esa lista no envejece con commits nuevos del hijo, y **un séptimo** commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**. (La r11 la propuso cuando eran cinco; el número es el estado de la lista, no una propiedad del criterio.)
 
 ```sh
 #!/usr/bin/env bash
@@ -661,6 +661,14 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r13 (base `61a6c32`, HEAD `45cc35f`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 escalado
+
+Codex verificó que el bloque de C14 funciona con el conjunto de seis —`rc=0`, 7 paths totales y 6 del hijo; quitando `f6fce39`, `rc=1` con el `diff`— y dio por coincidentes 28 pedidos, seis SHA autorizados, 15 secciones, los tamaños `21/1065`, `183/10989` y `374/21148`, el alcance por commit y `git diff --check` limpio. Sin observaciones de preferencia. Los tres puntos son de la misma familia otra vez, y esta vez la ironía es completa: **el commit que arregló una cifra dejó desincronizadas otras tres**.
+
+1. **C14 conservaba el conteo anterior**: el mecanismo estaba bien pero el texto seguía diciendo «cinco SHA» y que falla «un sexto», cuando tras `f6fce39` son **seis** y lo que falla es **un séptimo**. **Aceptado**: corregido, y de paso el texto ahora dice que el número es **el estado de la lista y no una propiedad del criterio**, para que la próxima incorporación no vuelva a dejarlo viejo. Las menciones históricas de la r11 se conservan, como marcó.
+2. **El compromiso vigente del padre contradecía `f6fce39`.** STATUS y el ledger seguían prometiendo que el padre **no** commitearía al ledger durante el ciclo abierto, y `f6fce39` hizo exactamente eso. La corrección era necesaria y estaba autorizada; lo que faltaba era **registrar la excepción** y reformular el compromiso. **Aceptado**: en STATUS pasa a «**ningún commit adicional después de `f6fce39`**», con la excepción declarada y su razón —era la corrección del conteo del propio ledger, que el hijo no podía hacer y que el reviewer no dejaba pasar—. **La formulación equivalente dentro del ledger la sincroniza el padre**: es su archivo y su compromiso; el hijo lo reporta y no lo reescribe. Escalado.
+3. **El conteo de caídas por `529` no coincidía**: el pedido de la r13 decía **tres** y STATUS decía **dos**. Codex marcó además el punto de fondo, que es el que importa: **el snapshot no contiene con qué arbitrarlo**. Las caídas de sesión no dejan rastro en ningún artefacto versionado. **Aceptado con la segunda de sus dos salidas** —fijar el número desde la fuente autoritativa, o **eliminarlo si no puede reconstruirse**—: se elimina. Publicar una cifra no derivable del repo es exactamente lo que este feature le prohíbe a la vidriera, y no hay razón para que el doc del feature juegue con otras reglas. Queda la afirmación que **sí** es derivable y es la que importa: la racha contractual, que `.claude/state/changes-streak` fija en **3**.
 
 ### r12 (base `61a6c32`, HEAD `b7bf446`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 escalado al padre
 
