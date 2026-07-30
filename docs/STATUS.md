@@ -2,9 +2,9 @@
 
 - **Fase**: **pipeline `/build` en curso** — autorizado el 2026-07-29 · ledger: [implementation/pipeline-2026-07-29-3.md](implementation/pipeline-2026-07-29-3.md) (`gate_base` `39b377e`)
 - **Unidad en curso**: `design` (design-delta) — superficie pública de axel: posicionamiento, política de idioma, licencia y evidencia auditable. **Delta consolidado** en [design/public-surface.md](design/public-surface.md) + tres filas de decisión y la fila de componentes en [DESIGN.md](DESIGN.md). Corre con `opus` (degradación anunciada: `fable` rechazado por falta de créditos en la cuenta; registrada en el ledger). Backlog vacío (los doce features del plan cerrados); la ruta agrega los features 13 y 14
-- **Ronda de review**: 1 · lanzada
-- **Último veredicto**: — (ciclo nuevo; el anterior fue el APPROVED de cierre del feature 12, ronda 7, base `886fe4f`)
-- **Esperando**: desenlace de la review r1 de la unidad `design`. El pipeline corre sus cuatro unidades (`design` → `plan` → `13` → `14`) y frena en el RECAP consolidado, cuyo OK las cierra. Ajuste de alcance del gate: el pipeline **no pushea ni toca los settings de GitHub** (topics/homepage) — eso lo hace el humano. Sigue sin registrar el fix de la colisión `build/` del instalador (fuera de alcance por decisión del humano)
+- **Ronda de review**: 2 · lanzada
+- **Último veredicto**: CHANGES_REQUESTED · ronda 1 · base `886fe4f` — siete puntos, los siete aceptados y corregidos en r2, ninguno argumentado
+- **Esperando**: desenlace de la review r2 de la unidad `design`. El pipeline corre sus cuatro unidades (`design` → `plan` → `13` → `14`) y frena en el RECAP consolidado, cuyo OK las cierra. Ajuste de alcance del gate: el pipeline **no pushea ni toca los settings de GitHub** (topics/homepage) — eso lo hace el humano. Sigue sin registrar el fix de la colisión `build/` del instalador (fuera de alcance por decisión del humano)
 - **Actualizado**: 2026-07-29
 
 > Vigente desde este delta (pendiente de review): la **superficie pública** tiene diseño propio — idioma por audiencia en tres planos (vidriera en inglés, método en español, semilla declarada), licencia MIT, corte README/manual, y la evidencia del reviewer como foto versionada con commit de corte y comando de derivación. Detalle: [design/public-surface.md](design/public-surface.md).
