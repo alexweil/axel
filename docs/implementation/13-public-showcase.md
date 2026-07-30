@@ -631,7 +631,7 @@ set -euo pipefail
 L=docs/implementation/pipeline-2026-07-29-3.md
 R=284ace4..HEAD
 # Lista CERRADA de los commits del padre autorizados a tocar el ledger.
-AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d"
+AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39"
 
 esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
 observado=$(git log --format=%H "$R" -- "$L" | sort)
@@ -648,10 +648,11 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 
 | Comprobación | Resultado |
 |---|---|
-| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) |
+| el conjunto que toca el ledger **es** el autorizado | **sí**, **seis** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) y `f6fce39` (corrección del conteo del ledger) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
+| **la lista creció, y ese es el mecanismo funcionando** | el sexto SHA entró **porque el padre corrigió el ledger**: sin la lista cerrada, ese commit habría pasado inadvertido; con ella, obligó a una actualización explícita y verificable |
 
 **Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` **y el `diff` del conjunto**, que el script ahora efectivamente imprime — la r12 marcó que la evidencia lo prometía y el bloque publicado no lo producía.
 
@@ -666,7 +667,9 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 Codex dio por cerrado el agujero sustantivo de C14 —ejecutó el bloque publicado: 7/6 paths con `rc=0`, y con un SHA fuera de la lista abortó con `rc=1` y el mensaje esperado— y no dejó observaciones de preferencia.
 
 1. **STATUS no había consumido el resultado de la r11**: la racha debía ser 1 y decía 0, la línea seguía anunciando la r11 cuando la r12 ya estaba lanzada, y —lo peor— **conservaba «veintinueve» mientras la línea de al lado afirmaba que STATUS ya estaba corregido a 28**. Un doc que se contradice consigo mismo en dos líneas contiguas. **Aceptado y corregido**, con la racha ahora en **2** y las dos caídas por `529` declaradas como lo que son: fallas de servidor que **no** cuentan para el tope.
-2. **El conteo falso sigue vigente en el ledger** (`pipeline-2026-07-29-3.md`, «veintinueve» donde la derivación cerrada da `13 + 15 = 28`). Codex **coincide en que el hijo no debe editar territorio del padre**, y a la vez plantea el límite correcto: reportarlo no corrige el estado versionado, y no puede aprobar un documento que sabe falso. Su salida es explícita: **lo corrige el padre, y ese commit nuevo sobre el ledger tiene que incorporarse a la lista cerrada de C14**. Escalado al padre — el hijo no lo toca ni lo declara resuelto.
+2. **El conteo falso sigue vigente en el ledger** (`pipeline-2026-07-29-3.md`, «veintinueve» donde la derivación cerrada da `13 + 15 = 28`). Codex **coincide en que el hijo no debe editar territorio del padre**, y a la vez plantea el límite correcto: reportarlo no corrige el estado versionado, y no puede aprobar un documento que sabe falso. Su salida es explícita: **lo corrige el padre, y ese commit nuevo sobre el ledger tiene que incorporarse a la lista cerrada de C14**. Escalado al padre — el hijo no lo tocó ni lo declaró resuelto por su cuenta.
+
+   **Resuelto**: el padre corrigió el ledger en `f6fce39` (toca **solo** ese archivo, verificado), dejando el texto original **tachado y conservado** con la derivación escrita. `f6fce39` entra a la lista cerrada, que pasa a **seis** SHA, y los dos caminos del script quedan re-corridos. Vale registrar el razonamiento que el padre corrigió al hacerlo, porque es reusable: él trataba «no romper C14» como la restricción dura y la falsedad del ledger como algo que podía esperar al cierre. **Es al revés — el doc falso es el defecto y C14 es el mecanismo que lo detecta; diferir la corrección para no hacer sonar la alarma es apagar la alarma.** La salida correcta satisface las dos cosas a la vez: el commit entra y la lista cerrada se actualiza en la misma ronda, que es exactamente para lo que sirve tener la lista.
 3. **La evidencia de C14 prometía una salida que el script no producía**: decía que el camino negativo muestra «el `diff` del conjunto», y el bloque publicado solo imprimía la línea de `FAIL`. Es la versión chica del mismo defecto de siempre —afirmar sobre el artefacto sin correrlo—, esta vez sobre una promesa de salida. **Aceptado**: el script publica ahora el `diff`, verificado corriendo el bloque literal (`rc=1`, la línea de FAIL y `2a3 > 573814d…`).
 
 ### r11 (base `61a6c32`, HEAD `64c96e8`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados · primera tras el desempate
