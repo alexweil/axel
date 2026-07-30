@@ -153,9 +153,9 @@ Five principles hold it together:
 ## What this is not
 
 - **Not a framework.** It is a pile of markdown and two shell scripts. It adds no packages to your
-  project and there is nothing to import — the requirements above are the two agent CLIs and stock
-  Unix tools. No lock-in, readable in an afternoon, and that is the point rather than an apology:
-  deleting it is as easy as installing it.
+  project and there is nothing to import — what it needs are the command-line tools listed above. No
+  lock-in, readable in an afternoon, and that is the point rather than an apology: deleting it is as
+  easy as installing it.
 - **Not cheap.** Two paid subscriptions, and review rounds measured in tens of minutes.
 - **Not autonomous.** It stops and waits for you at every checkpoint, by design.
 - **Not proven at scale.** One repo built itself with this, and one external install exists. That is

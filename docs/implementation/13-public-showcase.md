@@ -527,9 +527,9 @@ Los tres artefactos existen. Tamaños **medidos con `wc -l` / `wc -c` sobre el c
 
 | Artefacto | Líneas | Bytes |
 |---|---|---|
-| `LICENSE` | 21 | 1065 |
-| `README.md` | 183 | 11 002 |
-| `docs/install.md` | 342 | 19 533 |
+| `LICENSE` | 21 | 1 065 |
+| `README.md` | 183 | 10 989 |
+| `docs/install.md` | 358 | 20 064 |
 
 Evidencia por criterio.
 
@@ -537,7 +537,7 @@ Evidencia por criterio.
 
 **C2 — estructura del README.** Las nueve secciones, en el orden aprobado y con los requisitos **antes** del comando: título+cifras (§1, sin encabezado), `The problem`, `What a session actually looks like`, `Requirements, honestly`, `Install`, `The commands`, `How it works`, `What this is not`, `Links`. Verificado con `grep -n '^## ' README.md`.
 
-**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **183**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070** caracteres; el README nuevo está wrappeado a ~100, y su línea más larga es **338**. Comparado por **bytes** —`wc -c`, que es lo reproducible; la r7 marcó que yo los llamaba «caracteres», y en UTF-8 no son lo mismo: el baseline da 7971 caracteres Unicode contra 8142 bytes—, pasa de **8142** a **11 002** bytes: un 30 % más de texto, cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
+**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **183**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070 bytes**; el README nuevo está wrappeado a ~100, y su línea más larga es de **338 bytes**. Comparado por **bytes** —`wc -c`, que es lo reproducible; la r7 marcó que yo los llamaba «caracteres», y en UTF-8 no son lo mismo: el baseline da 7971 caracteres Unicode contra 8142 bytes—, pasa de **8142** a **10 989** bytes — **+35.0 %**, derivado con las mismas magnitudes de la tabla y no estimado a ojo (la r8 marcó que mi «30 %» había envejecido al crecer el README), cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
 
 **C3 — cero afirmación no verificable.** Pasada por oración sobre los dos artefactos, clasificando cada una en las tres clases del contrato editorial. Los casos que no son trivialmente «hecho derivable»:
 
@@ -628,6 +628,15 @@ Precisión que conviene dejar escrita: el rango desde el SHA de arranque de la u
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r8 (base `61a6c32`, HEAD `b94e6e7`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
+
+Codex dio por cerrados los tamaños de la tabla, C5(A) 45/45, C5(B) completo, las 15 secciones, links y placeholders limpios, y verificó que el rango tiene cinco commits: **uno del padre, exclusivamente sobre el ledger**, y cuatro míos sobre los cuatro docs declarados. Suites: lint limpio, `install.sh` 460/0, `loop.sh` 287/0 con el smoke no contractual omitido.
+
+1. **La tabla de tamaños cerraba pero el porcentaje derivado de ella, no.** `11 002 / 8142` es **+35 %**, no el 30 % que yo seguía publicando: la frase había envejecido al crecer el README en las propias correcciones. **Aceptado**: el porcentaje se **deriva** de las mismas magnitudes de la tabla, con el número recalculado al cierre en vez de estimado. De paso quedaron rotuladas en bytes las dos medidas de línea más larga, que seguían diciendo «caracteres».
+2. **Dos formulaciones todavía más amplias que su evidencia.** (a) El README llamaba «stock Unix tools» a los requisitos restantes, y `git`, `python3` y `curl` **no** son herramientas garantizadas por el sistema ⇒ «the command-line tools listed above». (b) La apertura del manual prometía «the failure modes the installer reports» como conjunto **completo**, y el instalador tiene decenas de rechazos concretos mientras el manual documenta clases y casos seleccionados ⇒ «the main failure modes».
+3. **La matriz de templates era correcta pero no reconstruible al corte.** Publicaba fecha, el comando y un link a `github/gitignore` sobre **`main`** — que se mueve. Un tercero no podía reproducir la matriz del 2026-07-30. Es exactamente el criterio que este feature le exige a sus propias cifras («ninguna cifra sin su corte»), aplicado a una fuente **externa**, y yo no lo había extendido ahí. **Aceptado con la primera de sus dos salidas**: el manual fija el commit `57286c3` de `github/gitignore`, publica el **script completo** que instala cada template como `.gitignore` de un repo de prueba y corre `git check-ignore`, y presenta el resultado como **snapshot de ese commit**, no como afirmación perpetua sobre cada ecosistema.
+4. **La racha durable de STATUS estaba desactualizada.** El `APPROVED` de la r5 la reseteó, pero r6 y r7 fueron dos rechazos consecutivos: al lanzar la r8 STATUS debía declarar **2** y seguía diciendo 0. **Aceptado**: el commit que lanza la r9 declara **3**. Es un defecto de mi bookkeeping, no del contador de `review.sh`, que venía bien.
 
 ### r7 (base `61a6c32`, HEAD `7540ca1`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
 

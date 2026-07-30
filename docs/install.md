@@ -1,7 +1,6 @@
 # Installing axel
 
-The install manual: the supported paths, the failure modes the installer reports, and the known
-issues. If you are still deciding whether axel is for you, read the [README](../README.md) first —
+The install manual: the supported paths, the main failure modes, and the known issues. If you are still deciding whether axel is for you, read the [README](../README.md) first —
 this page assumes you already decided.
 
 This document is in English because its audience is the same person the README speaks to, one step
@@ -265,14 +264,31 @@ rechazo: .claude/skills/build/SKILL.md: nacería ignorado por las reglas del des
 `.gitignore` pattern. The preflight is behaving **correctly**: nothing the installer writes may fall
 outside the diff. What is wrong is a directory name. No other skill collides.
 
-*Checked against [github/gitignore](https://github.com/github/gitignore) on 2026-07-30, by running
-`git check-ignore -v .claude/skills/build/SKILL.md` against each template rather than by reading the
-patterns — two successively looser versions of this claim did not survive review:* the **Python**
-template ignores it via `build/`, and the **Gradle** template via `**/build/`. The **Node** template
-has `build/Release`, which does **not** match. **Java**, **C**, **Maven**, **Go** and **Rust** carry
-no matching rule. So the accurate statement is conditional — this bites you when your `.gitignore`
-ignores `build/`, whether that came from a template or from your own hand — rather than a list of
-ecosystems.
+*Two successively looser versions of this claim did not survive review, so here is the check pinned
+to a commit you can re-run.* Templates from
+[github/gitignore@`57286c3`](https://github.com/github/gitignore/tree/57286c3887203259752b747db94e6c3ad10ec53d),
+each installed as the `.gitignore` of an empty repo containing `.claude/skills/build/SKILL.md`, then
+asked directly instead of pattern-matched by eye:
+
+```bash
+SHA=57286c3887203259752b747db94e6c3ad10ec53d
+git init -q probe && cd probe && mkdir -p .claude/skills/build
+for t in Python Gradle Node Java C Maven Go Rust; do
+  curl -fsSL "https://raw.githubusercontent.com/github/gitignore/$SHA/$t.gitignore" -o .gitignore
+  printf '%-8s %s\n' "$t" "$(git check-ignore -v .claude/skills/build/SKILL.md || echo 'not ignored')"
+done
+```
+
+| Template | Ignores the skill? |
+|---|---|
+| **Python** | yes — `build/` |
+| **Gradle** | yes — `**/build/` |
+| Node | no — its `build/Release` does not match |
+| Java · C · Maven · Go · Rust | no — no matching rule |
+
+So the accurate statement is conditional: this bites you when your `.gitignore` ignores `build/`,
+whether that came from a template or from your own hand. The table is a snapshot of that one commit,
+not a claim about every ecosystem forever.
 
 **Fix.** Add this to the destination's `.gitignore`, **after** the pattern that excludes it:
 
