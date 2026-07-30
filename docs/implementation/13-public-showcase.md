@@ -665,6 +665,28 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 
 ## Review log
 
+### r20 (base `61a6c32`, HEAD `1ff5413`) — **APPROVED de cierre**
+
+Codex contestó las dos preguntas que decidían el cierre, y las dos en negativo: **«Bloqueantes de publicación: ninguno»** y **«Bookkeeping pendiente: ninguno al HEAD revisado»**. Verificó la corrección del README como factual (184 en `846308f`, 185 en `4908bfb`; 11 042 bytes y +35,6 % bien derivados), que la v2 del extractor reproduce sus **135** candidatos e **incluye los dos escapes conocidos**, y que declara correctamente no ser exhaustiva — sin encontrar otro contador móvil sin anclar. Cierre mecánico: C14 **12/12** con 7 y 6 paths y negativo fail-closed; C5 **45/45**; C6 **15** secciones; **23** links y **7** anclas sin roturas; `diff --check` y lint limpios; `loop.sh` 287/0 por los seis skips conocidos; `install.sh` rc=0; el `numstat` corregido en 4/2.
+
+**Cobertura del `APPROVED`**: `1ff5413` **era HEAD** al aprobarse — el veredicto cubre todo el trabajo del ciclo. Lo único posterior es el commit de cierre que registra este estado, que es **transcripción mecánica** (fila de IMPLEMENTATION, STATUS, esta entrada) y va listado como **no revisado por Codex** según el criterio fijado en la r14.
+
+#### Balance del ciclo
+
+| | |
+|---|---|
+| rondas | **20** (r1–r20), con **dos** `APPROVED`: la bajada en la r5 y el cierre en la r20 |
+| pedidos de Codex | **51**, **los 51 aceptados sin argumentar ninguno** — bajada **13** (r1–r4), implementación **38** (r6–r19) |
+| cortes por tope | **dos** (r6–r10 y r11–r15), los dos desempatados por el humano con «a)»; **ninguno fue deadlock de desacuerdo** |
+| commits | **33** del hijo y **12** del padre al ledger, en el rango `284ace4..1ff5413` |
+| artefactos | intactos desde `2289975` **salvo una edición de 2 líneas** en el `README.md` (abajo) |
+
+**La edición del `README.md`, declarada porque rompe una señal que veníamos usando.** Desde `2289975`, «los tres artefactos están byte a byte intactos» fue la evidencia de que el churn era de bookkeeping y no del entregable. En la r19 esa racha se rompió a propósito: `git diff --numstat 2289975..1ff5413 -- README.md docs/install.md LICENSE` da **2/2**, y son la línea que publicaba «185 commits» sin corte —un contador móvil **en la vidriera**— más su continuación. Se corrigió a «185 commits as of `4908bfb`, the commit that closed the adoption». La alternativa era dejar el defecto en el artefacto publicado y no en el doc interno, que es al revés de lo que importa.
+
+**Estado final de la condición de falsación.** Se disparó **una vez** (r19): apareció un contador móvil que el barrido no veía. No cambió el juicio, y la razón es verificable: los **dos** escapes del ciclo —el «único consumidor» de la r18 y los «185 commits» de la r19— tuvieron **una única causa común y ya declarada**, que la v1 del extractor solo miraba cifras en negrita. Defecto acotado, arreglado en la v2 y **verificado contra los dos casos que se le habían escapado**. El criterio que queda para el futuro: si un tercero escapa **por una causa distinta a la cobertura del extractor**, eso sí sería una clase inabarcable y correspondería tratarlo como problema estructural.
+
+**Lo que este ciclo deja escrito, más allá del feature**: que una auditoría también es un artefacto y puede tener el defecto que busca; que los docs no deben publicar en prosa contadores que el proceso mueve —van como foto anclada a un SHA o como comando—; y que ninguna cifra de un commit se transcribe si no se midió contra el SHA ya commiteado.
+
 ### r19 (base `61a6c32`, HEAD `c7f7bb5`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados
 
 Codex verificó el barrido publicado (**106** matches y un solo `único`, reproducidos), la corrección del ledger correctamente rotulada, C14 con **12** observados/autorizados y 7/6 paths, `rc=1` al quitar `99e6b73`, artefactos intactos y `diff --check` y `lint` limpios. Sin observaciones de preferencia.
