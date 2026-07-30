@@ -623,7 +623,7 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C14 — alcance, verificado fail-closed contra una lista cerrada.** Tercera versión de este criterio, y las dos anteriores fallaron por la misma razón de fondo: **la evidencia se apoyaba en algo que se mueve**. La primera publicaba «seis archivos, un commit del padre» y envejeció cuando el padre commiteó al ledger. La segunda —r11— particionaba por «toca el ledger o no» y afirmaba no depender de mensajes de commit, pero su cuarto comando decidía la autoría con `grep -c '^feature 13'`: leía el mensaje, se contradecía con su propia afirmación, **habría reclasificado como «del padre» un commit del hijo sobre el ledger con otro asunto** —dando 0 igual— y encima ese `grep -c` imprime 0 con `rc=1`.
 
-La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los SHA autorizados del padre** — hoy **seis**, tras la corrección `f6fce39`. Esa lista no envejece con commits nuevos del hijo, y **un séptimo** commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**. (La r11 la propuso cuando eran cinco; el número es el estado de la lista, no una propiedad del criterio.)
+La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los SHA autorizados del padre** — hoy **siete**. Esa lista no envejece con commits nuevos del hijo, y **un octavo** commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**. (La r11 la propuso cuando eran cinco; el número es el **estado de la lista**, no una propiedad del criterio, y por eso se mueve sin que el criterio cambie.)
 
 ```sh
 #!/usr/bin/env bash
@@ -631,7 +631,7 @@ set -euo pipefail
 L=docs/implementation/pipeline-2026-07-29-3.md
 R=284ace4..HEAD
 # Lista CERRADA de los commits del padre autorizados a tocar el ledger.
-AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39"
+AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d f6fce39 a24abac"
 
 esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
 observado=$(git log --format=%H "$R" -- "$L" | sort)
@@ -648,11 +648,12 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 
 | Comprobación | Resultado |
 |---|---|
-| el conjunto que toca el ledger **es** el autorizado | **sí**, **seis** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate) y `f6fce39` (corrección del conteo del ledger) |
+| el conjunto que toca el ledger **es** el autorizado | **sí**, **siete** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (corte), `573814d` (desempate), `f6fce39` (corrección del conteo) y `a24abac` (compromiso reenunciado como regla) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
-| **la lista creció, y ese es el mecanismo funcionando** | el sexto SHA entró **porque el padre corrigió el ledger**: sin la lista cerrada, ese commit habría pasado inadvertido; con ella, obligó a una actualización explícita y verificable |
+| **la lista creció dos veces, y ese es el mecanismo funcionando** | el sexto y el séptimo SHA entraron **porque el padre corrigió falsedades vigentes en el ledger**: sin la lista cerrada esos commits habrían pasado inadvertidos; con ella, cada uno obligó a una actualización explícita y verificable |
+| **la regla que gobierna el crecimiento** | el padre no commitea al ledger durante el ciclo **salvo para corregir una falsedad vigente**, y en ese caso el SHA entra a `AUTORIZADOS` en la misma ronda (`a24abac`). Un compromiso absoluto estaba mal enunciado, porque dejar en pie una falsedad conocida no es una opción disponible |
 
 **Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` **y el `diff` del conjunto**, que el script ahora efectivamente imprime — la r12 marcó que la evidencia lo prometía y el bloque publicado no lo producía.
 
