@@ -34,6 +34,14 @@ La causa es el **diff agregado**: aplana commits de dos autores con permisos dis
 
 Un commit del hijo que toque el ledger **falla**. Un commit no declarado que toque el ledger **falla**. Un commit del padre declarado que toque, digamos, `README.md`, **falla**. No hay estado en que las dos cláusulas se contradigan, porque ya no hay dos cláusulas: hay una, aplicada commit por commit.
 
+#### Por qué el instrumento importa más que la redacción — observación reusable
+
+Vale sacarla de este feature, porque explica una clase de churn y no solo un criterio. **El diff agregado aplana commits de autores con permisos distintos**, y una vez aplanados no hay redacción que distinga una violación de una excepción autorizada: la información que hacía falta se perdió en el instrumento, antes de que el criterio la mirara. Dos redacciones sucesivas fallaron acá por eso, no por estar mal escritas.
+
+La generalización: **cuando un criterio no cierra después de dos intentos de redacción, sospechar del instrumento antes que de las palabras**. Si la medición borra una distinción que el criterio necesita, ninguna formulación la recupera.
+
+Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte rondas de la unidad `13` fueron exactamente esto — sus commits al ledger y los del hijo se mezclaban en un solo rango, así que cada corrección de uno movía la evidencia del otro, y el ciclo persiguió con redacciones un problema que era de instrumento.
+
 **`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango.** El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
 
 - *(vacía — ningún commit del padre interior al rango todavía)*
@@ -123,7 +131,7 @@ No se derivan con el mismo comando que las 88: no tienen esquema tabular.
 | features 00, 01, 02 | 4 + 11 + 10 = **25** | sus review logs versionados, vía la ronda de cierre que registra la tabla del plan al corte |
 | feature 03, rondas 1–5 | **5** | `03-loop-hardening.md`, cuyo Review log las registra una por una |
 | **subtotal en review logs versionados** | **30** | — |
-| ciclo de plan inicial | **5** | **segunda fuente, citada aparte**: no tiene doc en `implementation/`; su memoria son los commits y el STATUS histórico (`2f7c814`) |
+| ciclo de plan inicial | **5** | **segunda fuente, citada aparte**: no tiene doc en `implementation/`; su memoria son los **commits del ciclo** —`6afb57d..3ab6794`, cuatro de corrección más la ronda que aprobó— y el STATUS histórico. Anclada al **cierre `3ab6794`** |
 
 **30 + 5 = 35**, y **88 + 35 = 123**. La inferencia desde el snapshot **se conserva, degradada a contra-chequeo independiente**: la primera fila del snapshot es la ronda 6, lo que confirma desde otra fuente que al feature 03 le faltan exactamente cinco. Dos fuentes que coinciden valen más que una; lo que no vale es presentar la débil como si fuera la fuerte.
 
@@ -132,6 +140,8 @@ No se derivan con el mismo comando que las 88: no tienen esquema tabular.
 Regla de publicación, fijada por el diseño y no negociable: **dos cifras rotuladas** —«88 logged rounds since instrumentation» y 123 como total histórico con su segunda fuente— y **nunca una sola cifra sin decir a cuál corresponde**.
 
 **«Cero aprobados en ronda 1» se demuestra sobre los 23 ciclos, no sobre los 18.** El log da 18/18 `CHANGES_REQUESTED` en la r1 de cada ciclo; los **cinco** ciclos anteriores a la instrumentación hay que verificarlos en sus propias fuentes, y están verificados: `00-bootstrap.md` r1 `CHANGES_REQUESTED`, `01-installer.md` r1 `CHANGES_REQUESTED`, `02-remote-install.md` r1 `CHANGES_REQUESTED`, `03-loop-hardening.md` r1 `CHANGES_REQUESTED`, y el ciclo de plan en `git show 2f7c814:docs/STATUS.md` («la ronda 1 pidió cambios»). **18 + 5 = 23**, que es exactamente la cifra que el README publica.
+
+**`2f7c814` sirve para esto y solo para esto** (precisión de la r3): es el commit de la **ronda 1** del ciclo de plan, así que es evidencia del veredicto de esa primera ronda — **no** es el corte del ciclo, que cierra en `3ab6794`. Yo lo había usado para las dos cosas, y anclar un conteo de cinco rondas al commit de la primera es afirmar el total desde una foto que no lo contiene.
 
 ### 5. Topics y homepage — valores concretos, argumentados, y **no ejecutados**
 
@@ -243,7 +253,7 @@ Inglés. Estructura:
    | 1 hito sin rechazo (`2dbbdfc`) | snapshot | `b0bdf4d` | sí |
    | 25 rondas de los features 00–02 | tabla del plan al corte (ronda de cierre) | `b0bdf4d` | sí |
    | 5 rondas del feature 03 previas al log | `03-loop-hardening.md`; contra-chequeo: primera fila del snapshot | `b0bdf4d` | sí |
-   | 5 rondas del ciclo de plan | commits + STATUS histórico (`2f7c814`) | `2f7c814` | sí |
+   | 5 rondas del ciclo de plan | commits del ciclo (`6afb57d..3ab6794`) + STATUS histórico | **`3ab6794`** — el **cierre** del ciclo | sí |
    | **35 previas** — *compuesta* | 25 + 5 + 5, tres fuentes de arriba | `b0bdf4d` | sí |
    | **123 histórico** — *compuesta* | 88 (snapshot) + 35 (compuesta de arriba) | `b0bdf4d` | sí |
    | **23 ciclos** — *compuesta* | 18 (snapshot) + 5 ciclos previos a la instrumentación | `b0bdf4d` | sí |
@@ -296,6 +306,25 @@ Inglés, orientado a **qué feedback busca esta ronda**:
 
 **Límite declarado**: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa que esta unidad tiene prohibida. El chequeo cubre las causas de descarte documentadas que están enumeradas arriba — **no el esquema en su totalidad**, y C6 se enuncia así y no de otra manera.
 
+**Un fixture negativo por invariante, no «casos negativos» en general** (r3). La formulación anterior se satisfacía con uno o dos fixtures mientras E7, E8 o E10 no rechazaban nunca: un validador con ramas que jamás se ejecutan puede aprobar cualquier cosa que caiga en ellas, y el criterio no se enteraría. Cada invariante tiene el suyo, y **cada fixture aísla la suya** —falla esa rama y pasa las otras—, que es la misma disciplina de precondición por caso que el feature 03 usó para las tres invariantes de `wt_valid`:
+
+| Invariante | Fixture negativo | Esperado |
+|---|---|---|
+| E1 | formulario sin `description` | rechazo por E1 |
+| E2 | clave de raíz fuera de la allowlist (`colour:`) | rechazo por E2 |
+| E3 | `body: []` | rechazo por E3 |
+| E4 | elemento con `type: paragraph` | rechazo por E4 |
+| E5 | `body` con un único elemento `markdown` | rechazo por E5 |
+| E6 | `textarea` sin `attributes.label` | rechazo por E6 |
+| E7 | `dropdown` con una opción repetida | rechazo por E7 |
+| E8 | dos elementos con el mismo `id` | rechazo por E8 |
+| E9 | `validations.required: "yes"` (string donde va booleano) | rechazo por E9 |
+| E10 | `markdown` con `validations` | rechazo por E10 |
+| E11 | `contact_links` con `url` **relativo** | rechazo por E11 |
+| — | los **tres archivos reales** | aceptación, `rc=0` |
+
+La última fila importa tanto como las once: un validador que rechaza todo también tiene todas sus ramas verdes.
+
 ### `README.md` — edición acotada
 
 Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, y que este feature activa:
@@ -314,7 +343,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen las once invariantes E1–E11** de §Enfoque, que son las causas de descarte documentadas por GitHub que este chequeo cubre. **No se afirma «cumplen el esquema» a secas**: el validador de GitHub es la autoridad final, no se lo puede correr sin pushear —prohibido en esta unidad— y el límite se publica junto al criterio. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` (stock de macOS) para el parseo, **más** un validador de E1–E11 corrido sobre los tres archivos, con casos negativos que lo hagan fallar a propósito — un validador que nunca rechazó nada no está verificado. Referencias: [sintaxis de issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms), [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema) y [errores comunes de validación](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms) |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen las once invariantes E1–E11** de §Enfoque, que son las causas de descarte documentadas por GitHub que este chequeo cubre. **No se afirma «cumplen el esquema» a secas**: el validador de GitHub es la autoridad final, no se lo puede correr sin pushear —prohibido en esta unidad— y el límite se publica junto al criterio. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` (stock de macOS) para el parseo, **más** un validador de E1–E11 corrido sobre los tres archivos, con **la matriz completa `EN → fixture negativo` de §Enfoque: uno por invariante, cada uno aislando la suya**, más el camino positivo sobre los tres archivos reales. «Casos negativos» a secas no alcanzaba: se satisface con dos fixtures mientras el resto de las ramas nunca se ejecuta, y una rama que nunca corrió aprueba lo que sea que caiga en ella. Referencias: [sintaxis de issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms), [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema) y [errores comunes de validación](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms) |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
@@ -336,6 +365,15 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 7. **Ampliar la edición del README.** El contrato dice «activar dos referencias», no «revisar la vidriera». Mitigación: C7 acota, y ante una tercera cosa que parezca necesaria se registra y se pregunta en vez de decidir solo.
 
 ## Review log
+
+### r3 (base `6ec4b48`, HEAD `9f56b39`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados sin argumentar ninguno
+
+**C12 quedó cerrado, y verificado sobre el artefacto**: Codex recorrió los tres commits de `2985447..HEAD` y confirmó que todos sus paths pertenecen a la lista del hijo, sin ledger ni commit interior del padre. La matriz cubre el universo previsto y no aparecieron contadores móviles nuevos.
+
+1. **Corte incorrecto para las cinco rondas del ciclo de plan.** Yo había anclado esa fila en `2f7c814`, que es el commit de la **ronda 1** — después existen r2–r4 y el cierre `3ab6794`. Anclar un conteo de cinco rondas al commit de la primera es afirmar un total desde una foto que no lo contiene. Corregido al cierre **`3ab6794`**, con la derivación ya fijada por el 13 (`6afb57d..3ab6794`); `2f7c814` **se conserva, acotado** a lo único que prueba: el veredicto de la primera ronda, que es lo que la cifra compuesta de «cero aprobados en ronda 1» necesita.
+2. **«Con casos negativos» no cubría cada rama.** Se satisfacía con uno o dos fixtures mientras E7, E8 o E10 no rechazaban nunca, y una rama que jamás se ejecuta aprueba lo que sea que caiga en ella — el mismo validador podía volver a aprobar por no haber corrido la rama defectuosa. Reemplazado por una **matriz `E1…E11 → fixture negativo`**, uno por invariante y **cada uno aislando la suya**, más el camino positivo sobre los tres archivos reales: un validador que rechaza todo también tiene todas sus ramas verdes. Es la misma disciplina de precondición por caso que el feature 03 usó para `wt_valid`.
+
+**Sobre la señal de churn, aplicando la condición que yo mismo puse antes de esta ronda.** La condición era: si los puntos vuelven a caer sobre las correcciones anteriores **sin cerrar nada nuevo**, se nombra como lazo. **No se cumple, y por lo tanto no es un lazo.** Los dos puntos sí caen sobre correcciones previas —Codex lo dice explícitamente y coincidimos en que la señal existe—, pero los dos son **contraejemplos concretos y locales**: un SHA de corte objetivamente equivocado y una cobertura de ramas que no existía. Ninguno reabre algo ya cerrado y ninguno es bookkeeping vacío. La profundidad además baja monótonamente —6 → 3 → 2— y esta ronda **cerró** un criterio (C12) en vez de moverlo. Eso es convergencia, no el lazo de la unidad `13`.
 
 ### r2 (base `6ec4b48`, HEAD `f266844`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados sin argumentar ninguno
 
