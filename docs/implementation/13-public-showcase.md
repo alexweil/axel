@@ -663,9 +663,21 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 
 ## Review log
 
+### r16 (base `61a6c32`, HEAD `04d2fd6`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 anotado
+
+Primera ronda tras el segundo desempate, y la primera con el método nuevo: **auditar el archivo entero en un commit** en vez de corregir el ítem señalado. Encontró seis desincronizaciones donde la r15 había señalado una, incluidos **dos** SHA faltantes en la lista cerrada —`a2b3b5a`, que el padre nombró, y `62f4468`, el commit del segundo corte, **que no había visto nadie**—. Codex confirmó C14 con nueve SHA (`rc=0`, 7/6 paths; `rc=1` al quitar `a2b3b5a`), los artefactos intactos, 45/45 tokens y 15 secciones, sin observaciones de preferencia ni defectos del entregable.
+
+Los dos bloqueantes son el mismo defecto en dos capas, y los dos son míos:
+
+1. **La auditoría atribuía a la r15 verificaciones hechas en la r14.** Mi entrada de la r15 decía que Codex verificó «en la misma ronda» los 45/45 tokens, los 23 links, las 7/7 anclas y las tres suites. **No**: esos chequeos son de la **r14**; en la r15 verificó C14, la invariancia de los artefactos, los tamaños y la estructura. Lo irónico es dónde apareció: en la ronda cuya tesis era que **el review log es la fuente confiable**, el propio review log resultó tener una atribución falsa. **Aceptado**: la entrada de la r15 separa ahora lo que esa ronda verificó de lo que no, con la procedencia nombrada; ídem STATUS. La línea equivalente del ledger la corrige el padre — **escalada**.
+2. **Las afirmaciones absolutas sobre el review log no sobrevivían al punto 1.** Yo había escrito que «estuvo correcto en las quince rondas» y «estuvo correcto siempre»; el punto 1 es un contraejemplo producido por la misma auditoría que hacía la afirmación. **Aceptado**: las dos quedan acotadas a **lo realmente auditado** —secuencia de rondas, heads y veredictos—, con el contraejemplo escrito al lado. La conclusión operativa no cambia (se reconstruye review log → STATUS), pero ahora se sostiene en lo verificado y no en una infalibilidad que nadie comprobó.
+3. **No bloqueante, factual**: `597fb17..HEAD` tenía **3** commits —dos del padre (`62f4468`, `a2b3b5a`) y uno del hijo—, no dos como decía mi pedido. Anotado acá para no repetirlo; no está publicado como cifra vigente.
+
+**Lo que este par de puntos deja como aprendizaje**, y vale para el cierre: una auditoría **también es un artefacto** y puede tener el defecto que busca. La afirmación de que una fuente es confiable necesita el mismo tratamiento que cualquier otra cifra publicada — decir **qué** se auditó de ella, y no declararla infalible.
+
 ### r15 (base `61a6c32`, HEAD `597fb17`) — CHANGES_REQUESTED · **el veredicto más lopsided del ciclo** · segundo tope
 
-Codex declaró textualmente **«No hay defectos pendientes en los artefactos, C14 ni el ledger»**, que los artefactos están **byte a byte intactos** desde `2289975`, que no deja observaciones de preferencia, y que **«el único bloqueo versionado es la línea de racha»**. Verificó en la misma ronda: C14 `rc=0` con las siete SHA de entonces y `rc=1` al quitar `a24abac`; 45/45 tokens; 23 links sin roturas; 7/7 anclas; 15 secciones; tamaños; y las tres suites. Fue la quinta sin converger ⇒ **segundo corte**, y el humano volvió a desempatar con **«a)»**.
+Codex declaró textualmente **«No hay defectos pendientes en los artefactos, C14 ni el ledger»**, que los artefactos están **byte a byte intactos** desde `2289975`, que no deja observaciones de preferencia, y que **«el único bloqueo versionado es la línea de racha»**. **Lo que verificó en esta ronda**: C14 —`rc=0` con las siete SHA de entonces y `rc=1` al quitar `a24abac`—, la **invariancia de los artefactos** desde `2289975`, los tamaños y la estructura. **Lo que NO verificó en esta ronda**: los 45/45 tokens, los 23 links, las 7/7 anclas y las tres suites — **esos chequeos son de la r14**, y atribuírselos a la r15 fue un error mío que la r16 detectó. Cada verificación pertenece a la ronda que la corrió. Fue la quinta sin converger ⇒ **segundo corte**, y el humano volvió a desempatar con **«a)»**.
 
 1. **Bloqueante, y único versionado: la línea de racha de STATUS.** Decía **3** y enumeraba r11–r13 mientras las líneas de arriba ya registraban el `CHANGES_REQUESTED` de la r14. Debía decir **4**.
 2. **No bloqueante, factual**: `2289975..HEAD` tenía **4** commits —uno del padre y **tres** del hijo—, no cinco como decía mi pedido de la r15. No estaba versionado como cifra vigente. Queda anotado acá **para no copiarlo mal**, que es lo único que Codex pidió al respecto.
@@ -684,7 +696,7 @@ Codex declaró textualmente **«No hay defectos pendientes en los artefactos, C1
 | veces que STATUS quedó atrás | «tres veces» sin fuente | **ocho** rondas con un punto sobre STATUS (r3, r4, r7, r8, r12, r13, r14, r15), de las cuales **tres** por no consumir una ronda ya registrada (r12, r14, r15) — derivado del review log |
 | «C14 con siete SHA» en el último veredicto | vigente | anclado como histórico de esa ronda |
 
-**La lección, para que el cierre no la repita**: el **review log versionado estuvo correcto en las quince rondas**; STATUS falló ocho veces. La dirección de reconstrucción correcta es review log → STATUS, y no al revés.
+**La lección, para que el cierre no la repita**, acotada a lo que la auditoría **realmente verificó** — la r16 mostró que la versión absoluta no se sostenía: el review log fue correcto en **la secuencia de rondas, los heads y los veredictos**, que es lo que se auditó y con lo que se reconstruye STATUS; **no** es infalible en todo su contenido, y la prueba es que su propia entrada de la r15 atribuía a esa ronda verificaciones hechas en la r14. STATUS, en cambio, falló en **ocho** rondas. La dirección de reconstrucción sigue siendo review log → STATUS y no al revés, pero por la parte auditada y no por una infalibilidad que nadie comprobó.
 
 ### r14 (base `61a6c32`, HEAD `2289975`) — CHANGES_REQUESTED · 2 puntos · 1 corregido, 1 ya resuelto fuera del snapshot
 
