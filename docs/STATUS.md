@@ -1,7 +1,7 @@
 # STATUS
 
 - **Fase**: **pipeline `/build` en curso** — autorizado el 2026-07-29 · ledger: [implementation/pipeline-2026-07-29-3.md](implementation/pipeline-2026-07-29-3.md) (`gate_base` `39b377e`)
-- **Feature en curso**: ninguno — backlog vacío (los doce features del plan cerrados); la ruta propuesta agrega los features 13 y 14
+- **Unidad en curso**: `design` (design-delta) — superficie pública de axel: posicionamiento, política de idioma, licencia y evidencia auditable. Backlog vacío (los doce features del plan cerrados); la ruta agrega los features 13 y 14
 - **Ronda de review**: —
 - **Último veredicto**: APPROVED de cierre · ronda 7 · base `6f2c04a` (feature 12)
 - **Esperando**: nada — el pipeline corre sus cuatro unidades (`design` → `plan` → `13` → `14`) y frena en el RECAP consolidado, cuyo OK las cierra. Ajuste de alcance del gate: el pipeline **no pushea ni toca los settings de GitHub** (topics/homepage) — eso lo hace el humano. Sigue sin registrar el fix de la colisión `build/` del instalador (fuera de alcance por decisión del humano)
