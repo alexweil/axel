@@ -635,7 +635,11 @@ AUTORIZADOS="ee1e8ca 10e8f1f a0e9fa8 49ceb0b 573814d"
 
 esperado=$(for c in $AUTORIZADOS; do git rev-parse "$c"; done | sort)
 observado=$(git log --format=%H "$R" -- "$L" | sort)
-[ "$esperado" = "$observado" ] || { echo "FAIL: commits sobre el ledger fuera del conjunto autorizado" >&2; exit 1; }
+if [ "$esperado" != "$observado" ]; then
+  echo "FAIL: commits sobre el ledger fuera del conjunto autorizado" >&2
+  diff <(printf '%s\n' "$esperado") <(printf '%s\n' "$observado") >&2 || true
+  exit 1
+fi
 
 git log --format= --name-only "$R" | grep -v '^$' | sort -u                    # 7 paths
 git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         # los del hijo:
@@ -649,13 +653,21 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
 
-**Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` y el `diff` del conjunto.
+**Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` **y el `diff` del conjunto**, que el script ahora efectivamente imprime — la r12 marcó que la evidencia lo prometía y el bloque publicado no lo producía.
 
 Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**. Y **no se publica el total de commits del rango**: crece con cada corrección del hijo, y publicarlo es lo que envejeció la primera versión.
 
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r12 (base `61a6c32`, HEAD `b7bf446`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 escalado al padre
+
+Codex dio por cerrado el agujero sustantivo de C14 —ejecutó el bloque publicado: 7/6 paths con `rc=0`, y con un SHA fuera de la lista abortó con `rc=1` y el mensaje esperado— y no dejó observaciones de preferencia.
+
+1. **STATUS no había consumido el resultado de la r11**: la racha debía ser 1 y decía 0, la línea seguía anunciando la r11 cuando la r12 ya estaba lanzada, y —lo peor— **conservaba «veintinueve» mientras la línea de al lado afirmaba que STATUS ya estaba corregido a 28**. Un doc que se contradice consigo mismo en dos líneas contiguas. **Aceptado y corregido**, con la racha ahora en **2** y las dos caídas por `529` declaradas como lo que son: fallas de servidor que **no** cuentan para el tope.
+2. **El conteo falso sigue vigente en el ledger** (`pipeline-2026-07-29-3.md`, «veintinueve» donde la derivación cerrada da `13 + 15 = 28`). Codex **coincide en que el hijo no debe editar territorio del padre**, y a la vez plantea el límite correcto: reportarlo no corrige el estado versionado, y no puede aprobar un documento que sabe falso. Su salida es explícita: **lo corrige el padre, y ese commit nuevo sobre el ledger tiene que incorporarse a la lista cerrada de C14**. Escalado al padre — el hijo no lo toca ni lo declara resuelto.
+3. **La evidencia de C14 prometía una salida que el script no producía**: decía que el camino negativo muestra «el `diff` del conjunto», y el bloque publicado solo imprimía la línea de `FAIL`. Es la versión chica del mismo defecto de siempre —afirmar sobre el artefacto sin correrlo—, esta vez sobre una promesa de salida. **Aceptado**: el script publica ahora el `diff`, verificado corriendo el bloque literal (`rc=1`, la línea de FAIL y `2a3 > 573814d…`).
 
 ### r11 (base `61a6c32`, HEAD `64c96e8`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados · primera tras el desempate
 
