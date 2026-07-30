@@ -45,9 +45,10 @@ El diseño advierte que un diff de texto no sirve, porque el contenido cambia de
 
 ````sh
 # Extractor. Entrada: markdown por stdin. Salida: un token por línea, únicos y ordenados.
-# Regla cerrada, sin selección humana: (1) las líneas dentro de un fence se emiten enteras;
-# (2) fuera de los fences, cada span delimitado por backticks simples; (3) cada destino de
-# link markdown ](…) — sin la regla 3, un path que solo aparece como link quedaba fuera.
+# Reglas cerradas, sin selección humana: (1) las líneas dentro de un fence, enteras;
+# (2) cada span entre backticks simples; (3) cada destino de link markdown ](…);
+# (4) cada path o nombre de archivo **desnudo** en la prosa — se le quita a la línea lo ya
+#     capturado por (2) y (3) y las URLs, y sobre ese residuo se buscan los .md/.sh/.json.
 awk '
   /^```/ { infence = !infence; next }
   infence { if (length($0)) print; next }
@@ -56,13 +57,21 @@ awk '
       print substr(line, RSTART + 1, RLENGTH - 2); line = substr(line, RSTART + RLENGTH) }
     line = $0
     while (match(line, /\]\([^)]+\)/)) {
-      print substr(line, RSTART + 2, RLENGTH - 3); line = substr(line, RSTART + RLENGTH) } }
+      print substr(line, RSTART + 2, RLENGTH - 3); line = substr(line, RSTART + RLENGTH) }
+    rest = $0
+    gsub(/`[^`]+`/, " ", rest); gsub(/\]\([^)]+\)/, " ", rest)
+    gsub(/https?:\/\/[^ )]+/, " ", rest)
+    while (match(rest, /[A-Za-z0-9_~][A-Za-z0-9_~.\/-]*\.(md|sh|json)/)) {
+      print substr(rest, RSTART, RLENGTH); rest = substr(rest, RSTART + RLENGTH) } }
 ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' | grep -v '^$' | sort -u
 ````
 
-  Corrido sobre `git show 284ace4:README.md`, produce **exactamente 44 tokens**. La lista literal queda abajo, en §«Los 44 tokens del baseline», para que el chequeo sea un `grep` por línea contra la unión y no una búsqueda a ojo. Cero faltantes es el criterio; el conteo 44 es lo que impide que alguien acorte la lista y siga «cumpliendo».
+  Corrido sobre `git show 284ace4:README.md`, produce **exactamente 45 tokens**. La lista literal queda abajo, en §«Los 45 tokens del baseline», para que el chequeo sea un `grep` por línea contra la unión y no una búsqueda a ojo. Cero faltantes es el criterio; el conteo 45 es lo que impide que alguien acorte la lista y siga «cumpliendo».
 
-  **La regla 3 la agregó la r2, y no era cosmética.** El extractor original solo miraba backticks, así que `AGENTS.md`, `docs/STATUS.md`, `docs/DESIGN.md` y `docs/IMPLEMENTATION.md` —que en el baseline aparecen **únicamente** como destino de link— no estaban entre los tokens. Combinado con que la estructura de §9 solo exigía diseño, contrato, plan y las referencias futuras, los cuatro podían desaparecer del README nuevo y **pasar C2, C5 y C10 sin que nada lo marcara**. Con la regla 3 son 4 tokens más, y §9 los nombra explícitamente (abajo).
+  **Las reglas 3 y 4 no son cosméticas: cada una tapó un agujero real, y las dos las encontró la review.**
+
+  - **Regla 3 (r2)** — el extractor original solo miraba backticks, así que `AGENTS.md`, `docs/STATUS.md`, `docs/DESIGN.md` y `docs/IMPLEMENTATION.md` —que en el baseline aparecen **únicamente** como destino de link— no estaban entre los tokens. Combinado con una estructura de §9 laxa, los cuatro podían desaparecer del README nuevo y **pasar C2, C5 y C10 sin que nada lo marcara**.
+  - **Regla 4 (r3)** — quedaba todavía una clase afuera: los paths **desnudos**, sin backticks ni link. El caso concreto es `CLAUDE.md`, que en la línea 50 del baseline aparece en prosa («siembra lo que falte (AGENTS.md + symlink CLAUDE.md, docs, settings)»). Sin la regla 4, C5 podía aprobar la **pérdida de la documentación del symlink sembrado**, que es una de las piezas que el instalador crea. Es 1 token más, y M10 pasa a nombrarlo explícito.
 
 - **(B) Por contenido, tramo por tramo, sobre la prosa.** Mapa **completo** de las 69 líneas del baseline — la r1 objetó que la versión anterior cubría la línea 18 y el bloque 22–69 pero dejaba **1–17 sin mapear**, incluyendo la entrada de uso y las descripciones actuales de comandos. Ahora todo tramo con contenido tiene fila y **disposición declarada**: `mudado` (va al manual), `conservado` (sigue en el README), `partido` o `reemplazado a propósito`.
 
@@ -100,7 +109,7 @@ awk '
 | M7 | 42 · el cache `~/.axel`, `AXEL_HOME`, manejo fail-closed del cache, y que el modo local no usa red | §Install → *The `~/.axel` cache* | idéntico |
 | M8 | 44–46 · modo clásico con clon local (destino obligatorio) | §Install → *From a local clone* | idéntico |
 | M9 | 48 · forks: sin `--from` instala el canónico; `AXEL_DEFAULT_REMOTE` | §Install → *Forks* | idéntico |
-| M10 | 50 · qué instala, los tres modos, precondiciones, no commitea, exit codes 0/1/2 con la salvedad de la corrida incompleta, `tests/install.sh` | partido en §What gets installed, §The three modes y §Exit codes | **ampliado**: los tres modos pasan de una oración corrida a tres bloques, y los exit codes a tabla |
+| M10 | 50 · qué instala —maquinaria (skills, scripts, contrato, política) y semillas, nombrando **`AGENTS.md` + el symlink `CLAUDE.md`**, docs y settings—, los tres modos, precondiciones, que no commitea, exit codes 0/1/2 con la salvedad de la corrida incompleta, y `tests/install.sh` | partido en §What gets installed, §The three modes y §Exit codes | **ampliado**: los tres modos pasan de una oración corrida a tres bloques, y los exit codes a tabla. `AGENTS.md` y el symlink `CLAUDE.md` van **nombrados explícitamente** en §What gets installed (r3): `CLAUDE.md` aparece en el baseline solo como path desnudo, y hasta la regla 4 del extractor su pérdida no la detectaba nadie |
 | M11 | 54 · intro de «Para agentes (Claude Code)» | §For agents (Claude Code) | idéntico |
 | M12 | 56–63 · los cinco pasos numerados del procedimiento para agentes | §For agents (Claude Code) → los mismos cinco pasos | idéntico |
 | M13 | 65 · auditar antes de ejecutar: clonar **fuera** del destino | §Audit before you run | idéntico |
@@ -111,9 +120,9 @@ awk '
 
 **Contenido nuevo del manual, que no viene del baseline** (no es mudanza, así que no entra en el inventario de pérdida — pero sí en los criterios de completitud C6–C9, porque «no perder nada» y «entregar lo diseñado» son cosas distintas y la r1 marcó que los criterios viejos solo cubrían la primera): §The commands in full, §Known issues con los tres puntos de fricción, §After an adoption con los cuatro docs y dos nombres, y §License notice con la limitación del aviso MIT.
 
-#### Los 44 tokens del baseline
+#### Los 45 tokens del baseline
 
-Salida literal del extractor sobre `git show 284ace4:README.md`. El chequeo de la mitad (A) es: cada una de estas 44 líneas aparece en la unión de `README.md` + `docs/install.md` al cerrar el feature.
+Salida literal del extractor sobre `git show 284ace4:README.md`. El chequeo de la mitad (A) es: cada una de estas 45 líneas aparece en la unión de `README.md` + `docs/install.md` al cerrar el feature.
 
 ```
 $0
@@ -134,6 +143,7 @@ AGENTS.md
 AXEL_DEFAULT_REMOTE
 AXEL_HOME
 AXEL_SRC="$(mktemp -d)/axel" && git clone https://github.com/alexweil/axel "$AXEL_SRC" && "$AXEL_SRC/scripts/install.sh" "$(git rev-parse --show-toplevel)"
+CLAUDE.md
 bash
 bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash'
 bash -o pipefail -c '…'
@@ -285,15 +295,31 @@ El log de hoy no tiene reintentos (las 88 filas son intento 1 y todas con veredi
 # Ronda: solo filas con número de ronda; el desenlace es el ÚLTIMO registro de esa
 # (ciclo, ronda), así que un PROC_FAIL previo al veredicto no cuenta como ronda aparte.
 # Los eventos pre-invocación (DEADLOCK, INPUT_ERROR) llevan `-` en ronda y quedan fuera.
-BEGIN { FS = "\t"; OFS = "\t" }
-$2 == "new" && ($4 == "1" || $4 == "-") { cyc++ }
+# El ciclo 0 es el tramo parcial anterior al primer `new` — se inicializa explícito, no por
+# coerción de vacío a cero (r3): el esquema de salida promete un número en el campo 1.
+# GUARDA DE TOPOLOGÍA, fail-closed (r3): el `rounds-log` es best-effort, así que una fila
+# `new` que no llegó a escribirse fusionaría dos ciclos y sobreescribiría sus rondas en
+# silencio. Se rechaza lo que es detectable desde el propio log.
+function die(msg) { printf "FAIL: línea %d: %s\n", NR, msg > "/dev/stderr"; exit 1 }
+BEGIN { FS = "\t"; OFS = "\t"; cyc = 0; prev = 0 }
+$2 == "new" && ($4 == "1" || $4 == "-") { cyc++; prev = 0 }
 $3 ~ /^[0-9]+$/ {
-  key = cyc SUBSEP $3
-  if (!(key in seen)) { seen[key] = 1; order[++n] = key; c[key] = cyc; r[key] = $3 }
+  cur = $3 + 0
+  if (cyc >= 1 && prev == 0 && cur != 1)
+    die("el ciclo " cyc " abre en la ronda " cur " y no en la 1")
+  if (prev > 0 && cur < prev)
+    die("la ronda retrocede de " prev " a " cur " sin frontera de ciclo (¿fila `new` perdida?)")
+  if (prev > 0 && cur > prev + 1)
+    die("la ronda salta de " prev " a " cur " (¿fila de ronda perdida?)")
+  key = cyc SUBSEP cur
+  if (!(key in seen)) { seen[key] = 1; order[++n] = key; c[key] = cyc; r[key] = cur }
   v[key] = $5; s[key] = $6
+  prev = cur
 }
 END { for (i = 1; i <= n; i++) { k = order[i]; print c[k], r[k], v[k], s[k] } }
 ````
+
+**Qué valida la guarda y qué no.** Valida las tres violaciones **detectables desde el log**: que un ciclo abierto por `new` empiece en una ronda distinta de 1; que la ronda retroceda sin frontera (el síntoma de la fila `new` perdida); y que salte más de uno (el síntoma de una fila de ronda perdida). El ciclo `0` queda exento de la primera regla, porque arrancar en la ronda 6 es precisamente lo que le pasa al tramo parcial. Lo que **no** hace es rechazar un ciclo **incompleto**: un ciclo sin `APPROVED` final es un estado legítimo —el ciclo en curso— y aparece como observable pero no cerrado, que es justo la distinción que la tabla de abajo cuenta por separado.
 
 ```sh
 awk -f normaliza.awk snapshot.tsv > rondas.tsv    # 88 líneas; ciclo 0 = el parcial del arranque
@@ -301,13 +327,26 @@ mediana() { sort -n | awk '{a[NR]=$1} END{ if(NR%2) m=a[(NR+1)/2]; else m=(a[NR/
              print "n="NR" mediana="m" min="a[1]" peor="a[NR] }'; }
 ```
 
-**Prueba sintética, corrida** — un ciclo con reintento más un evento pre-invocación (5 filas: `new/1/1 PROC_FAIL`, `new/1/2 CHANGES_REQUESTED`, `round/2/1 CHANGES_REQUESTED`, `round/3/1 APPROVED`, `round/-/- DEADLOCK`):
+**Prueba sintética positiva, corrida** — 9 filas que juntan los seis casos que el log real no tiene (la r3 pidió sumar el prefijo parcial, `NO_VERDICT` y un retry de `round`):
+
+| Fila | Qué caso cubre |
+|---|---|
+| `round/4/1 CR`, `round/5/1 APPROVED` | **prefijo parcial**: el log arranca a mitad de un ciclo ⇒ ciclo `0` |
+| `new/1/1 PROC_FAIL` + `new/1/2 CR` | **retry de `new`**: los dos intentos son `mode=new` y no deben abrir dos ciclos |
+| `round/2/1 NO_VERDICT` + `round/2/2 CR` | **retry de `round`** y **«último registro gana»**: la ronda 2 vale `CHANGES_REQUESTED`, no `NO_VERDICT` |
+| `round/3/1 APPROVED` | cierre del ciclo 1 |
+| `round/-/- DEADLOCK` | **evento pre-invocación**: no es ronda |
+| `new/1/1 CR` | **ciclo incompleto**: observable, no cerrado |
 
 | | reductor viejo | normalizador |
 |---|---|---|
-| ciclos | **2** | **1** |
-| veredictos de «r1» | **2** (`PROC_FAIL`, `CHANGES_REQUESTED`) | **1** (`CHANGES_REQUESTED`) |
-| rondas / longitudes | **1 y 4** (5 filas) | **3** rondas |
+| ciclos | **3** | **2** observables (más el parcial `0`) |
+| veredictos de «r1» | **3**, uno de ellos `PROC_FAIL` | **2**, los dos `CHANGES_REQUESTED` |
+| rondas | 9 filas contadas como tales | **6** rondas contractuales |
+| ronda (1,2) | dos entradas | una, con `sha=a2` — el retry supera al `NO_VERDICT` |
+| ciclos cerrados | no distinguía | **1** de 2 — el incompleto no se rechaza ni se cuenta como cerrado |
+
+**Prueba sintética negativa, corrida** — dos ciclos con la fila `new` del segundo perdida (`new/1`, `round/2 APPROVED`, `round/1`, `round/2 APPROVED`): sin guarda, el normalizador los fusionaba y **sobreescribía en silencio** las rondas 1 y 2 del primero. Con guarda: `rc=1`, `FAIL: línea 3: la ronda retrocede de 2 a 1 sin frontera de ciclo (¿fila `new` perdida?)`.
 
 #### Cifras derivadas, todas sobre `rondas.tsv`
 
@@ -425,7 +464,7 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 | C2 | `README.md` en inglés, las nueve secciones en el orden aprobado, requisitos **antes** del comando de instalación | lectura contra la estructura de arriba |
 | C3 | **Cero afirmación no verificable**: toda oración del README y del manual cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C4 | Toda cifra publicada lleva su **commit de corte** y su comando; las cifras se re-derivan con los comandos de §«El corte de métricas» **sobre `snapshot.tsv`** y coinciden. Incluye las tres derivaciones de las 35 históricas | re-corrida de la tabla de comandos, con la reconstrucción fail-closed y sus tres postcondiciones |
-| C5 | **Cero pérdida, verificada sobre los artefactos y no sobre el mapa**: cada fila V1–V9 / M0–M14 está **realizada** en el `README.md` o el `docs/install.md` finales —se recorre fila por fila localizando el contenido en su destino declarado—, y los **44 tokens** aparecen en la unión, con las 2 traducciones literales de la tabla de placeholders | recorrido fila por fila con locator + `grep` token por token sobre la lista versionada. *Que el mapa esté escrito no verifica su implementación* (r2) |
+| C5 | **Cero pérdida, verificada sobre los artefactos y no sobre el mapa**: cada fila V1–V9 / M0–M14 está **realizada** en el `README.md` o el `docs/install.md` finales —se recorre fila por fila localizando el contenido en su destino declarado—, y los **45 tokens** aparecen en la unión, con las 2 traducciones literales de la tabla de placeholders | recorrido fila por fila con locator + `grep` token por token sobre la lista versionada. *Que el mapa esté escrito no verifica su implementación* (r2) |
 | **C6** | **Completitud del manual**: existen y tienen contenido las **14 secciones** de la lista cerrada de §Enfoque, incluida §The commands in full con los **siete** comandos | recorrido de la lista, una por una |
 | **C7** | **Los tres problemas conocidos están**, cada uno donde el diseño lo manda: la colisión `build/` con su workaround y la trampa de `!.claude/` en §Known issues; el rechazo por árbol sucio en §Known issues; el `modo: initial` en una adopción en §After an adoption | inspección por punto, contra la tabla del diseño |
 | **C8** | **El aviso MIT está declarado como incumplimiento pendiente**, no como cumplimiento parcial: §License notice dice que el aviso no viaja con el payload y que declararlo en el manual informa pero **no** satisface el requisito | lectura literal de la sección |
@@ -443,13 +482,22 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 1. **Prosa sin harness.** No hay test que compruebe que un README convence. Mitigación: los criterios son de **verificabilidad**, no de gusto — el contrato editorial convierte «prosa auditable» en una clasificación por oración, y **C3/C13** la hacen revisable (referencia corregida en la r3: la renumeración a C1–C16 había dejado este puntero apuntando a los criterios viejos).
 2. **Las cifras se mueven mientras se escribe.** Ya pasó durante la review del delta de diseño. Mitigación: corte declarado, comandos escritos, y la consecuencia (el snapshot no incluye las rondas del 13 y del 14) publicada en vez de escondida.
 3. **La mediana que volvió a 4.** Riesgo concreto de que una relectura futura crea que se reintrodujo el error corregido. Mitigación: el aviso explícito de arriba, y la decisión de **no publicar la mediana en el README**.
-4. **Traducir mientras se muda puede perder un caso en silencio.** Mitigación: la partición (A)/(B) — lo invariante de idioma se chequea con una lista de **44 tokens** producida por un extractor versionado, y la prosa contra un mapa que cubre las **36 líneas con contenido** del baseline, con la cobertura derivada y no afirmada.
+4. **Traducir mientras se muda puede perder un caso en silencio.** Mitigación: la partición (A)/(B) — lo invariante de idioma se chequea con una lista de **45 tokens** producida por un extractor versionado, y la prosa contra un mapa que cubre las **36 líneas con contenido** del baseline, con la cobertura derivada y no afirmada.
 5. **El one-liner probado corre contra el remoto, que está detrás del local.** Mitigación: declarado en §4; el README no afirma nada sobre el contenido no pusheado.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Es una línea y está a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
 7. **«No perder nada» no es «entregar lo diseñado».** Riesgo que la r1 encontró y que no estaba en esta lista: un manual podía pasar C3 y C5 con la mitad del contenido nuevo ausente. Mitigación: C6–C9, que verifican completitud contra listas cerradas —14 secciones, 3 problemas conocidos, el aviso MIT, 6 objeciones— en vez de contra el criterio de quien revisa.
 8. **Un procedimiento que verifica su propio enunciado en vez del artefacto.** Es el patrón común de los tres puntos de la r1 y de dos de la r2: el mapa escrito no prueba que el mapa se haya implementado, y un reductor que cuenta filas no prueba que cuente rondas. Mitigación: C5 recorre los artefactos finales fila por fila, el normalizador tiene su prueba sintética con reintento, y la reconstrucción del corte tiene sus cuatro modos de falla probados.
 
 ## Review log
+
+### r3 (base `284ace4`, HEAD `528a4e0`) — CHANGES_REQUESTED · 4 puntos, los 4 aceptados
+
+Codex reprodujo por su cuenta las 88 rondas, 59 rechazos, 29 aprobaciones, 18 ciclos cerrados, las medianas y el único hito de longitud 1; también 25/5/5, 212 commits, 3 días y 13 features. Dio por buenos C6–C9, V8, y C5 «verificable sobre los artefactos una vez incorporado `CLAUDE.md`». De las dos dudas que le planteé sobre el normalizador, **descartó una y confirmó la otra con una reproducción**, que es la diferencia entre una opinión y un hallazgo.
+
+1. **El normalizador no emitía el ciclo parcial como `0`.** Al no inicializar `cyc`, las tres primeras filas de `rondas.tsv` salían con el campo 1 **vacío**; las cifras coincidían solo porque awk coerciona vacío a cero. Es decir: el esquema documentado prometía un número y el programa entregaba otra cosa, y la exclusión del parcial quedaba implícita en una coerción. **Aceptado**: `cyc = 0` explícito en `BEGIN`, y el prefijo parcial agregado a la prueba sintética.
+2. **La frontera `new` faltante sí merecía guarda** — yo había preguntado si era un estado que el contrato impide, y la respuesta es que no: el `rounds-log` es **best-effort**, así que una escritura fallida puede omitir esa fila. Lo **reprodujo**: con dos ciclos y el segundo `new` perdido, el normalizador los fusionaba y **sobreescribía en silencio** las rondas 1 y 2 del primero. **Aceptado**: guarda fail-closed de la topología detectable —un ciclo abierto por `new` empieza en la ronda 1; después, la ronda repite (retry) o avanza en uno; retroceder o saltar exige otra frontera— con `die()` y prueba negativa. Aceptada también su acotación de que **un ciclo incompleto no debe rechazarse**: la prueba demuestra que aparece observable y no cerrado. Y sumados a la prueba positiva los dos casos que pidió, `NO_VERDICT` y retry de `round`, que fijan «último registro gana».
+3. **El extractor todavía omitía una ruta invariante**: `CLAUDE.md` aparece en la línea 50 del baseline **sin backticks ni link**, así que no entraba en los 44 tokens y **C5 podía aprobar la pérdida de la documentación del symlink sembrado**. Tercera clase de contenido invariante que se me escapó, después de los backticks y los links. **Aceptado**: regla 4 —paths desnudos sobre el residuo de la línea, quitando lo ya capturado y las URLs— ⇒ **45 tokens**, lista y conteo regenerados (y verificado que la lista publicada es idéntica byte a byte a la salida del extractor), y M10 pasa a nombrar `AGENTS.md` + symlink `CLAUDE.md` explícitamente.
+4. **`STATUS.md` seguía fechado `2026-07-29`** con el commit bajo review del `2026-07-30`. **Aceptado**, corregido.
 
 ### r2 (base `284ace4`, HEAD `4f2a310`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados
 
