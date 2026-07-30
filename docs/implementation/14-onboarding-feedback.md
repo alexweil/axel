@@ -46,7 +46,8 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 - `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
 - `71c78be` — registro del **tercer desempate humano («a»)** que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
-- `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único —hubo **tres**— y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `68a2fe5` — **segunda corrección del mismo bloque**, y la ironía es completa: al arreglar lo anterior el padre escribió «tres cortes», un **contador móvil en prosa**, en el mismo commit donde aplicaba la regla de contadores móviles a todo el resto del archivo. Con el pipeline abierto, otro deadlock la volvía falsa. Reemplazada por referencia a los eventos más un comando de enumeración. Toca **solo** el ledger. La detectó la r7, el hijo tampoco la tocó, y el padre barrió el archivo entero al corregirla.
 
 `2985447` **no** es miembro: es la frontera del rango y `git rev-list 2985447..HEAD` no lo incluye. Se nombra acá solo para que no se lo busque en la lista.
 
@@ -534,7 +535,9 @@ La corrección de `checkboxes`, el retiro de `upload` y C12 quedaron bien. **El 
 
    De acá salió también la **frontera única**, que es mejor que seguir agregando invariantes de a una: *para cada causa documentada, o hay invariante con fixture, o C15 fija el valor que la vuelve imposible*.
 
-3. **La reparación volvió a publicar contadores móviles.** STATUS duplicaba `AUTORIZADOS` como «los tres SHA» —justo después de declarar que fuera la única lista— y publicaba el tamaño del barrido, que este mismo feedback amplió. Los dos reemplazados por referencia. **La tercera instancia es del ledger y es del padre**: el `## Cierre` quedó diciendo «tres cortes» con el pipeline abierto, así que otro deadlock la vuelve falsa. No se toca; se le pasa.
+3. **La reparación volvió a publicar contadores móviles.** STATUS duplicaba `AUTORIZADOS` como «los tres SHA» —justo después de declarar que fuera la única lista— y publicaba el tamaño del barrido, que este mismo feedback amplió. Los dos reemplazados por referencia. **La tercera instancia era del ledger**: el `## Cierre` quedó diciendo «tres cortes» con el pipeline abierto. No se tocó; se le pasó al padre, que commiteó `68a2fe5` y **barrió el archivo entero**. La ironía es del mismo orden que las dos mías: el padre escribió ese contador **en el commit con que arreglaba otra falsedad del mismo bloque**, mientras aplicaba la regla al resto del archivo.
+
+   **Los tres casos —dos míos, uno suyo— tienen la misma forma**: el defecto aparece dentro del acto de corregirlo. No es descuido de ninguno de los dos; es que corregir *es* escribir, y escribir es donde el defecto nace. Por eso la salida no es más cuidado sino la frontera única: mover la garantía del autor al mecanismo.
 
 **Balance de la ronda, que vale anotar**: los tres puntos son la misma clase que el ciclo persigue, y **los tres cayeron sobre correcciones de la ronda anterior** — pero ninguno reabre algo cerrado y los tres traen contraejemplo concreto. Lo que cambió respecto de mi lectura de la r4 es que ya no sostengo que la clase se agote con un barrido: se agota cuando el mecanismo la vuelve imposible, y eso es lo que intenta la frontera única.
 
