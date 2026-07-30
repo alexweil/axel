@@ -123,7 +123,7 @@ Dos cosas que el barrido enseña, más allá de las filas:
 
 > Sección con nombre propio a pedido del padre, porque sirve más allá de este feature y se diluía entre los criterios.
 
-Cinco veces en esta unidad, un defecto apareció **dentro del acto de corregir otro del mismo tipo**. No en el mismo archivo ni en la misma semana: en el mismo commit, y en el párrafo que declaraba el remedio.
+Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregir otro del mismo tipo**. No en el mismo archivo ni en la misma semana: en el mismo commit, y en el párrafo que declaraba el remedio.
 
 | Ocurrencia | Dónde apareció |
 |---|---|
@@ -136,7 +136,7 @@ Cinco veces en esta unidad, un defecto apareció **dentro del acto de corregir o
 
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
 
-De ahí la única salida que funciona: **mover la garantía del autor al mecanismo**. Que la propiedad no dependa de que alguien recuerde aplicarla, sino de que su violación sea detectable —o imposible— por construcción. Las tres formas que esta unidad terminó usando son ejemplos de lo mismo:
+De ahí la única salida que funciona: **mover la garantía del autor al mecanismo**. Que la propiedad no dependa de que alguien recuerde aplicarla, sino de que su violación sea detectable —o imposible— por construcción. Las formas que esta unidad terminó usando son ejemplos de lo mismo:
 
 - **auditar por commit y no por diff agregado** — el instrumento conserva la distinción que el criterio necesita, en vez de exigir que la redacción la recupere;
 - **no publicar contadores móviles** — la cifra se deriva o se ancla, así que no hay prosa que pueda desincronizarse;
@@ -406,6 +406,121 @@ Consecuencias directas sobre el diseño de los dos campos, ahora derivadas y no 
 
 **`config.yml`** — `blank_issues_enabled: true` y un `contact_links` con las tres claves que el esquema exige (`name`, `url`, `about`). El `url` tiene que ser **absoluto**, así que queda fijado acá: `https://github.com/alexweil/axel/blob/main/CONTRIBUTING.md`.
 
+### La especificación literal — los tres archivos, completos
+
+La r9 encontró que **C15 prometía una especificación literal que no existía**: las tablas fijaban propósito, tipo y requiredness, pero ningún valor —ni `name`, ni `id`, ni `label`, ni los textos—, así que C6 no tenía contra qué comparar. Es el mismo defecto que C15 fue creado para atrapar, ocurriendo dentro de C15. Se materializa acá: **estos bloques son los archivos**, y la implementación los copia sin editar.
+
+`.github/ISSUE_TEMPLATE/install-failed.yml`
+
+```yaml
+name: Install failed
+description: The installer refused, errored, or wrote something unexpected
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying axel. The fields below are the ones that make a failed
+        install diagnosable without a round trip.
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and git version
+      placeholder: macOS 15.5, git 2.49.0
+    validations:
+      required: true
+  - type: textarea
+    id: final-line
+    attributes:
+      label: The installer's final line
+      description: "The line beginning with `── axel · fin: rc=`"
+    validations:
+      required: true
+  - type: textarea
+    id: full-output
+    attributes:
+      label: Full installer output
+    validations:
+      required: true
+  - type: textarea
+    id: gitignore-rules
+    attributes:
+      label: Lines in the destination .gitignore that mention build/
+      description: Write "none" if there are no such lines.
+    validations:
+      required: true
+  - type: dropdown
+    id: announced-mode
+    attributes:
+      label: Which mode did the installer announce?
+      options:
+        - initial
+        - adoption
+        - update
+        - it did not get that far
+    validations:
+      required: true
+  - type: checkboxes
+    id: clean-tree
+    attributes:
+      label: Destination state before running
+      options:
+        - label: The destination repository had a clean working tree
+          required: true
+```
+
+`.github/ISSUE_TEMPLATE/friction-or-question.yml`
+
+```yaml
+name: Friction or a question
+description: Something was unclear, harder than it should be, or you are not sure how it is meant to work
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions belong here too. If the answer was not obvious from the README
+        or the install manual, that is a documentation bug worth reporting.
+  - type: textarea
+    id: what-you-were-doing
+    attributes:
+      label: What you were doing
+    validations:
+      required: true
+  - type: textarea
+    id: what-you-expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened instead
+    validations:
+      required: true
+  - type: checkboxes
+    id: where-you-looked
+    attributes:
+      label: Where you looked first
+      options:
+        - label: The README
+        - label: The install manual
+        - label: The contributing guide
+        - label: The skill files
+        - label: Nowhere yet
+```
+
+`.github/ISSUE_TEMPLATE/config.yml`
+
+```yaml
+blank_issues_enabled: true
+contact_links:
+  - name: How to give feedback
+    url: https://github.com/alexweil/axel/blob/main/CONTRIBUTING.md
+    about: What this round of feedback is looking for, and what is out of scope today.
+```
+
+**Claves opcionales deliberadamente omitidas**, declaradas porque «la especificación es completa» tiene que incluir lo que *no* está: `title`, `labels`, `assignees`, `projects` y `type` en la raíz (`labels` en particular queda fuera por la decisión ya registrada de no referenciar etiquetas que no existen); `render` en los `textarea`; `description` y `placeholder` donde no aparecen; y `multiple` en el `dropdown`. El conjunto de atributos usado es `value` en `markdown`, `label` y `placeholder` en `input`, `label` y `description` en `textarea`, `label` y `options` en `dropdown` y en `checkboxes`.
+
 **Cómo se valida, y por qué esto cambió en la r8.** Hasta la r7 el chequeo era «enumerar las causas por las que GitHub descarta un formulario y verificar que ninguna ocurra». Las rondas r5, r6, r7 y r8 encontraron, cada una, **causas nuevas que la enumeración anterior no tenía** — y no por descuido: la lista de causas es de GitHub, vive en su documentación, y **yo no puedo acotarla**. Un criterio cuya condición de cierre es «haber agotado la especificación de un tercero» no cierra nunca. Es exactamente la clase abierta que esta unidad diagnosticó, alojada dentro del criterio que debía cerrarla.
 
 **La inversión, que es lo que la vuelve acotada**: el chequeo deja de preguntar *«¿viola alguna regla de GitHub?»* —conjunto abierto, ajeno— y pasa a preguntar *«¿contiene exactamente lo que la bajada fijó?»* —conjunto cerrado, nuestro—.
@@ -427,7 +542,8 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 | Regla documentada | Cómo la satisface el contenido fijado |
 |---|---|
-| `name` debe superar **3 caracteres**, o la plantilla **no se muestra** — «*The `name` field must be more than 3 characters. If it's not, the template won't be shown when creating an issue*» | los dos `name` son frases descriptivas; C15 fija sus literales |
+| `name` debe superar **3 caracteres**, o la plantilla **no se muestra** | `Install failed` (14) y `Friction or a question` (22) |
+| **`name` único entre todas las plantillas del repo**, incluidas las Markdown (regla que faltaba, señalada en la r9) | los dos literales son distintos, y **no hay otras plantillas** en `.github/ISSUE_TEMPLATE/` |
 | claves de raíz requeridas (`name`, `description`, `body`) y sin claves ajenas | C15 fija el conjunto de claves de raíz de cada archivo |
 | `body` no vacío y con **al menos un campo no-`markdown`** | `F1–F7` y `G1–G5` incluyen seis y cuatro campos de entrada |
 | `type` presente y válido en cada elemento | C15 fija el `type` de cada campo |
@@ -444,6 +560,22 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 | `config.yml`: `blank_issues_enabled` booleano y `contact_links` con `name`, `about` y `url` absoluto | C15 fija el archivo completo, URL incluido |
 
 **Límite declarado, y ahora es honesto porque el chequeo ya no promete lo contrario**: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa prohibida en esta unidad. Esta tabla registra **las reglas que la documentación publica y que conocemos**; que GitHub tenga otras no documentadas es posible y no se puede descartar desde acá. Lo que sí se garantiza es lo acotado: los archivos coinciden con una especificación cerrada, y esa especificación fue elegida contra las reglas de arriba.
+
+### El comparador: `diff` byte a byte, no igualdad de objetos
+
+La r9 encontró que «coincide con la especificación» no se puede verificar parseando y comparando objetos, y lo **reprodujo**: `name: injected` seguido de `name: expected` produce el mismo objeto que `name: expected` solo. O sea que un archivo con una **clave duplicada** —una vía de inyección, no una torpeza— pasaba un comparador estructural mientras contradecía C6.
+
+**El comparador es `diff` byte a byte contra el bloque canónico extraído de esta bajada**, más el parseo como chequeo independiente:
+
+```sh
+# extraer el bloque canónico de la bajada y comparar
+diff <(extraer_bloque install-failed) .github/ISSUE_TEMPLATE/install-failed.yml   # debe ser vacío
+/usr/bin/ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/ISSUE_TEMPLATE/install-failed.yml   # debe salir 0
+```
+
+Los dos chequeos son distintos y los dos hacen falta: el `diff` prueba **literalidad** —ninguna clave de más, ninguna duplicada, ningún byte distinto— y el parseo prueba que el bloque canónico **es YAML válido**, que el `diff` por sí solo no diría. Con esto la política sobre aliases, documentos múltiples y claves repetidas deja de necesitar redacción: cualquiera de esas construcciones es una diferencia de bytes.
+
+*(Verificado al escribir esto, y encontró un defecto real: el primer bloque **no parseaba**. La `description` del campo `final-line` contenía `fin: rc=` sin comillas, y los dos puntos seguidos de espacio hacían que YAML lo leyera como un mapa anidado. Corregido con comillas. Es exactamente lo que un chequeo corrido encuentra y uno razonado no — la misma disciplina con que el padre verificó el comando del ledger.)*
 
 ### Fixtures: mutaciones de los archivos reales
 
@@ -476,7 +608,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **coinciden con la especificación literal que fija C15** — ni una clave de más, ni una de menos, ni un tipo ni un valor distinto. **La r8 invirtió la carga y por eso el criterio ya no dice «cumplen el esquema»**: enumerar las causas por las que GitHub descarta un formulario resultó una condición de cierre inalcanzable —cuatro rondas seguidas encontraron causas nuevas, porque el conjunto es de GitHub y no lo acoto yo—. Las reglas documentadas siguen valiendo y se satisfacen **por construcción**, con cada elección registrada contra su regla en §Enfoque | `ruby -ryaml` para el parseo —disponible en esta máquina, precondición de entorno declarada en §«Barrido de premisas»— más el chequeo de conformidad contra la especificación de C15, con **una mutación por cada sitio que C15 fija** (clave faltante, clave extra, tipo cambiado, valor cambiado) y el camino positivo sobre los tres archivos sin mutar. La cobertura se **deriva enumerando la especificación**, no se declara |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal» *y* **parsean**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro— y la r9 la **materializó**: sin los bloques literales, C6 no tenía contra qué comparar. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | `diff` byte a byte contra el bloque canónico —que detecta claves duplicadas, aliases y documentos múltiples sin necesidad de política escrita, porque todos son diferencias de bytes— **más** `/usr/bin/ruby -ryaml` como chequeo independiente de que el bloque es YAML válido. Los dos hacen falta y prueban cosas distintas. Mutaciones por sitio (clave faltante, extra, **duplicada**, tipo cambiado, valor cambiado) y camino positivo sobre los tres archivos |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
@@ -486,7 +618,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
-| **C15** | **Especificación literal completa, y completitud contra los artefactos.** Dos cosas que la r4 y la r8 fueron pidiendo por separado y que quedan en un solo criterio. (i) La bajada **fija el contenido literal** de los tres YAML: cada clave, cada valor, cada atributo de cada campo `F1–F7` y `G1–G5`, y `config.yml` entero — es la especificación cerrada contra la que C6 verifica, y sin ella C6 no tiene referencia. (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** —`type` + el significado que la fila declara + sus opciones cuando las tiene + su requiredness + su ubicación—, incluido que F7 sea `checkboxes` de una opción con `required` **en la opción** y que G5 no tenga ninguna requerida; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés**, que es lo que el diseño manda para toda la vidriera | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la **tupla entera**, no solo su presencia — la r5 mostró que cardinalidad y requiredness correctas admiten igual dos formularios con textareas genéricos, o todos los artefactos escritos en español. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada*: es el defecto que el feature 13 tuvo que corregir con sus C6–C9, y se hereda el remedio en vez de redescubrirlo |
+| **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con sus valores y con las **claves opcionales omitidas declaradas** — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por `diff`, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
 
 ## Riesgos
 
@@ -500,6 +632,17 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r9 (base `6ec4b48`, HEAD `3f270ff`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · la ronda que materializó la inversión
+
+**La respuesta a la pregunta que hice, que era lo que más importaba de la ronda**: «*La inversión de C6 es conceptualmente válida, pero todavía no está materializada*». O sea que **el corte quedó bien puesto** —no hay un camino estructural por el que un archivo conforme a C15 sea rechazado—, y el límite residual que declaré es el correcto: «*aun con todo esto, la conformidad local no prueba aceptación por GitHub; su esquema sigue en public preview y GitHub conserva la autoridad final*». Lo que faltaba no era el diseño sino su realización.
+
+1. **C15 prometía una especificación literal que no existía.** Las tablas fijaban propósito, tipo y requiredness, y **ningún valor**: ni `name`, ni `id`, ni `label`, ni los textos, ni las opciones, ni `contact_links`. Sin eso C6 no tenía contra qué comparar. **Es el defecto que C15 fue creado para atrapar, ocurriendo dentro de C15** —«que la lista esté escrita no verifica que esté implementada», aplicado a la lista misma—. Materializado: §«La especificación literal» trae **los tres archivos enteros**, más las **claves opcionales omitidas declaradas**, porque «completa» tiene que incluir lo que no está.
+2. **«Coincide» necesitaba un comparador que preservara la literalidad**, y Codex lo reprodujo: parsear y comparar objetos **no detecta claves duplicadas** — `name: injected` seguido de `name: expected` da el mismo objeto que `name: expected`. Un archivo con una clave de más pasaba. Reemplazado por **`diff` byte a byte** contra el bloque canónico, más el parseo como chequeo independiente. Los dos prueban cosas distintas y los dos hacen falta; y la política sobre aliases, documentos múltiples y claves repetidas deja de necesitar redacción, porque todos son diferencias de bytes.
+3. **Faltaba una regla oficial**: cada `name` debe ser **único entre todas las plantillas del repo**, incluidas las Markdown. Agregada a la tabla por construcción, con los dos literales distintos y la constatación de que no hay otras plantillas.
+4. **Reaparecieron contadores móviles**: «Cinco veces» cuando la tabla ya enumeraba seis, «Las tres formas», y «Los tres pendientes del ledger» en STATUS. Los tres reemplazados por formulaciones sin cantidad, conservando las listas como fuente.
+
+**Un defecto real que encontró el chequeo corrido, y que el razonado no habría visto**: al validar los bloques recién escritos, **el primero no parseaba**. La `description` del campo `final-line` contenía `fin: rc=` sin comillas, y los dos puntos seguidos de espacio hacían que YAML lo leyera como un mapa anidado. Es la misma disciplina con que el padre verificó el comando del ledger —correrlo, no razonarlo— dando el mismo tipo de resultado. Corregido, y las reglas documentadas quedaron **verificadas mecánicamente sobre los bloques**: longitudes de `name`, unicidad de labels e `id`, charset, ausencia de `None`, ausencia de términos prohibidos, tipos de `options` y claves de `config.yml`.
 
 ### r8 (base `6ec4b48`, HEAD `03947c2`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · **la ronda que obligó a invertir el criterio**
 
