@@ -603,7 +603,9 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests.
 
-**C14 — alcance.** `git diff --stat 284ace4..HEAD` toca solo `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**.
+**C14 — alcance.** El diff de **mis** commits, `git diff --stat ee1e8ca..HEAD`, toca exactamente seis archivos: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**.
+
+Precisión que conviene dejar escrita: el rango desde el SHA de arranque de la unidad, `284ace4..HEAD`, muestra **además** el ledger `pipeline-2026-07-29-3.md`. No es mío — es el commit `ee1e8ca` con que el **padre** registró el arranque de esta unidad, y cae dentro del rango porque el SHA de inicio precede a ese commit. Verificado con `git log 284ace4..HEAD -- docs/implementation/pipeline-2026-07-29-3.md`, que devuelve ese único commit. **El hijo no editó territorio del padre.**
 
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
