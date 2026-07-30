@@ -62,12 +62,12 @@ Sesión limpia → `/feature` → gate de arranque (resumen breve + confirmació
 
 La confirmación liviana de `/plan` la absorbió ese gate. **Ajustes de alcance del gate, que mandan sobre este delta**: (a) la decisión abierta que el gate presentó —acotar a `/adopt` o volverlo contrato común de todas las skills que cierran con un mensaje al humano (`recap`, `feature`, `design`, `plan`, `build`)— se resuelve **acotando a `/adopt`**, con la condición registrada de que el mecanismo quede escrito de forma **reusable**, para que generalizarlo después sea adoptar un contrato y no reinventarlo; (b) el segundo pendiente que el pedido traía anotado —la colisión del directorio `build/` de la skill homónima con el patrón `build/` del `.gitignore` de los destinos, que hace rebotar al instalador— queda **sin registrar**: ni implementado ni anotado como feature del backlog. **Restricción de alcance de la ruta autorizada**: el delta entra como **un** feature (el 12); partirlo, o agregar features que el pedido dejó explícitamente fuera (la reescritura del README público de axel, la colisión `build/`), es divergencia ⇒ corte. **Acuerdo entre agentes**: APPROVED del ciclo de review de esta unidad en su **ronda 3** (2026-07-29, base `74d3f5c`, head `bcf34f3`, sin observaciones accionables). Codex acordó **la sustancia desde la r1** —un único feature 12, su posición por criterio 1, la ausencia de entrada de backlog para la colisión `build/` y para el README, la sección al final del doc, y superficie y preguntas suficientes para la bajada— y sus **siete** pedidos —cinco en la r1 y dos en la r2— fueron todos de forma o de precisión factual, aceptados sin argumentar: (r1) la promesa del resultado visible del ledger daba por hecho que un re-run del instalador sobre inquirylab produciría el inventario, cuando el modo update propaga la skill pero **no reabre una adopción cerrada** (`tests/install.sh` T5) — corregida con el texto original conservado, y la aclaración replicada en la «Verificación prevista» del 12 para que la bajada no repita el error; el pedido literal del gate entraba como núcleo con elipsis y ahora va **completo**; la atribución de cobertura del cierre del pipeline anterior invocaba la excepción post-OK para dos bullets de sustancia; la línea «Esperando» de STATUS volvía a prosa libre; y una línea en blanco al EOF de [implementation/11-subagent-models.md](implementation/11-subagent-models.md) rompía `git diff --check`. (r2) La corrección de la atribución nombraba el «barrido de la ronda 1», pero una ronda `CHANGES_REQUESTED` no otorga cobertura ni mueve la base — la otorga el `APPROVED` final del ciclo; y la línea «Esperando» conservaba prosa tras el literal, cuando el vocabulario del contrato es fijo y no un prefijo. El OK humano no es individual — llega con el RECAP consolidado del pipeline.
 
-**Extensión 2026-07-29 (pipeline 3)**: delta de plan escrito como unidad `plan-delta` del **tercer** pipeline `/build` del 2026-07-29 — ledger: [implementation/pipeline-2026-07-29-3.md](implementation/pipeline-2026-07-29-3.md) —, autorizado por su gate ese mismo día («dale, autorizado — el push y los topics los hago yo»). **Pedido del humano**, literal de la frase que lo abre:
+**Extensión 2026-07-29 (pipeline 3)**: delta de plan escrito como unidad `plan-delta` del **tercer** pipeline `/build` del 2026-07-29 — ledger: [implementation/pipeline-2026-07-29-3.md](implementation/pipeline-2026-07-29-3.md) —, autorizado por su gate ese mismo día («dale, autorizado — el push y los topics los hago yo»). **Pedido literal del gate** (transcripción completa; el mismo texto vive en el bloque Gate del ledger):
 
-> «Dejar el repo público de axel presentable para compartirlo: README en inglés escrito para quien lo descubre, licencia MIT, y los docs de onboarding y feedback que faltan.»
-
-**Por qué el literal completo no se transcribe acá**, a diferencia de la extensión del pipeline 2 (donde el reviewer lo pidió entero y entró entero): el pedido de esta corrida tiene ~117 líneas con tablas y bloques de código, y —esto es lo que decide, no el largo— **trae cifras que el propio ledger ya corrigió** en su bloque «Hechos del pedido que el padre verificó al abrir el gate»: 176 commits ⇒ **196**; 11 features ⇒ **12**; 70 rondas / 46 rechazos / 24 aprobados ⇒ **80 / 53 / 27**; mediana 4 ⇒ **4,5**; y la adopción de inquirylab, que el pedido daba por pendiente, ya está cerrada. Copiarlo verbatim acá plantaría cifras **falsas y ya conocidas como falsas** en el plan, separadas de su corrección — exactamente lo que el contrato editorial del diseño prohíbe («una sola fuente para los números»). El ledger está versionado y linkeado, y es el único lugar donde el literal y su corrección viven juntos. Lo que sí entra literal, completo y sin elipsis, es **lo que ata a este delta**:
-
+> «Dejar el repo público de axel presentable para compartirlo: README en inglés escrito para quien lo descubre, licencia MIT, y los docs de onboarding y feedback que faltan.
+>
+> Todo lo de abajo son decisiones ya tomadas con el humano y hallazgos ya verificados en una sesión previa. No están registrados en ningún doc del repo — este pipeline es quien los baja a diseño, plan y features.
+>
 > **## Alcance: qué NO entra**
 >
 > El humano decidió explícitamente que este pipeline se ocupa **solo del repo público**. Fuera de alcance, ya decidido, no re-abrir en el gate:
@@ -75,10 +75,124 @@ La confirmación liviana de `/plan` la absorbió ese gate. **Ajustes de alcance 
 > - **El fix del instalador para la colisión `build/`** (ver «Problema conocido» abajo). Queda para después; por ahora los primeros colegas agregan la regla a mano y **el README/`docs/install.md` tienen que documentarlo**.
 > - Los dos mensajes de rechazo del instalador que dan fricción (también abajo): documentarlos si ayuda, no arreglarlos acá.
 >
+> **## Contexto**
+>
+> El repo es público (github.com/alexweil/axel, creado 2026-07-27, 0 stars) y `main` está pusheado y sincronizado en `88020af`. Estado del loop: estable, backlog vacío, los once features cerrados.
+>
+> Difusión en **dos etapas**: primero entre colegas para feedback, después publicación amplia (HN, Twitter). La vara final es HN; la urgencia inmediata es que un colega entienda qué es esto y pueda instalarlo.
+>
+> **## axel ya se instaló en otro repo real — usar esto**
+>
+> Se instaló axel en `/Users/alexweil/src/inquirylab` (repo activo, 181 commits, con `docs/` propios ⇒ modo adopción), commit `846308f`, 20 archivos. La adopción quedó pendiente de cerrar con `/adopt` ahí (handoff en `inquirylab/docs/ADOPTION.md`, 21 docs preexistentes listados como candidatos a mapear).
+>
+> Esto importa para el README por dos razones:
+> 1. **Responde la objeción más letal** — "¿funciona en algo que no sea axel mismo?". Hasta ahora axel se había validado solo sobre axel, y `tests/install.sh` es sintético.
+> 2. **Es la fuente del transcript** de la sección "What a session actually looks like". Un ejemplo sobre un proyecto cualquiera se lee solo; uno de axel diseñándose a sí mismo es recursivo y confuso para quien recién llega. Si `/adopt` ya se cerró en inquirylab cuando corras, hay material real; si no, usar lo que haya y no inventar.
+>
+> **Lo que funcionó bien en la instalación real** (no romperlo, y sirve como evidencia): el cache `~/.axel` se auto-actualizó por fast-forward, los anuncios de fuente/destino salieron antes de tocar nada, el rechazo fue fail-closed sin escribir un byte, apareció la línea final `── axel · fin: rc=N · … ──`, los 18 archivos quedaron dentro del diff, el symlink `CLAUDE.md → AGENTS.md` correcto y el handoff `ADOPTION.md` claro.
+>
+> **## Problema conocido que el README debe documentar (no arreglar)**
+>
+> La skill `/build` vive en `.claude/skills/build/`, y **`build/` es uno de los patrones de `.gitignore` más comunes que existen** — está en el template de Python, Node, Java, Gradle, Maven y C/C++. El preflight del instalador lo detecta y rechaza fail-closed:
+>
+> ```
+> rechazo: .claude/skills/build/SKILL.md: nacería ignorado por las reglas del destino; nada del instalador puede quedar fuera del diff
+> ── axel · fin: rc=2 · rechazo (ver el detalle arriba) ──
+> ```
+>
+> Ninguna otra skill colisiona (adopt, design, feature, plan, recap, status). El preflight se comporta **correctamente**: el diseño acertó, lo que falla es el nombre de un directorio.
+>
+> **Workaround verificado empíricamente**, que es lo que hay que documentar: agregar al `.gitignore` del destino, **después** del patrón `build/`:
+>
+> ```
+> !.claude/skills/build/
+> ```
+>
+> Trampa que hay que decir explícitamente porque es contraintuitiva: **`!.claude/` NO funciona** — git no re-incluye un archivo si un directorio padre intermedio quedó excluido. La negación tiene que nombrar el directorio. `!.claude/**` también funciona pero es más amplio de lo necesario.
+>
+> Documentarlo como "known issue" con el workaround y con la nota de que se va a arreglar. Es lo primero que le va a pasar a un colega con un repo Python, y sin esto el mensaje de rechazo es críptico.
+>
+> **## Otros dos puntos de fricción observados (documentar si ayuda, no arreglar)**
+>
+> 1. El rechazo por árbol sucio dice `el árbol del destino no está limpio; commiteá o stasheá` pero **no lista qué archivos** están sucios, y **`git stash` sin `-u` no toca untracked** — que es el caso más común en un repo activo. El usuario stashea, sigue rechazado y no entiende por qué.
+> 2. El instalador anunció `modo: initial` cuando lo que ejecutó fue una **adopción** (detectó 21 docs propios, escribió `ADOPTION.md`, salió con RC=1). `AGENTS.md` documenta tres modos —instalación / adopción / actualización— así que el modo anunciado contradice el ejecutado. Consecuencia visible: inquirylab quedó con `DESIGN.md` e `IMPLEMENTATION.md` en la raíz (suyos) **y** `docs/DESIGN.md` + `docs/IMPLEMENTATION.md` (semillas) — cuatro archivos, dos nombres, sin ningún aviso de cuál manda. Es lo diseñado (las semillas no pisan nada y `/adopt` resuelve), pero nadie lo explica.
+>
+> **## Decisiones ya tomadas por el humano**
+>
+> - **Idioma**: README y CONTRIBUTING en **inglés** (es la vidriera de GitHub). `AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`, los subdirectorios y los commits **siguen en español**, como manda la convención del repo. No traducir los docs del método.
+> - **Licencia**: **MIT**. Hoy falta por completo — el repo es público sin licencia, o sea legalmente "todos los derechos reservados", lo que contradice que su propuesta central sea "instalalo en tu proyecto".
+> - **Difusión en dos etapas**: colegas primero, público amplio después.
+>
+> **## El activo que hoy no se usa: las métricas del reviewer**
+>
+> `.claude/state/rounds-log` (no versionado) tiene **70 rondas de review**: 14 sesiones nuevas de Codex + 56 rondas de resume.
+>
+> - `CHANGES_REQUESTED`: **46** (66%)
+> - `APPROVED`: **24**
+> - Aprobados en ronda 1: **0**
+> - Mediana hasta aprobar: **4 rondas**; peor caso: **11**
+>
+> Esto responde solo la objeción "el reviewer es un sello de goma que aprueba todo". **Precisión obligatoria**: los 24 APPROVED son *hitos* (bajada fina, implementación), no features — hay más aprobados que features, y enunciarlo mal es exactamente lo que destruye credibilidad en HN. La formulación defendible es "70 rounds, 46 rejections, zero first-round approvals". Como `rounds-log` no está versionado, **extraer las cifras a un doc versionado** para que un tercero pueda auditarlas, y decir de dónde salen.
+>
+> Ejemplo concreto y citable de una review que atrapó algo real: commit `74d3f5c` — "tres defectos invisibles en la lectura del texto nuevo".
+>
+> **## Posicionamiento acordado**
+>
+> El gancho es un hecho verificable, no una promesa: **este repo se construyó a sí mismo con su propio método** — 176 commits en 3 días, 11 features, cada uno con su loop hasta APPROVED, con ledgers de lote y pipeline versionados en `docs/implementation/`.
+>
+> Los cuatro diferenciales frente a los cincuenta "AI coding agent" que salen por semana:
+> 1. Review **cross-vendor** (Claude contra GPT), no un modelo revisándose a sí mismo ni dos instancias del mismo.
+> 2. El reviewer **ejecuta**: corre tests y builds en un worktree snapshot clavado al commit. Verificación, no confianza.
+> 3. La memoria es **el repo**, no la ventana de contexto. Sesión nueva = leer tres archivos.
+> 4. Se construyó a sí mismo y es **auditable**.
+>
+> Estructura propuesta para el README (~120 líneas, inglés), a validar y refinar en la unidad de diseño:
+>
+> 1. Título + una línea + las tres cifras del reviewer.
+> 2. **The problem** (~6 líneas): un agente solo no se audita a sí mismo y pierde el hilo entre sesiones.
+> 3. **What a session actually looks like** — transcript real en markdown: pedido sin comando → gate → un `CHANGES_REQUESTED` verdadero → RECAP → OK. Va **arriba**, antes de instalar: es la sección que convierte.
+> 4. **Requirements, honestly** — Claude Code **y** Codex CLI (dos suscripciones, dos proveedores distintos), macOS (`caffeinate`), git, python3, y que las reviews en xhigh tardan >10 min. Hoy no está declarado en ningún lado.
+> 5. **Install** — el one-liner, el known issue de `build/` con su workaround, y nada más.
+> 6. **The six commands** — tabla de una línea cada uno.
+> 7. **How it works** — el diagrama de flujo de `docs/DESIGN.md` + los 5 principios comprimidos.
+> 8. **What this is not** — sección de honestidad (ver objeciones abajo).
+> 9. Links: diseño, contrato de review, cómo dar feedback.
+>
+> Toda la casuística actual del README (pipefail, exit codes, forks, corridas interrumpidas, y la sección entera "Para agentes (Claude Code)") **se conserva pero se muda a `docs/install.md`**, referenciada desde el README. Hoy el README tiene 70 líneas y ~50 son eso: está escrito para quien ya decidió usarlo, no para quien lo descubre.
+>
+> **## Objeciones de HN que el README debe contestar antes de que aparezcan**
+>
+> | Objeción | Respuesta acordada |
+> |---|---|
+> | "Cuesta una fortuna" | Declararlo de frente en Requirements: dos suscripciones, reviews largas. Es caro y es a propósito. |
+> | "El reviewer es otro LLM, ¿por qué confiaría?" | Las métricas + que Codex ejecuta tests, no solo lee el diff. |
+> | "Es un montón de markdown, no un framework" | Sí, y es la virtud: sin dependencias, sin lock-in, se lee en una tarde. Decirlo primero uno mismo. |
+> | "Está todo en español" | Declararlo sin disculpas: README en inglés, docs del método en español, la maquinaria es agnóstica del idioma. |
+> | "macOS only" | Declarar qué se rompe fuera de macOS (`caffeinate`) y qué no. |
+> | "¿Funciona en algo que no sea axel mismo?" | Ahora sí hay respuesta: la instalación real en inquirylab. Ser honesto sobre su alcance (un repo, del mismo autor). |
+>
+> **## Archivos nuevos previstos**
+>
+> `LICENSE` (MIT) · `docs/install.md` (todo lo que sale del README + el known issue) · `CONTRIBUTING.md` en inglés (cómo dar feedback — es lo que el humano busca de esta ronda) · `.github/ISSUE_TEMPLATE/` · un doc versionado con las métricas del reviewer · topics y homepage en el repo de GitHub.
+>
+> Sobre demo visual: se descartó asciinema por ahora (las reviews tardan >10 min y habría que editarlo). Empezar con el **transcript en markdown** — cero infra, funciona en móvil, se lee en 20 segundos.
+>
 > **## Orden sugerido de features (a acordar en el plan)**
 >
 > 1. **Vidriera** — LICENSE MIT + README en inglés + `docs/install.md` con el known issue.
-> 2. **Onboarding y feedback** — CONTRIBUTING + `.github/` + métricas del reviewer versionadas.
+> 2. **Onboarding y feedback** — CONTRIBUTING + `.github/` + métricas del reviewer versionadas.»
+
+**Datos del literal que ya estaban obsoletos al abrirse el gate.** El pedido venía de una sesión previa y el padre re-verificó sus cifras contra el repo **antes** de autorizar; la transcripción de arriba se conserva **tal cual se pidió**, y lo vigente es esto:
+
+| Lo que dice el pedido | Vigente, verificado al abrir el gate (`39b377e`) |
+|---|---|
+| 176 commits en 3 días | **196** |
+| 11 features cerrados | **12** |
+| 70 rondas · 46 `CHANGES_REQUESTED` · 24 `APPROVED` · 14 sesiones nuevas + 56 resume | **80** · **53** · **27** · **16** + **64** |
+| Mediana hasta aprobar: **4** rondas | **4,5 por ciclo** (y **3 por hito**): el «4» contaba como completo el ciclo **parcial** con que arranca el `rounds-log`. Corrección detectada recién en la r2 de la unidad de diseño de este pipeline — o sea que el propio ledger la dio por buena al abrir el gate |
+| La adopción de inquirylab quedó **pendiente** de cerrar con `/adopt` | **cerrada** (commit `4908bfb`): hay material real para el transcript |
+
+Se sostienen sin cambio: **cero** aprobados en ronda 1, **11** rondas de peor caso, la precisión obligatoria de que los `APPROVED` son **hitos y no features**, y el workaround de `build/`, confirmado en un repo real (`98c70c0`). La tabla completa, con su procedencia y con el texto original tachado en vez de borrado, está en el bloque «Hechos del pedido que el padre verificó al abrir el gate» del [ledger](implementation/pipeline-2026-07-29-3.md).
 
 La confirmación liviana de `/plan` la absorbió ese gate. **Ajustes de alcance del gate, que mandan sobre este delta**: (b) **el pipeline no toca GitHub ni pushea** — ni `git push`, ni topics, ni homepage, ni ninguna otra acción sobre el remoto o sus settings; la unidad `14` **deja los comandos exactos listos** y los corre el humano al leer el resultado, y ejecutarlos desde el pipeline es divergencia ⇒ corte. (a) y (c) **sin ajuste**: la corrección de las cifras del pedido queda como la registró el bloque «Hechos del pedido…» del ledger, y el **origen del transcript** —que el gate delegó explícitamente a la unidad de diseño— ya lo resolvió esa unidad: dos bloques citables con procedencia propia y ninguna línea inventada ([design/public-surface.md](design/public-surface.md)).
 
@@ -214,7 +328,7 @@ Verificación prevista (fijada por la ruta autorizada): como en los features 08�
 
 Pedido humano (2026-07-29, gate del **tercer** pipeline `/build` del día — literal en la extensión de arriba): dejar el repo público presentable para quien lo descubre. Posición: **primero** del bloque nuevo 13–14 (backlog vacío tras el cierre del feature 12), fijada por pedido humano (criterio 1). El orden interno lo fija el mismo pedido, y lo acompañan dos razones de los agentes: (a) **el embudo** — el README es lo primero que un colega lee y lo que decide si sigue; `CONTRIBUTING.md` y `.github/` le sirven recién a quien ya decidió engancharse, así que invertirlos entregaría los formularios de feedback antes que la razón para dar feedback; (b) **valor desbloqueado antes que pulido** (criterio 2) — la vidriera es lo único que hoy bloquea compartir el repo con un colega, que es la urgencia declarada del pedido.
 
-**Estado verificado hoy** (base `31471be`, derivado del repo y no de memoria): **no existen** `LICENSE`, `CONTRIBUTING.md`, `docs/install.md` ni `.github/`. `README.md` tiene **69 líneas** en cuatro tramos — título y tres links (1–7), «Uso» (9–18), «Llevar axel a otro proyecto» (20–50) y «Para agentes (Claude Code)» (52–69): los dos últimos son **50 líneas de casuística**, que es exactamente lo que se muda al manual.
+**Estado verificado hoy** (base `31471be`, derivado del repo y no de memoria): **no existen** `LICENSE`, `CONTRIBUTING.md`, `docs/install.md` ni `.github/`. `README.md` tiene **69 líneas** en cuatro tramos — título y tres links (1–7), «Uso» (9–18), «Llevar axel a otro proyecto» (20–50) y «Para agentes (Claude Code)» (52–69): los dos últimos suman **49 líneas de casuística** —**50** si se cuenta la línea en blanco 51 que los separa, o sea el intervalo 20–69 completo—, y es exactamente lo que se muda al manual.
 
 **Lo que el diseño fija y la bajada no rediscute** ([design/public-surface.md](design/public-surface.md)): el **corte vidriera/manual** como test aplicable línea a línea (al README solo entra lo que vale para todos; toda frase que empieza con «si…» o «salvo que…» describe un caso y los casos van al manual, que es el completo **en el dominio operativo**; el README lleva punteros, nunca casos; los requisitos van **antes** del comando de instalación); **inglés** para el README y para `docs/install.md`, que es la última milla del mismo embudo; el **contrato editorial** —toda afirmación publicada es hecho derivable con su comando, limitación declarada u opinión marcada, y lo que no cae en las tres no se publica— con **fuente única** para todo número; el **transcript en dos bloques** con procedencia propia y **ninguna línea inventada**; **MIT**, con titular y año a confirmar en la bajada; la **limitación del aviso MIT que no viaja con el payload**, que se declara en el manual como **incumplimiento pendiente** y no como cumplimiento parcial; y el mapa de los tres problemas conocidos — el de `build/` con su workaround `!.claude/skills/build/` y la trampa de `!.claude/` explicada, en «Known issues» de `docs/install.md` **más un puntero de una línea desde el README** por ser el único que bloquea la promesa; los otros dos, solo en el manual.
 
@@ -222,19 +336,22 @@ Pedido humano (2026-07-29, gate del **tercer** pipeline `/build` del día — li
 
 1. **El README de hoy omite dos de los comandos.** La sección «Uso» lista cinco (`/status`, `/feature`, `/design`, `/plan`, `/recap`) y **no menciona `/build` ni `/adopt`**: la vidriera actual no nombra el pipeline —que desde el feature 10 es la entrada principal del método— ni la adopción. La tabla de comandos del README nuevo los cubre; queda por decidir si `/adopt` entra en la tabla o como línea aparte, porque `DESIGN.md` lo trata como componente separado de los seis.
 2. **La mudanza no rompe punteros de la maquinaria, pero sí deja sin destino un camino de uso.** Verificado: ni las skills, ni `scripts/install.sh`, ni `AGENTS.md` referencian el README o sus secciones (las apariciones en `tests/` lo usan como archivo dummy). Pero el feature 02 diseñó el camino «instalá axel siguiendo \<url\>», y esa URL cae en el README: si «Para agentes (Claude Code)» se muda entera sin dejar rastro, ese camino aterriza en una página que ya no tiene el procedimiento. El README debe conservar un **puntero de una línea** para agentes — que es justo lo que el corte del diseño permite (puntero sí, caso no).
-3. **La dependencia con el 14**, que este delta resuelve abajo para que la bajada no la re-decida ni la descubra tarde.
+3. **Las dos dependencias con el 14**, que este delta cierra abajo para que la bajada no las re-decida ni las descubra tarde.
 
-**Contrato entre el 13 y el 14 — el doc de métricas.** El diseño manda **fuente única**: toda cifra de la vidriera vive en el doc de métricas y el README la **cita**. Pero la ruta autorizada pone las cifras en el 13 y el doc en el 14, así que hay una dependencia hacia adelante que hay que cerrar sin re-cortar los features:
+**Contrato entre el 13 y el 14 — las dos referencias hacia adelante.** El README que crea el 13 apunta a **dos artefactos que nacen recién en el 14**, y son dos dependencias distintas, no una: (a) el diseño manda **fuente única** para los números —toda cifra de la vidriera vive en el doc de métricas y el README la **cita**—, y (b) la estructura aprobada del README cierra con links, entre ellos **cómo dar feedback**, que es `CONTRIBUTING.md`. Se cierran con un **estado intermedio verificable**, sin re-cortar los features:
 
-- **El 13 fija el path** del informe y del snapshot, y escribe el link — es el primer consumidor, y sin path no hay cita posible. Lo hace respetando la distinción que impone el diseño: el **informe** es prosa de vidriera (inglés) y el **snapshot crudo** es dato, neutro de idioma. El diseño le encarga a la bajada del 14 «mantener la distinción al elegir los paths»; lo que este delta cambia es **quién elige primero**, no el criterio — el 14 hereda un path que ya la respeta.
-- **El 14 crea los artefactos en ese path** y re-deriva las cifras con el comando declarado, verificando que coincidan con lo que el README afirma — verificación que la ruta autorizada ya le asigna.
-- **Entre uno y otro el link queda colgando**, y no es deuda oculta: el pipeline **no pushea**, así que nada de esto es público hasta que el humano pushee después del OK consolidado, y la condición de cierre es que el 14 lo resuelva antes del RECAP. **Riesgo declarado**: si la corrida se cortara entre el 13 y el 14, el README quedaría en el repo local con un link roto, y arreglarlo es lo primero antes de pushear.
+- **El 13 no deja links rotos: deja referencias no activas y explícitamente pendientes.** El README nombra en prosa el doc de métricas y la vía de feedback y **no los linkea**; cada cifra publicada va con su commit de corte y con la marca visible de que su artefacto auditable llega en el 14. La bajada del 13 fija la **forma** de esa marca —tiene que verse, no ser una nota al pie—, no los paths.
+- **La elección de los paths se queda en el 14**, donde el diseño la puso: este delta ya no la mueve. El 14 elige el path del informe y el del snapshot manteniendo la distinción que el diseño le encarga (informe = prosa de vidriera en inglés; snapshot = dato neutro de idioma), crea `CONTRIBUTING.md`, el informe y el snapshot, y **activa las dos referencias del README**, convirtiéndolas en links.
+- **Que el 14 edite `README.md` está dentro de la ruta autorizada**, y conviene dejarlo dicho porque es el punto donde una lectura estrecha vería divergencia: no parte ni fusiona los features, no agrega ninguno de los que el pedido excluyó, y el resultado visible que el gate prometió trata a los dos como **una sola entrega**. Es la activación de dos referencias que el 13 dejó pendientes **a propósito**, no una reapertura del 13. Si en la bajada esa edición resultara excluida, la salida correcta es **registrar divergencia y cortar**, no mover en silencio una decisión del diseño.
+- **Los dos estados se verifican por separado**, que es lo que vuelve honesto el corte. Al cerrar el **13**: todo link del README **resuelve**, y toda referencia a un artefacto del 14 está **sin linkear y marcada como pendiente** — cero links rotos, literalmente, sin excepción que negociar. Al cerrar el **14**: las dos referencias son links que resuelven, ninguna cifra de la vidriera vive fuera del doc de métricas, y el chequeo de links corre sobre el conjunto completo.
+
+Con esto no queda ventana con el repo inconsistente: el estado intermedio es un README **completo y coherente** que declara dos pendientes, no un README roto esperando el feature siguiente.
 
 Superficie estimada — la bajada decide el detalle: `LICENSE` (nuevo), `README.md` (reescrito de punta a punta, en inglés) y `docs/install.md` (nuevo, en inglés, con la casuística completa de las líneas 20–69 del README actual más las secciones de problemas conocidos y de adopción). **Fuera de la superficie por alcance**: el método, las skills, el instalador, los scripts y toda acción sobre GitHub.
 
 Preguntas para la bajada: **titular y año** del copyright de MIT — no se inventan: los confirma el humano o se derivan del repo; **cómo se verifica «cero pérdida» cuando la mudanza es a la vez traducción** — el diseño ya advierte que un diff de texto no sirve y pide chequeo por contenido caso por caso, así que falta la forma concreta (candidato: inventario de los casos del README actual, cada uno con su destino en el manual); **qué corrida concreta se renderiza en el transcript** — el diseño fija los cinco hitos y sus fuentes durables y sugiere un pipeline como fuente natural, pero cuál y con qué extensión lo decide la bajada, con la salida ya declarada de **cambiar la promesa del título** si ninguna tiene el arco completo; y **cómo se prueban el one-liner y el workaround** sin ensuciar el repo, ya que el criterio (c) de abajo pide probarlos y no transcribirlos.
 
-Verificación prevista (fijada por la ruta autorizada): no hay harness que compruebe prosa. La evidencia es (a) **cero afirmación no verificable** — cada cifra, cada nombre de archivo y cada comando del README chequeado contra el repo, con las métricas re-derivadas al commit de corte, y cada oración clasificable en una de las tres clases del contrato editorial; (b) **cero pérdida** en la mudanza a `docs/install.md` — la casuística actual entra completa y ningún link queda roto; (c) el one-liner y el workaround de `build/` **probados**, no transcritos de memoria.
+Verificación prevista (fijada por la ruta autorizada): no hay harness que compruebe prosa. La evidencia es (a) **cero afirmación no verificable** — cada cifra, cada nombre de archivo y cada comando del README chequeado contra el repo, con las métricas re-derivadas al commit de corte, y cada oración clasificable en una de las tres clases del contrato editorial; (b) **cero pérdida y cero link roto** en la mudanza a `docs/install.md` — la casuística actual entra completa, **todo link del README resuelve**, y las dos referencias a artefactos que nacen en el 14 quedan **sin linkear y marcadas como pendientes**, según el contrato de arriba; (c) el one-liner y el workaround de `build/` **probados**, no transcritos de memoria.
 
 ### 14 — Onboarding y feedback: CONTRIBUTING + `.github/` + métricas versionadas
 
@@ -245,7 +362,8 @@ Sustancia:
 - **`CONTRIBUTING.md`** en inglés, orientado a **qué feedback busca esta ronda**: colegas probándolo, no PRs de código — cómo reportar que el instalador rebotó, qué información sirve para diagnosticarlo, y qué está explícitamente fuera de alcance hoy (los tres puntos de fricción ya documentados como problemas conocidos, y el aviso MIT que todavía no viaja con el payload).
 - **`.github/ISSUE_TEMPLATE/`** con las plantillas que hagan que ese feedback llegue accionable — candidatos del pedido: fallo de instalación, fricción de uso, pregunta.
 - **El doc de métricas del reviewer**, que el diseño parte en **dos piezas de idioma distinto**: el **informe** (prosa, vidriera ⇒ inglés) y el **snapshot crudo** del `rounds-log` (dato —marcas de tiempo, veredictos y SHA— ⇒ neutro de idioma; vivir bajo `docs/` no lo vuelve un doc del método). Con **commit de corte** declarado, **comando de derivación** que corra con el toolchain de stock de macOS —verificado en el diseño: el `awk` del sistema **no** tiene `asort`, así que el orden se resuelve con `sort`—, el **contra-chequeo independiente** contra los SHA de una historia verificablemente lineal, y el ejemplo citable de una review que atrapó algo real.
-- **Los comandos exactos de GitHub** —push, topics, homepage— **dejados listos para que los corra el humano**, sin ejecutarlos: el ajuste (b) del gate los saca del alcance del pipeline y correrlos desde acá es divergencia ⇒ corte. Dónde quedan escritos (RECAP, doc del feature, o ambos) lo decide la bajada.
+- **La activación de las dos referencias pendientes del README** (contrato del 13, arriba): los links al informe de métricas y a `CONTRIBUTING.md`, más el chequeo final de links y de fuente única sobre el conjunto completo.
+- **Los comandos exactos de GitHub** —push, topics, homepage— **dejados listos para que los corra el humano**, sin ejecutarlos: el ajuste (b) del gate los saca del alcance del pipeline y correrlos desde acá es divergencia ⇒ corte. «Exactos» es una vara, no una frase hecha: el comando tiene que poder pegarse en una terminal sin editarlo, lo que obliga a resolver en la bajada **qué contenido llevan** —cuáles topics y qué URL de homepage, que el diseño dejó expresamente sin decidir y que el gate solo asignó al humano, no eligió— y **con qué herramienta y precondiciones** se corren. Dónde quedan escritos (RECAP, doc del feature, o ambos) también lo decide la bajada.
 
 **Lo que el diseño fija y la bajada no rediscute**: las **tres unidades que no se mezclan** —ronda (**80** registradas al corte `e1e1282`), hito (**27**), ciclo (**16** completos observables más uno parcial)—; que los `APPROVED` son **hitos, no features**, por lo que hay más aprobados que features y enunciarlo mal es lo que destruye la credibilidad; el **criterio de conteo** —la ronda es la del contrato y no la fila del log: se deduplica por (ciclo, número de ronda), porque un reintento deja `PROC_FAIL` antes del veredicto y un veredicto inválido deja `NO_VERDICT`, y los eventos pre-invocación no son rondas—; y los **tres hallazgos** que el doc tiene que incorporar porque fijan el criterio y no solo el número:
 
@@ -253,10 +371,10 @@ Sustancia:
 2. El log **arranca el día 2** y el faltante es recuperable de **dos fuentes que se citan por separado** — **30** rondas en los review logs versionados de features y **5** del ciclo de plan inicial, cuya memoria son los commits y el STATUS histórico ⇒ **115** históricas contra **80** registradas, publicadas como dos cifras rotuladas y nunca como una sola sin decir a cuál corresponde. El «cero en ronda 1» se demuestra con el veredicto de **cada primera ronda**, no con la ronda de cierre del ciclo.
 3. Las cifras **se movieron durante la review del propio delta de diseño**: la demostración en vivo de por qué la evidencia se publica como foto fechada con su commit de corte.
 
-**Contrato con el 13**: el path del informe y del snapshot lo fija la bajada del 13, que es el primer consumidor (arriba); el 14 crea los artefactos ahí y cierra el link.
+**Contrato con el 13** (detallado en su sección): el 13 deja el README **completo y sin links rotos**, con dos referencias sin activar y marcadas como pendientes; el 14 **elige los paths** —la decisión que el diseño le asignó—, crea los artefactos y **activa las dos referencias**. Es el 14, y no el 13, el que cierra el estado.
 
-Superficie estimada — la bajada decide el detalle: `CONTRIBUTING.md` (nuevo, inglés), `.github/ISSUE_TEMPLATE/` (nuevo), el informe de métricas y el snapshot (nuevos, en los paths que fijó el 13), y la verificación —no la reescritura— del link que el README ya dejó apuntando. Lo que **no** se toca: `.claude/state/` no se desversiona, porque el loop escribe ahí en cada ronda y versionarlo metería su propio ruido en todos los commits (descartado explícitamente por el diseño).
+Superficie estimada — la bajada decide el detalle: `CONTRIBUTING.md` (nuevo, inglés), `.github/ISSUE_TEMPLATE/` (nuevo), el informe de métricas y el snapshot (nuevos, en los paths que elige este feature), y **`README.md`** (edición acotada: activar las dos referencias pendientes; no se reabre el resto de su prosa). Lo que **no** se toca: `.claude/state/` no se desversiona, porque el loop escribe ahí en cada ronda y versionarlo metería su propio ruido en todos los commits (descartado explícitamente por el diseño).
 
-Preguntas para la bajada: **cuántas plantillas y cuáles** —hay tres candidatos, pero de más plantillas se llenan menos, así que se decide contra el objetivo declarado: que el reporte de un colega llegue accionable—; **cuándo se toma la foto**, porque el corte se mueve mientras se escribe el feature (este pipeline suma rondas, y las del propio 14 pueden desactualizarla apenas se escribe: candidato a declarar, cortar en el último commit del feature y asumir que el corte no se incluye a sí mismo); **si el snapshot es copia literal del `rounds-log` o una proyección** — la copia literal es lo más auditable pero arrastra un formato interno que no es contrato público; y **cómo se citan las 35 rondas previas a la instrumentación**, que no tienen esquema tabular y por lo tanto no se derivan con el mismo comando que las 80.
+Preguntas para la bajada: **cuántas plantillas y cuáles** —hay tres candidatos, pero de más plantillas se llenan menos, así que se decide contra el objetivo declarado: que el reporte de un colega llegue accionable—; **cuándo se toma la foto**, porque el corte se mueve mientras se escribe el feature (este pipeline suma rondas, y las del propio 14 pueden desactualizarla apenas se escribe: candidato a declarar, cortar en el último commit del feature y asumir que el corte no se incluye a sí mismo); **si el snapshot es copia literal del `rounds-log` o una proyección** — la copia literal es lo más auditable pero arrastra un formato interno que no es contrato público; **cómo se citan las 35 rondas previas a la instrumentación**, que no tienen esquema tabular y por lo tanto no se derivan con el mismo comando que las 80; y **qué dicen exactamente los comandos de GitHub** — cuáles son los topics y qué URL va de homepage (decisión del **humano**: el diseño la dejó sin decidir y el gate solo dijo quién los corre, así que la bajada la **plantea**, no la inventa; si no hay respuesta a tiempo, el comando se entrega con el valor marcado como hueco a completar y se dice así), con qué herramienta y bajo qué precondiciones (repo ya pusheado, herramienta instalada y autenticada).
 
-Verificación prevista (fijada por la ruta autorizada): la misma vara de prosa auditable del 13 —contrato editorial aplicado por oración—, más que las cifras del doc de métricas **se re-deriven** en la bajada con el comando declarado, sobre el snapshot versionado, y **coincidan** con lo que el README afirma.
+Verificación prevista (fijada por la ruta autorizada): la misma vara de prosa auditable del 13 —contrato editorial aplicado por oración—, más tres chequeos propios: que las cifras del doc de métricas **se re-deriven** en la bajada con el comando declarado, sobre el snapshot versionado, y **coincidan** con lo que el README afirma; que al cerrar el feature **las dos referencias del 13 sean links que resuelven** y ninguna cifra de la vidriera viva fuera del doc de métricas (chequeo de links y de fuente única sobre el conjunto completo); y que los **comandos de GitHub** estén escritos de forma **ejecutable tal cual** —herramienta, sintaxis y precondiciones declaradas, sin valores por decidir salvo los marcados explícitamente como huecos—, verificados sin correrlos contra el remoto.
