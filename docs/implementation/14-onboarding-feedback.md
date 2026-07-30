@@ -99,8 +99,18 @@ La r5 volteó esta bajada por una afirmación mía sobre el esquema de GitHub qu
 | `git rev-list A..B` excluye `A` | git | **verificada** empíricamente en la auditoría por commit |
 | `ruby -ryaml` parsea YAML | esta máquina | **verificada acá**, y **no se afirma que sea universal**: si una corrida futura no lo tiene, el chequeo necesita otro parser. Es una precondición del entorno, no una propiedad de macOS |
 | «GitHub levanta `CONTRIBUTING.md` desde la raíz» | GitHub | **no verificada ⇒ retirada**. El path se sostiene por convención y por el plan, no por ese comportamiento |
+| charset de `id`: solo alfanuméricos, `-` y `_` | GitHub | **verificada** — «`'id' can only contain numbers, letters, -, _`» ⇒ E8b (agregada en la r7) |
+| claves no permitidas dentro de un elemento y dentro de `attributes` | GitHub | **verificada** — «`'x' is not a permitted key`» / «`'x' is not a permitted attribute`» ⇒ E14 y, para los atributos, la fijación de C15 |
+| strings vacíos o solo-whitespace rechazados | GitHub | **verificada** — «`Empty strings, or strings consisting of only whitespaces, are not permissible when the field expects a string`» ⇒ E13 |
+| **cuándo aparecen los errores de validación** | GitHub | **verificada, y corrige una afirmación mía**: «*when creating, saving, or viewing issue forms*» — o sea que GitHub **sí** avisa. Lo que no podemos es verlo sin pushear, que es una limitación **nuestra** y no de la herramienta |
+| «`name` exige más de tres caracteres» | GitHub | **buscada y no encontrada** ⇒ **no se codifica**. La fuente marca `name` como requerido y no documenta longitud mínima. Se codifica lo que sí documenta (E13) y el contraejemplo se cierra por la otra mitad de la frontera: **C15 fija los valores literales** |
 
-Lo que el barrido enseña, más allá de las filas: la última fila es la única que se **quitó** en vez de sourcear, y es la que mejor muestra el criterio — cuando una afirmación no es necesaria para la decisión, retirarla cuesta menos que sostenerla.
+Dos cosas que el barrido enseña, más allá de las filas:
+
+- La fila retirada (`CONTRIBUTING.md`) es la que mejor muestra el criterio: **cuando una afirmación no es necesaria para la decisión, retirarla cuesta menos que sostenerla**.
+- La última fila muestra el criterio simétrico, y lo aprendí en esta ronda: **una premisa señalada por el reviewer también hay que sourcearla antes de codificarla**. Aceptar un umbral no documentado por venir de quien tiene razón casi siempre es el mismo defecto, con la autoridad cambiada de lado.
+
+*(El tamaño de este inventario no se publica en prosa: crece con cada ronda que encuentra una premisa nueva, y ya me costó un punto publicarlo. La tabla es la lista.)*
 
 ## Regla de contadores móviles, adoptada de la unidad 13
 
@@ -368,18 +378,33 @@ Consecuencias directas sobre el diseño de los dos campos, ahora derivadas y no 
 
 | # | Invariante |
 |---|---|
-| E1 | Raíz con `name`, `description` y `body`, los tres presentes y no vacíos |
+| E1 | Raíz con `name`, `description` y `body`, los tres **presentes** *(que no estén vacíos lo cubre E13, para que cada condición tenga un único dueño)* |
 | E2 | Claves de raíz dentro de la **allowlist** (`name`, `description`, `title`, `body`, `labels`, `assignees`, `projects`, `type`); cualquier otra falla |
-| E3 | `body` es una **lista no vacía** |
-| E4 | Todo elemento tiene `type` ∈ `markdown` · `input` · `textarea` · `dropdown` · `checkboxes` — **los cinco que estos formularios usan**. *(La r5 me hizo agregar `upload` y la r6 me hizo sacarlo, con razón: al agregarlo tenía que sostener también su `attributes.label` y un caso positivo que lo ejercitara, y sin eso un validador que lo rechazara siempre pasaba igual todos los fixtures. La allowlist queda **acotada y declarada**: `upload` existe en el esquema y está deliberadamente fuera del alcance de este validador, que no es de propósito general sino el de estos tres archivos. Reusarlo sobre un formulario con `upload` exige extender E4 primero.)* |
+| E3a | `body` **es una lista** |
+| E3b | esa lista **no está vacía** |
+| E4a | Todo elemento **tiene** `type` |
+| E4b | Ese `type` ∈ `markdown` · `input` · `textarea` · `dropdown` · `checkboxes` — **los cinco que estos formularios usan**. *(La r5 me hizo agregar `upload` y la r6 me hizo sacarlo, con razón: al agregarlo tenía que sostener también su `attributes.label` y un caso positivo que lo ejercitara, y sin eso un validador que lo rechazara siempre pasaba igual todos los fixtures. La allowlist queda **acotada y declarada**: `upload` existe en el esquema y está deliberadamente fuera del alcance de este validador, que no es de propósito general sino el de estos tres archivos. Reusarlo sobre un formulario con `upload` exige extender E4 primero.)* |
 | E5 | **Al menos un elemento no-`markdown`**: un formulario que solo muestra texto no recoge nada y GitHub lo descarta |
-| E6 | `markdown` exige `attributes.value`; los **otros cuatro** tipos de E4 exigen `attributes.label` |
-| E7 | **`dropdown`**: `attributes.options` es lista de **strings**, no vacía y con todas las opciones **distintas** |
-| **E12** | **`checkboxes`**: `attributes.options` es lista de **objetos**, cada uno con `label` string no vacío y, si aparece, `required` **booleano**; `label` distintos entre sí. *(La r5 encontró que E7 aplanaba las dos formas en una y por lo tanto aceptaba `options: [foo, bar]` en un `checkboxes`, que GitHub rechaza.)* |
-| E8 | Los `id` presentes son **únicos dentro del archivo** |
-| E9 | Tipos de dato correctos: strings donde van strings, listas donde van listas, `validations.required` booleano **y `options[].required` booleano** en `checkboxes` |
+| E6a | `markdown` exige `attributes.value` |
+| E6b | Los **otros cuatro** tipos de E4b exigen `attributes.label` |
+| E7a | **`dropdown`**: `attributes.options` **es una lista** |
+| E7b | **`dropdown`**: esa lista **no está vacía** |
+| E7c | **`dropdown`**: sus elementos son **strings** |
+| E7d | **`dropdown`**: sus opciones son **distintas** |
+| **E12a** | **`checkboxes`**: `attributes.options` es lista de **objetos** *(la r5 encontró que E7 aplanaba las dos formas y aceptaba `options: [foo, bar]`, que GitHub rechaza)* |
+| **E12b** | **`checkboxes`**: cada opción **tiene** `label` |
+| **E12c** | **`checkboxes`**: los `label` son **distintos** entre sí |
+| E8a | Los `id` presentes son **únicos dentro del archivo** |
+| E8b | Los `id` usan **solo** alfanuméricos, `-` y `_` — «`'id' can only contain numbers, letters, -, _`» |
+| E9a | `validations.required` es **booleano** |
+| E9b | `options[].required` es **booleano** |
+| E9c | Los campos que esperan string **son** string (`name`, `description`, `label`, `value`, `about`, `url`) |
 | E10 | `validations` no se usa en elementos `markdown` |
-| E11 | `config.yml`: `blank_issues_enabled` booleano, y cada `contact_links` con `name`, `about` y `url` **absoluto** (`http`/`https`) |
+| E11a | `config.yml`: `blank_issues_enabled` es **booleano** |
+| E11b | `config.yml`: cada `contact_links` trae `name`, `about` y `url` |
+| E11c | `config.yml`: el `url` de cada `contact_links` es **absoluto** (`http`/`https`) |
+| **E13** | **Ningún string esperado es vacío ni solo whitespace** — «`Empty strings, or strings consisting of only whitespaces, are not permissible when the field expects a string`» |
+| **E14** | **Claves de elemento** dentro de la allowlist `type` · `id` · `attributes` · `validations` — «`'x' is not a permitted key`» |
 
 **Procedencia de cada invariante, con el texto de error que GitHub publica** (barrido de la r6; antes las tenía enumeradas pero no todas sourced):
 
@@ -399,35 +424,60 @@ Fuentes: [form schema](https://docs.github.com/en/communities/using-templates-to
 
 **Un fixture negativo por cada condición enumerada en la tabla de invariantes**, no «casos negativos» en general (r3, afinado en la r5 y otra vez en la r6). La formulación original se satisfacía con uno o dos fixtures mientras E7, E8 o E10 no rechazaban nunca: un validador con ramas que jamás se ejecutan puede aprobar cualquier cosa que caiga en ellas, y el criterio no se enteraría. **Cada fixture aísla su condición** —falla ésa y pasa las otras—, que es la misma disciplina de precondición por caso que el feature 03 usó para las tres invariantes de `wt_valid`:
 
-| Invariante · condición | Fixture negativo | Esperado |
-|---|---|---|
-| E1 · falta una clave | formulario sin `description` | rechazo por E1 |
-| E1 · presente pero vacía | formulario con `name: ""` | rechazo por E1 |
-| E2 | clave de raíz fuera de la allowlist (`colour:`) | rechazo por E2 |
-| E3 · no es lista | `body:` con un mapa | rechazo por E3 |
-| E3 · lista vacía | `body: []` | rechazo por E3 |
-| E4 · `type` ausente | elemento sin `type` | rechazo por E4 |
-| E4 · `type` desconocido | elemento con `type: paragraph` | rechazo por E4 |
-| E5 | `body` con un único elemento `markdown` | rechazo por E5 |
-| E6 · `markdown` | `markdown` sin `attributes.value` | rechazo por E6 |
-| E6 · no-`markdown` | `textarea` sin `attributes.label` | rechazo por E6 |
-| E7 · ausente | `dropdown` sin `attributes.options` | rechazo por E7 |
-| E7 · vacía | `dropdown` con `options: []` | rechazo por E7 |
-| E7 · no son strings | `dropdown` cuyas `options` son objetos | rechazo por E7 |
-| E7 · repetida | `dropdown` con dos opciones iguales | rechazo por E7 |
-| E8 | dos elementos con el mismo `id` | rechazo por E8 |
-| E9 · elemento | `validations.required: "yes"` — string donde va booleano | rechazo por E9 |
-| E9 · opción | `checkboxes` con `options[].required: "true"` | rechazo por E9 |
-| E10 | `markdown` con `validations` | rechazo por E10 |
-| E11 · flag | `blank_issues_enabled: "true"` — string donde va booleano | rechazo por E11 |
-| E11 · clave faltante | `contact_links` sin `about` | rechazo por E11 |
-| E11 · url relativo | `contact_links` con `url: CONTRIBUTING.md` | rechazo por E11 |
-| E12 · no son objetos | `checkboxes` con `options: [foo, bar]` | rechazo por E12 |
-| E12 · sin `label` | `checkboxes` con una opción sin `label` | rechazo por E12 |
-| E12 · `label` duplicado | `checkboxes` con dos opciones de igual `label` | rechazo por E12 |
-| **positivo** | los **tres archivos reales** | aceptación, `rc=0` |
+| Condición | Fixture negativo |
+|---|---|
+| E1 | formulario sin `description` |
+| E2 | clave de raíz fuera de la allowlist (`colour:`) |
+| E3a | `body:` con un mapa en vez de una lista |
+| E3b | `body: []` |
+| E4a | elemento sin `type` |
+| E4b | elemento con `type: paragraph` |
+| E5 | `body` con un único elemento `markdown` |
+| E6a | `markdown` sin `attributes.value` |
+| E6b | `textarea` sin `attributes.label` |
+| E7a | `dropdown` con `options: foo` — no es lista |
+| E7b | `dropdown` con `options: []` |
+| E7c | `dropdown` cuyas `options` son objetos |
+| E7d | `dropdown` con dos opciones iguales |
+| E8a | dos elementos con el mismo `id` |
+| E8b | elemento con `id: "bad id"` — único, pero con espacio |
+| E9a | `validations.required: "yes"` |
+| E9b | `checkboxes` con `options[].required: "true"` |
+| E9c | `description: true` — booleano donde va string |
+| E10 | `markdown` con `validations` |
+| E11a | `blank_issues_enabled: "true"` |
+| E11b | `contact_links` sin `about` |
+| E11c | `contact_links` con `url: CONTRIBUTING.md` |
+| E12a | `checkboxes` con `options: [foo, bar]` |
+| E12b | `checkboxes` con una opción sin `label` |
+| E12c | `checkboxes` con dos opciones de igual `label` |
+| E13 | formulario con `name: "   "` — solo whitespace |
+| E14 | elemento con una clave extra (`colour:`) junto a `type`/`attributes` |
+| **positivo** | los **tres archivos reales** ⇒ aceptación, `rc=0` |
 
-**La fila positiva importa tanto como las negativas**: un validador que rechaza todo también tiene todas sus ramas verdes. Y **la promesa se enuncia contra esta tabla y no al revés** (corrección de la r6): «un fixture por cada condición enumerada en la tabla de invariantes, más el caso positivo». Antes decía «por cada rama» mientras la matriz dejaba condiciones sin caso —`dropdown` con `options` vacías, entre otras—, que es la misma clase de promesa más ancha que su evidencia, ahora dentro del mecanismo que la detecta.
+**La fila positiva importa tanto como las negativas**: un validador que rechaza todo también tiene todas sus ramas verdes.
+
+**La propiedad que se exige de esta tabla es la biyección** (r7): cada condición de la tabla de invariantes tiene **exactamente un** fixture, y cada fixture corresponde a **exactamente una** condición. No es una frase de estilo — es **chequeable mecánicamente** comparando los identificadores de las dos tablas, y ése es el chequeo, no la promesa. Verificado con `comm` sobre los identificadores extraídos de cada tabla: **cero identificadores de un solo lado**, en las dos direcciones. *(No se publica acá cuántos son: crece cada vez que una ronda atomiza una invariante. Lo que se publica es la propiedad y cómo se comprueba.)* La r6 había reemplazado «por rama» por «por condición» y la r7 mostró que la tabla seguía sin cubrirlas: faltaban `options` no-lista, `label` vacío o no-string, el charset de `id`, las claves extra y los strings solo-whitespace. Atomizar las invariantes —`E3a/b`, `E4a/b`, `E6a/b`, `E7a–d`, `E8a/b`, `E9a–c`, `E11a–c`, `E12a–c`— es lo que vuelve la biyección verificable en vez de argumentable.
+
+### La frontera única: toda causa documentada está cubierta por una invariante **o** neutralizada por C15
+
+Es la salida que la r7 propuso y es mejor que seguir agregando invariantes de a una. Para cada causa de descarte documentada, o hay invariante con fixture, o **C15 fija el valor** de modo que la causa no pueda ocurrir en estos archivos:
+
+| Causa documentada | Cubierta por |
+|---|---|
+| claves de raíz faltantes o no permitidas | E1, E2 |
+| body vacío, no-lista, o solo-markdown | E3a, E3b, E5 |
+| `type` ausente o no permitido | E4a, E4b |
+| atributos requeridos faltantes | E6a, E6b |
+| `options` mal formadas, vacías o repetidas | E7a–d, E12a–c |
+| `id` duplicado o con charset inválido | E8a, E8b |
+| tipos de dato incorrectos | E9a–c, E11a |
+| strings vacíos o solo-whitespace | E13 |
+| claves no permitidas dentro de un elemento | E14 |
+| **claves no permitidas dentro de `attributes`** | **C15**: fija el contenido exacto de cada campo F1–F7 y G1–G5, así que no hay atributo que el diseño no haya nombrado |
+| **longitud mínima de `name`/`description`** | **C15**: fija los valores literales de los tres archivos |
+
+**Sobre esa última fila, y es el único punto de esta ronda donde no acepto sin más.** La r7 afirma que «GitHub exige más de tres caracteres» para `name`. Fui a la fuente y **no pude sostenerlo**: la documentación marca `name` como requerido y no documenta longitud mínima; lo que sí documenta es que «*Empty strings, or strings consisting of only whitespaces, are not permissible when the field expects a string*», que es exactamente lo que codifica **E13**. Entonces codifico la restricción que la fuente respalda y **no** la que no pude verificar — porque encodear un umbral sin fuente sería el mismo defecto que esta unidad viene pagando, solo que en la dirección contraria. El contraejemplo queda igualmente cerrado, por la vía que la propia r7 ofreció: **C15 fija los valores literales**, y ninguno de los tres archivos tiene un `name` de tres caracteres.
 
 ### `README.md` — edición acotada
 
@@ -447,7 +497,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen las invariantes E1–E12** de §Enfoque —con `dropdown` y `checkboxes` validados **por separado**, que es lo que la r5 volteó—, que son las causas de descarte documentadas por GitHub que este chequeo cubre. **No se afirma «cumplen el esquema» a secas**: el validador de GitHub es la autoridad final, no se lo puede correr sin pushear —prohibido en esta unidad— y el límite se publica junto al criterio. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` (stock de macOS) para el parseo, **más** un validador de E1–E12 corrido sobre los tres archivos, con **la matriz completa `EN → fixture negativo` de §Enfoque: uno por cada rama, cada uno aislando la suya**, más el camino positivo sobre los tres archivos reales. «Casos negativos» a secas no alcanzaba: se satisface con dos fixtures mientras el resto de las ramas nunca se ejecuta, y una rama que nunca corrió aprueba lo que sea que caiga en ella. Referencias: [sintaxis de issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms), [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema) y [errores comunes de validación](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms) |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` **parsean** *y* **cumplen todas las invariantes enumeradas** en §Enfoque —con `dropdown` y `checkboxes` validados **por separado**, que es lo que la r5 volteó—, que son las causas de descarte documentadas por GitHub que este chequeo cubre. **No se afirma «cumplen el esquema» a secas**: el validador de GitHub es la autoridad final, no se lo puede correr sin pushear —prohibido en esta unidad— y el límite se publica junto al criterio. Parsear no es validar: un archivo puede ser YAML legal y no ser un issue form | `ruby -ryaml` para el parseo —**disponible en esta máquina**, no «de stock»: es una precondición del entorno declarada en §«Barrido de premisas», y afirmarla como propiedad de macOS contradecía ese mismo límite (r7)—, **más** un validador corrido sobre los tres archivos con la matriz `condición → fixture` de §Enfoque, **verificada biyectiva**, más el camino positivo. «Casos negativos» a secas no alcanzaba: se satisface con dos fixtures mientras el resto nunca se ejecuta, y una condición que nunca corrió aprueba lo que sea que caiga en ella. Referencias: [sintaxis de issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms), [form schema](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema) y [errores comunes de validación](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/common-validation-errors-when-creating-issue-forms) |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
@@ -457,13 +507,13 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
-| **C15** | **Completitud contra los artefactos.** Los criterios anteriores verifican que lo publicado sea correcto, y **ninguno verifica que esté entregado lo diseñado** — hueco que la r4 expuso con un contraejemplo que pasaba C3, C6 y C8–C10: un informe con solo la matriz, un `CONTRIBUTING.md` con solo el aviso MIT y dos formularios válidos con un textarea genérico. Existen **y entregan lo diseñado**: (a) los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; (b) los **cuatro** bloques de `CONTRIBUTING.md`; (c) los campos **F1–F7** y **G1–G5**, cada uno contrastado en su **tupla completa** —`type` **+** el significado que la fila declara **+** sus opciones cuando las tiene **+** su requiredness **+** su ubicación en el archivo—, incluido que F7 sea `checkboxes` de una opción con `required` **en la opción** y que G5 no tenga ninguna requerida; (d) `config.yml` con el contenido ya fijado, URL absoluto incluido; (e) **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés**, que es lo que el diseño manda para toda la vidriera | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la **tupla entera**, no solo su presencia — la r5 mostró que cardinalidad y requiredness correctas admiten igual dos formularios con textareas genéricos, o todos los artefactos escritos en español. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada*: es el defecto que el feature 13 tuvo que corregir con sus C6–C9, y se hereda el remedio en vez de redescubrirlo |
+| **C15** | **Completitud contra los artefactos.** Los criterios anteriores verifican que lo publicado sea correcto, y **ninguno verifica que esté entregado lo diseñado** — hueco que la r4 expuso con un contraejemplo que pasaba C3, C6 y C8–C10: un informe con solo la matriz, un `CONTRIBUTING.md` con solo el aviso MIT y dos formularios válidos con un textarea genérico. Existen **y entregan lo diseñado**: (a) los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; (b) los **cuatro** bloques de `CONTRIBUTING.md`; (c) los campos **F1–F7** y **G1–G5**, cada uno contrastado en su **tupla completa** —`type` **+** el significado que la fila declara **+** sus opciones cuando las tiene **+** su requiredness **+** su ubicación en el archivo—, incluido que F7 sea `checkboxes` de una opción con `required` **en la opción** y que G5 no tenga ninguna requerida; (d) `config.yml` con el contenido ya fijado, URL absoluto incluido; (d-bis) **los valores literales** de `name` y `description` de cada formulario y **el conjunto exacto de atributos** de cada campo — es la otra mitad de la frontera única de §Enfoque: lo que C15 fija no necesita invariante, porque la causa no puede ocurrir; (e) **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés**, que es lo que el diseño manda para toda la vidriera | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la **tupla entera**, no solo su presencia — la r5 mostró que cardinalidad y requiredness correctas admiten igual dos formularios con textareas genéricos, o todos los artefactos escritos en español. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada*: es el defecto que el feature 13 tuvo que corregir con sus C6–C9, y se hereda el remedio en vez de redescubrirlo |
 
 ## Riesgos
 
 1. **La regla de fuente única es interpretable, y una regla interpretable churnea.** Es el riesgo más probable de esta unidad. Mitigación: la línea está **fijada por escrito antes de implementar** (§«Fuente única»), con la clase incluida, la clase excluida y el chequeo mecánico que la aplica. Si el reviewer no acepta la línea, se discute la línea una vez — no cifra por cifra.
 2. **Contadores móviles reapareciendo en prosa.** Es la causa de las dos rachas de la unidad 13. Mitigación: la regla adoptada arriba, aplicada también a este doc; donde hace falta un número que se mueve, va el comando.
-3. **YAML que GitHub descarta en silencio.** Un formulario mal formado no avisa: simplemente no aparece. Mitigación parcial y declarada como parcial: C6 valida con un parser real **y** con las invariantes **E1–E12**, que son las causas de descarte documentadas, con un fixture negativo **por rama**; el validador de GitHub sigue siendo la autoridad final y no se lo puede correr sin pushear. El riesgo se reduce, no se elimina, y el criterio lo dice. *(Las menciones de «E1–E11» dentro del Review log se conservan: describen el estado de su ronda, y E12 entró recién en la r5.)*
+3. **YAML que GitHub rechaza y nosotros no vemos.** El riesgo real no es que GitHub calle —la fuente dice que los errores pueden aparecer «*when creating, saving, or viewing issue forms*»—, sino que **nosotros no llegamos a verlos**: mirarlos exige que el archivo esté en el remoto, y esta unidad tiene prohibido pushear. Ésa es la asimetría, y la afirmación anterior («no avisa, simplemente no aparece») era una generalización sobre GitHub que la fuente no sostiene — otra premisa externa, corregida en la r7. Mitigación parcial y declarada como parcial: C6 valida con un parser real **y** con las invariantes de §Enfoque, cada condición con su fixture y la tabla exigida **biyectiva**; el validador de GitHub sigue siendo la autoridad final. El riesgo se reduce, no se elimina, y el criterio lo dice. *(Las menciones de rangos viejos de invariantes dentro del Review log se conservan: describen el estado de su ronda.)*
 4. **Tentación de correr los comandos de GitHub** —están escritos, verificados y a un `Enter` de distancia—. Mitigación: el corte está declarado como consecuencia, y C11b **no finge** que la no-ejecución sea demostrable desde el commit: es una invariante operativa que se sostiene por el contrato del pipeline y se asienta como registro, no como prueba. Prometer una prueba mecánica que no existe habría sido peor que no prometer nada — daba una garantía falsa exactamente donde importa.
 5. **El corte envejece mientras se trabaja.** Las rondas de esta misma unidad entran al `rounds-log`. Mitigación: es exactamente lo que el corte neutraliza; la consecuencia (el snapshot no incluye las rondas de los features 13 y 14) se **publica**.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Sigue siendo una línea a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
@@ -471,6 +521,22 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r7 (base `6ec4b48`, HEAD `7903df2`) — CHANGES_REQUESTED · **3 bloqueantes, cero preferencias**
+
+La corrección de `checkboxes`, el retiro de `upload` y C12 quedaron bien. **El pedido adversarial sobre el barrido dio resultado, y ésa es la información más útil de la ronda**: la clase de «premisa externa sin fuente» **no estaba agotada** — el barrido de la r6 se había dejado cuatro afuera.
+
+1. **Cuatro causas documentadas que ninguna invariante cubría**, todas verificadas ahora contra la fuente y agregadas: el **charset de `id`** (E8b — «`'id' can only contain numbers, letters, -, _`»), los **strings vacíos o solo-whitespace** (E13), las **claves no permitidas** dentro de un elemento (E14) y dentro de `attributes` (neutralizada por C15). Más dos hermanos: el riesgo 3 afirmaba que GitHub «no avisa», y la fuente dice que los errores aparecen «*when creating, saving, or viewing*» — la limitación es **nuestra**, no de la herramienta, y ahora lo dice así; y C6 conservaba «stock de macOS» para `ruby`, contradiciendo el límite de entorno que el propio barrido declara.
+
+   **El único punto de todo el ciclo donde no acepto sin más**: la r7 afirma que GitHub exige más de tres caracteres para `name`. Fui a la fuente y **no pude sostenerlo** — marca `name` como requerido y no documenta longitud mínima; lo que sí documenta es el rechazo de strings vacíos o solo-whitespace, que es lo que codifica E13. Codifico lo respaldado y no el umbral, porque **encodear una restricción sin fuente es el mismo defecto con la autoridad cambiada de lado**. El contraejemplo queda cerrado igual por la vía que la propia r7 ofreció: C15 fija los valores literales.
+
+2. **La matriz seguía sin cubrir cada condición que prometía.** E12 exigía `label` string no vacío y solo probaba su ausencia; E7 exigía lista y no probaba `options: foo`; E9 prometía tipos genéricamente sin caso para `description: true`. Y C6 y el riesgo 3 **todavía decían «por rama»** después de que la r6 declarara haber reemplazado esa promesa. Resuelto **atomizando** las invariantes (`E3a/b`, `E4a/b`, `E6a/b`, `E7a–d`, `E8a/b`, `E9a–c`, `E11a–c`, `E12a–c`) y exigiendo que la tabla condición→fixture sea **biyectiva** — propiedad chequeable comparando identificadores, no argumentable.
+
+   De acá salió también la **frontera única**, que es mejor que seguir agregando invariantes de a una: *para cada causa documentada, o hay invariante con fixture, o C15 fija el valor que la vuelve imposible*.
+
+3. **La reparación volvió a publicar contadores móviles.** STATUS duplicaba `AUTORIZADOS` como «los tres SHA» —justo después de declarar que fuera la única lista— y publicaba el tamaño del barrido, que este mismo feedback amplió. Los dos reemplazados por referencia. **La tercera instancia es del ledger y es del padre**: el `## Cierre` quedó diciendo «tres cortes» con el pipeline abierto, así que otro deadlock la vuelve falsa. No se toca; se le pasa.
+
+**Balance de la ronda, que vale anotar**: los tres puntos son la misma clase que el ciclo persigue, y **los tres cayeron sobre correcciones de la ronda anterior** — pero ninguno reabre algo cerrado y los tres traen contraejemplo concreto. Lo que cambió respecto de mi lectura de la r4 es que ya no sostengo que la clase se agote con un barrido: se agota cuando el mecanismo la vuelve imposible, y eso es lo que intenta la frontera única.
 
 ### r6 (base `6ec4b48`, HEAD `52850e3`) — CHANGES_REQUESTED · **2 bloqueantes, cero preferencias**, más un pendiente del ledger que es del padre
 
