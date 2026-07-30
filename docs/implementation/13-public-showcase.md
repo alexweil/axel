@@ -623,7 +623,9 @@ Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -
 
 **C14 — alcance, verificado fail-closed contra una lista cerrada.** Tercera versión de este criterio, y las dos anteriores fallaron por la misma razón de fondo: **la evidencia se apoyaba en algo que se mueve**. La primera publicaba «seis archivos, un commit del padre» y envejeció cuando el padre commiteó al ledger. La segunda —r11— particionaba por «toca el ledger o no» y afirmaba no depender de mensajes de commit, pero su cuarto comando decidía la autoría con `grep -c '^feature 13'`: leía el mensaje, se contradecía con su propia afirmación, **habría reclasificado como «del padre» un commit del hijo sobre el ledger con otro asunto** —dando 0 igual— y encima ese `grep -c` imprime 0 con `rc=1`.
 
-La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los SHA autorizados del padre** — hoy **diez**. Esa lista no envejece con commits nuevos del hijo, y **un undécimo** commit sobre el ledger falla **sea cual sea su mensaje o su autoría declarada**. (La r11 la propuso cuando eran cinco; el número es el **estado de la lista**, no una propiedad del criterio, y por eso se mueve sin que el criterio cambie.)
+La salida estable, que es la que señaló la r11: **comparar el conjunto de commits que tocan el ledger contra una lista cerrada de los SHA autorizados del padre** — la lista literal está en el script de abajo. **Cualquier commit sobre el ledger que no esté en ella falla**, sea cual sea su mensaje o su autoría declarada.
+
+**Este texto no publica cuántos son, y es deliberado** (r17). El tamaño de la lista es un **contador móvil**: crece cada vez que el padre corrige el ledger, y publicarlo en prosa hacía que **cada corrección desincronizara la frase que la describía** — pasó en la r13, la r14, la r16 y la r17. La lista vive en un solo lugar, el `AUTORIZADOS` del script, donde es dato y no prosa; el criterio no depende de su tamaño.
 
 ```sh
 #!/usr/bin/env bash
@@ -648,11 +650,11 @@ git log --format=%H "$R" | grep -vxF "$esperado" | while read -r c; do         #
 
 | Comprobación | Resultado |
 |---|---|
-| el conjunto que toca el ledger **es** el autorizado | **sí**, **diez** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) y `33dd1d4` (correcciones del ledger tras la auditoría de la r16) |
+| el conjunto que toca el ledger **es** el autorizado | **sí** — `ee1e8ca` (arranque), `10e8f1f` y `a0e9fa8` (anomalías del id), `49ceb0b` (primer corte), `573814d` (primer desempate), `f6fce39` (corrección del conteo), `a24abac` (compromiso reenunciado como regla), `62f4468` (segundo corte), `a2b3b5a` (segundo desempate) y `33dd1d4` (correcciones del ledger tras la auditoría de la r16) |
 | paths del rango completo | **7**: `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger |
 | paths de los commits del hijo (rango **menos la lista cerrada**, sin definición circular) | **6** — el ledger **no** aparece |
 | qué tocan los del padre | solo el ledger y `docs/STATUS.md`, los dos territorio suyo |
-| **la lista creció, y ese es el mecanismo funcionando** | del quinto al décimo SHA entraron por correcciones, cortes y desempates del padre: sin la lista cerrada habrían pasado inadvertidos; con ella, **cada uno obligó a una actualización explícita y verificable**. La auditoría de la r16 encontró que faltaban **dos** —`62f4468` además del `a2b3b5a` que el padre nombró—, que es exactamente el tipo de omisión que la lista existe para volver imposible de ignorar |
+| **la lista creció, y ese es el mecanismo funcionando** | los SHA posteriores al arranque entraron por correcciones, cortes y desempates del padre: sin la lista cerrada habrían pasado inadvertidos; con ella, **cada uno obligó a una actualización explícita y verificable**. La auditoría de la r16 encontró que faltaban **dos** —`62f4468` además del `a2b3b5a` que el padre nombró—, que es exactamente el tipo de omisión que la lista existe para volver imposible de ignorar |
 | **la regla que gobierna el crecimiento** | el padre no commitea al ledger durante el ciclo **salvo para corregir una falsedad vigente**, y en ese caso el SHA entra a `AUTORIZADOS` en la misma ronda (`a24abac`). Un compromiso absoluto estaba mal enunciado, porque dejar en pie una falsedad conocida no es una opción disponible |
 
 **Los dos caminos probados**, no argumentados: con la lista completa ⇒ `rc=0` y las dos listas de paths; sacando un SHA de la lista para simular un commit no autorizado ⇒ `rc=1`, `FAIL: commits sobre el ledger fuera del conjunto autorizado` **y el `diff` del conjunto**, que el script ahora efectivamente imprime — la r12 marcó que la evidencia lo prometía y el bloque publicado no lo producía.
@@ -662,6 +664,35 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 **C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
+
+### r17 (base `61a6c32`, HEAD `c143fd5`) — CHANGES_REQUESTED · 2 puntos · **la ronda que identificó la causa estructural**
+
+Codex confirmó que la lista de diez coincide **exactamente** con los commits que tocan el ledger, C14 en sus dos caminos, y que los tres artefactos siguen **byte a byte intactos y sin defectos pendientes**. Sin preferencias. Los dos puntos son otra vez bookkeeping, y **los dos son el mismo fenómeno**:
+
+1. **STATUS volvía a declarar una racha incorrecta**: decía `0`, pero el reset fue **antes** de la r16 y esa ronda volvió `CHANGES_REQUESTED`; al lanzar la r17 correspondía **1**.
+2. **Dos conteos vivos del ledger seguían en nueve cuando son diez**, uno de ellos publicado **junto a un comando cuyo resultado lo desmiente**.
+
+### La causa estructural, que es lo que esta ronda aporta
+
+Van cuatro rondas desde que Codex cerró los artefactos (r14–r17) y cada una encontró bookkeeping nuevo **generado por la corrección anterior**. La pregunta legítima es si esto converge. La respuesta es **sí, pero no corrigiendo valores** — y la causa tiene nombre:
+
+**Los docs publicaban en prosa contadores que el propio proceso mueve.** La racha cambia con cada veredicto; el tamaño de la lista cerrada crece con cada corrección del padre al ledger. Publicarlos como número garantiza que **la próxima corrección desincronice la frase que los describe**. No es mala suerte ni descuido acumulado: es un lazo, y por eso reaparece pase lo que pase con el cuidado que se ponga.
+
+Codex nombró la salida en su punto 2: **«eliminar los conteos móviles y anclar cada cifra histórica a un SHA»**. Eso es un cambio de **clase** de arreglo, no de valor, y es lo que hace esta ronda:
+
+| Contador móvil | Antes | Ahora |
+|---|---|---|
+| tamaño de la lista, en el texto de C14 | «hoy **diez**», «un **undécimo**» | **no se publica** — la lista vive solo en el `AUTORIZADOS` del script, donde es dato y no prosa |
+| tamaño de la lista, en la tabla de C14 | «**sí**, **diez** — …» | «**sí** — …», con los SHA enumerados y sin conteo |
+| crecimiento de la lista | «del quinto al **décimo** SHA» | «los SHA posteriores al arranque» |
+| commits del padre al ledger, en STATUS | «**diez**» (vivo) | **ocho al corte `62f4468`** — anclado a un SHA, con el comando para derivar el actual |
+| racha, en STATUS | «**0**» (vivo) | «**racha al lanzar la r18: 2**» — foto anclada al commit, con `.claude/state/changes-streak` nombrado como fuente |
+
+**La predicción falsable que deja este cambio**: a partir de acá, un commit nuevo del padre al ledger **no puede desincronizar prosa mía**, porque ninguna frase publica ese número — solo entra un SHA a una lista. Si una ronda futura vuelve a encontrar un conteo desincronizado en mis docs, esta tesis es falsa y hay que revisarla.
+
+Los seis contadores estaban enumerados y cerrados en una sola pasada; **quedan cero menciones vivas** en `docs/STATUS.md` y en este doc.
+
+**Lo que queda fuera de mi alcance**: los dos conteos del punto 2 viven en el **ledger**, territorio del padre. Escalados **con la recomendación estructural**, no solo con los valores — si se corrigen como número, la corrección genera la ronda siguiente.
 
 ### r16 (base `61a6c32`, HEAD `04d2fd6`) — CHANGES_REQUESTED · 3 puntos · 2 corregidos, 1 anotado
 
