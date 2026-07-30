@@ -469,7 +469,8 @@ Estructura aprobada por el diseño, con sus cuatro refinamientos (cifras con su 
 11. Audit before you run
 12. Known issues
 13. License notice
-14. Tests
+14. **Language** — agregada durante la implementación, y se declara acá para que C6 no quede desincronizado de su artefacto (que es el defecto que este doc viene persiguiendo). Razón: la objeción «está todo en español» de §8 del README necesita aterrizar en algún lado, y el destino natural es el manual — el README declara la política en una línea y el manual la explica en sus tres planos. Sin esta sección, ese puntero sería el único caso del README que apunta a nada
+15. Tests
 
 **Known issues**, con el criterio del diseño (un problema se documenta donde el usuario lo choca):
 
@@ -490,7 +491,7 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 | C3 | **Cero afirmación no verificable**: toda oración del README y del manual cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C4 | Toda cifra publicada lleva su **commit de corte** y su comando; las cifras se re-derivan con los comandos de §«El corte de métricas» **sobre `snapshot.tsv`** y coinciden. Incluye las tres derivaciones de las 35 históricas | re-corrida de la tabla de comandos, con la reconstrucción fail-closed y sus tres postcondiciones |
 | C5 | **Cero pérdida, verificada sobre los artefactos y no sobre el mapa**: cada fila V1–V9 / M0–M14 está **realizada** en el `README.md` o el `docs/install.md` finales —se recorre fila por fila localizando el contenido en su destino declarado—, y los **45 tokens** aparecen en la unión, con las 2 traducciones literales de la tabla de placeholders | recorrido fila por fila con locator + `grep` token por token sobre la lista versionada. *Que el mapa esté escrito no verifica su implementación* (r2) |
-| **C6** | **Completitud del manual**: existen y tienen contenido las **14 secciones** de la lista cerrada de §Enfoque, incluida §The commands in full con los **siete** comandos | recorrido de la lista, una por una |
+| **C6** | **Completitud del manual**: existen y tienen contenido las **15 secciones** de la lista cerrada de §Enfoque, incluida §The commands in full con los **siete** comandos | recorrido de la lista, una por una |
 | **C7** | **Los tres problemas conocidos están**, cada uno donde el diseño lo manda: la colisión `build/` con su workaround y la trampa de `!.claude/` en §Known issues; el rechazo por árbol sucio en §Known issues; el `modo: initial` en una adopción en §After an adoption | inspección por punto, contra la tabla del diseño |
 | **C8** | **El aviso MIT está declarado como incumplimiento pendiente**, no como cumplimiento parcial: §License notice dice que el aviso no viaja con el payload y que declararlo en el manual informa pero **no** satisface el requisito | lectura literal de la sección |
 | **C9** | **Las seis objeciones están contestadas** en el README, cada una en la sección donde la tabla de §Enfoque la ubica | recorrido de las seis, con el locator de cada respuesta |
@@ -512,6 +513,99 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Es una línea y está a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
 7. **«No perder nada» no es «entregar lo diseñado».** Riesgo que la r1 encontró y que no estaba en esta lista: un manual podía pasar C3 y C5 con la mitad del contenido nuevo ausente. Mitigación: C6–C9, que verifican completitud contra listas cerradas —14 secciones, 3 problemas conocidos, el aviso MIT, 6 objeciones— en vez de contra el criterio de quien revisa.
 8. **Un procedimiento que verifica su propio enunciado en vez del artefacto.** Es el patrón común de los tres puntos de la r1 y de dos de la r2: el mapa escrito no prueba que el mapa se haya implementado, y un reductor que cuenta filas no prueba que cuente rondas. Mitigación: C5 recorre los artefactos finales fila por fila, el normalizador tiene su prueba sintética con reintento, y la reconstrucción del corte tiene sus cuatro modos de falla probados.
+
+## Verificación del cierre
+
+Los tres artefactos existen: `LICENSE` (21 líneas), `README.md` (178 líneas, 10 625 caracteres) y `docs/install.md` (325 líneas). Evidencia por criterio.
+
+**C1 — `LICENSE`.** MIT estándar, sin modificar, `Copyright (c) 2026 alexweil`, con las dos derivaciones ancladas de §1 corridas al corte.
+
+**C2 — estructura del README.** Las nueve secciones, en el orden aprobado y con los requisitos **antes** del comando: título+cifras (§1, sin encabezado), `The problem`, `What a session actually looks like`, `Requirements, honestly`, `Install`, `The commands`, `How it works`, `What this is not`, `Links`. Verificado con `grep -n '^## ' README.md`.
+
+**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **178**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070** caracteres; el README nuevo está wrappeado a ~100, y su línea más larga es **338**. Comparado por caracteres —que es lo invariante—, pasa de **8142** a **10 625**: un 30 % más de texto, cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
+
+**C3 — cero afirmación no verificable.** Pasada por oración sobre los dos artefactos, clasificando cada una en las tres clases del contrato editorial. Los casos que no son trivialmente «hecho derivable»:
+
+| Afirmación | Clase | Sustento |
+|---|---|---|
+| «88 logged review rounds · 59 rejections · zero first-round approvals», «29 approvals», «123», «35», «23 cycles» | hecho derivable | comandos de §«El corte de métricas», corte `b0bdf4d` |
+| «185 commits», «20 files», «8 files» de la prueba externa | hecho derivable | commits `846308f`, `4908bfb`, `98c70c0`, verificados en ese repo |
+| «a round can take more than 10 minutes» | **limitación declarada** | `AGENTS.md` §Convenciones; no se publica como cifra medida |
+| «two subscriptions, from two different vendors» | hecho derivable | `scripts/review.sh` invoca `codex`; la sesión es Claude Code |
+| «Elsewhere they no-op cleanly» | hecho derivable | `scripts/awake.sh` imprime `caffeinate no disponible (no es macOS): nada que hacer` y retorna sin error |
+| «readable in an afternoon», «that is the point, not an apology», «expensive and unhurried on purpose» | **opinión marcada** | van en «What this is not», que es la sección declarada de juicio |
+| «the worst thing we could do» (sobre publicar un chat reconstruido) | **opinión marcada** | argumento del diseño, presentado como tal |
+| «This will be fixed» (known issue 1) | **limitación declarada** | compromiso explícito, sin fecha |
+| «not partial compliance, an open gap» (aviso MIT) | **limitación declarada** | exigido literalmente por el diseño |
+
+**C4 — cifras con corte y comando.** Re-derivadas con la reconstrucción fail-closed y el normalizador: snapshot **88**, rondas **88**, `CHANGES_REQUESTED` **59**, hitos **29**, ciclos **18**, cerrados **18**, r1 **18/18 `CHANGES_REQUESTED`**. Históricas **25+5+5 = 35** ⇒ **123**. Gancho: **212** commits, **3** días, **13** features al corte. El README publica el corte `b0bdf4d` en la propia línea de las cifras. Los **23 ciclos** de «What this is not» son los 18 del log más los 5 previos a la instrumentación.
+
+**C5 — cero pérdida, contra los artefactos.**
+
+- *(A) Tokens*: los **45** aparecen en la unión `README.md` + `docs/install.md`. **0 faltantes**, con las dos traducciones literales declaradas (`bash -s -- --from <fork-url> <destination>`, `scripts/install.sh /path/to/target-repo`) sustituidas según la tabla.
+- *(B) Mapa, fila por fila, con locator en el artefacto final*:
+
+| Fila | Realizada en |
+|---|---|
+| V1, V2 | README §1 (título, una línea de posicionamiento, las tres cifras) |
+| V3, V4, V5 | README §Links (`AGENTS.md`, `docs/STATUS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`) |
+| V6, V7 | README §The commands (encabezado y línea de entrada) |
+| V8 | README §The commands (tabla de 7) **y** manual §The commands in full (tabla completa con cuándo y precondición) |
+| V9 | README §How it works (loop y RECAP) **y** manual §Requirements (macOS, `caffeinate`, `scripts/awake.sh`) |
+| M0 | manual, título y encabezado |
+| M1 | manual §Install → *Quick install* |
+| M2 | manual §Install → *What the defaults assume*, con las tres líneas de anuncio reales |
+| M3 | manual §Install → *Explicit form* |
+| M4 | manual §Did it actually run? |
+| M5 | manual §Did it actually run? (bloque `pipefail`) |
+| M6 | manual §If you installed into the wrong repo |
+| M7 | manual §Install → *The `~/.axel` cache* |
+| M8 | manual §Install → *From a local clone* |
+| M9 | manual §Install → *Forks* |
+| M10 | manual §What gets installed (con `AGENTS.md` + symlink `CLAUDE.md` nombrados), §The three modes y §Exit codes |
+| M11, M12 | manual §For agents (Claude Code), los cinco pasos |
+| M13, M14 | manual §Audit before you run |
+
+**C6 — completitud del manual.** Las **15** secciones presentes y con contenido; §The commands in full lista los **siete** comandos.
+
+**C7 — los tres problemas conocidos, cada uno donde el diseño manda.** (1) Colisión `build/` en §Known issues, con el rechazo literal **probado** en P1, el workaround y la trampa de `!.claude/` explicada con la evidencia de `git check-ignore -v`; más el puntero de una línea desde el README §Install. (2) Rechazo por árbol sucio en §Known issues, con la nota de `git stash -u`. (3) `modo: initial` en una adopción en §After an adoption, que es donde se choca, con §Known issues 3 apuntando ahí.
+
+**C8 — aviso MIT.** §License notice dice literalmente que un puntero que no viaja con el payload no es el aviso que tiene que viajar con el payload, y lo rotula «**not partial compliance, an open gap**».
+
+**C9 — las seis objeciones, con locator.**
+
+| Objeción | Dónde |
+|---|---|
+| cuesta una fortuna | §Requirements, primer ítem, **antes** del comando de instalación |
+| el reviewer es otro LLM | §1 (las cifras) y §What this is not, último ítem |
+| es un montón de markdown | §What this is not, primer ítem |
+| está todo en español | §What a session (transcript bilingüe, que lo muestra) y §What this is not, quinto ítem |
+| macOS only | §Requirements, segundo ítem — qué se rompe y qué no |
+| ¿funciona fuera de axel? | §What a session → *Does it work outside axel?*, con el alcance honesto |
+
+**C10 — cero link roto.** Todos los destinos relativos de los dos artefactos resuelven, y las **siete anclas internas** usadas (`#known-issues`, `#language`, `#the-commands-in-full`, `#exit-codes`, `#after-an-adoption`, `#1-the-build-collision`, `#3-the-announced-mode-can-be-wrong`) corresponden a encabezados reales del manual, verificado derivando el slug de cada encabezado.
+
+**C11 — las dos referencias del 14, sin linkear y marcadas.** El bloque `> **Coming in feature 14, and deliberately not linked yet:**` al pie de §Links nombra en prosa el doc de métricas y `CONTRIBUTING.md`, y la línea de cifras de §1 lleva su propia marca. Ninguna de las dos es un link.
+
+**C12 — one-liner y workaround probados.** Publicados exactamente como salieron de P1–P4, incluida la línea final real del rechazo (`── axel · fin: rc=2 · rechazo del preflight (1 problema(s), nada escrito) ──`), que no es la que traía el pedido.
+
+**C13 — transcript sin línea inventada.** Los cinco hitos citados en su idioma original con su fuente, y las citas **comparadas mecánicamente** contra el original —normalizando espacios y marcas de énfasis— en vez de leídas a ojo:
+
+| Hito | Fuente | Cita idéntica al original |
+|---|---|---|
+| pedido sin comando | bloque Gate de `pipeline-2026-07-29-2.md` | sí |
+| gate y autorización | evento de autorización del mismo ledger | sí |
+| `CHANGES_REQUESTED` verdadero | §Review log r1, punto 2, de `12-adopt-close-report.md` | sí |
+| corrección → `APPROVED` | `f85a033` (r2) y `886fe4f` (r7) | SHAs verificados con `git cat-file -e` |
+| RECAP → OK | `eabd92f` (STATUS a «esperando OK») y `39b377e` (registro del OK), literal «OK» en §Cierre del ledger | SHAs verificados |
+
+Los ocho SHA citados en el README existen: los cinco de axel con `git cat-file -e`, y los tres de la prueba externa (`846308f`, `4908bfb`, `98c70c0`) contra ese repo. El README **no** cita la frase con que el ledger enmarca el OK, solo el literal del humano.
+
+**C16 — no-regresión.** `tests/lint.sh` **limpio** (shellcheck 0.11.0), `tests/loop.sh` **293 ok · 0 fail**, `tests/install.sh` **460 ok · 0 fail**. Es no-regresión pura: el delta no toca scripts ni tests.
+
+**C14 — alcance.** `git diff --stat 284ace4..HEAD` toca solo `LICENSE`, `README.md`, `docs/install.md`, `docs/implementation/13-public-showcase.md`, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o remoto — y **ningún push**.
+
+**C15 — puntero para agentes.** README §Install cierra nombrando «the full procedure **for agents** told to "install axel following this URL"» con link al manual, de modo que el camino que diseñó el feature 02 aterriza en el procedimiento completo.
 
 ## Review log
 

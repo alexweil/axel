@@ -1,69 +1,178 @@
 # axel
 
-Maquinaria de desarrollo con loop generador/reviewer: **Claude Code genera, Codex revisa**, iterando hasta acuerdo, con los docs como memoria persistente y checkpoints de OK humano.
+**A two-agent development loop: Claude Code writes, Codex reviews, and neither gets to approve its own work.** This repo built itself with it.
 
-- Contexto para agentes y reglas del proceso: [AGENTS.md](AGENTS.md)
-- Dónde estamos parados: [docs/STATUS.md](docs/STATUS.md)
-- Diseño: [docs/DESIGN.md](docs/DESIGN.md) · Plan: [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md)
+At commit `b0bdf4d`: **88 logged review rounds · 59 rejections · zero first-round approvals.**
 
-## Uso
+A *round* is one pass of the review contract — not one feature. The 29 approvals are **milestones**
+(a detailed spec, an implementation step, a plan cycle), so there are more approvals than features;
+counting them as features would be exactly the sloppiness that makes numbers like these worthless.
+88 is what the round log covers since instrumentation began on day two; the full history is 123,
+with the earlier 35 recovered from a separate source. *Coming in feature 14: the metrics document
+that publishes the snapshot and the exact command behind every figure — not yet published, so for
+now these numbers are only as good as this repo's git history, which you can read.*
 
-Abrí Claude Code en el repo:
+## The problem
 
-- `/status` — ubicarte en 10 líneas.
-- `/feature` — continuar el loop con el feature en curso o el siguiente.
-- `/design`, `/plan` — fases de diseño y planificación.
-- `/recap` — resumen de lo hecho desde el último OK.
+An agent left alone is both author and judge, and it grades generously. It also forgets: close the
+session and the reasoning behind every decision goes with it, so the next session re-litigates
+settled questions or silently contradicts them.
 
-El loop corre solo (commitea, pide review a Codex, itera) y se frena en cada RECAP a esperar tu OK. Podés responder desde una sesión remota. La máquina se mantiene despierta sola mientras el loop trabaja (`scripts/awake.sh` + `caffeinate` alrededor de Codex); con la tapa cerrada hace falta corriente y display externo.
+axel addresses both with structure rather than with a better prompt. **A different vendor's model
+reviews every change** and can run your tests to check for itself. **The repo is the memory** — a
+new session reconstructs everything by reading three files. And **you approve at checkpoints**, not
+at every step.
 
-## Llevar axel a otro proyecto
+## What a session actually looks like
 
-Sin clon previo de axel, parado adentro del repo destino:
+In axel the chat is disposable and the repo is the memory, so **there is no session transcript to
+capture** — publishing a chat log that looked reconstructed, in a project whose whole pitch is
+auditability, would be the worst thing we could do. What follows is rendered from the repo instead.
+Every line traces to a commit, a ledger entry or a review log. The originals are in Spanish; the
+English is a translation, and the source is named so you can check.
+
+### One run, end to end — [pipeline 2026-07-29 (2)](docs/implementation/pipeline-2026-07-29-2.md)
+
+**1 · A request, with no command typed.** Recorded verbatim in the run's ledger:
+
+> «Que la skill `/adopt` cierre reportándole al humano el **inventario completo de archivos que tocó**, no solo la narrativa de las decisiones que le parecieron importantes.»
+>
+> *"Make the `/adopt` skill close by reporting the complete inventory of files it touched, not just the story of the decisions it found interesting."*
+
+**2 · A gate, then one authorisation.** axel proposed a route, asked one question, and waited. The
+human's answer, quoted in the ledger:
+
+> «a) ok con tu recomendacion · b) dejalo sin registrar» — *"a) ok, go with your recommendation · b) leave it unrecorded"*
+
+**3 · The reviewer catches something real.** Round 1, from the feature's
+[review log](docs/implementation/12-adopt-close-report.md):
+
+> «El camino multicommit podía omitir archivos en silencio. Cierto y grave: `git diff <base>..HEAD` es el **efecto neto entre extremos**, no la unión de lo tocado — un archivo modificado y restaurado, o el path intermedio de un `A → B → C`, desaparecía sin dejar rastro, que es justo la falla del criterio (a).»
+>
+> *"The multi-commit path could silently omit files. True, and serious: `git diff <base>..HEAD` is the net effect between endpoints, not the union of what was touched — a file modified and then restored, or the middle step of an `A → B → C`, vanished without a trace, which is exactly the failure the criterion existed to prevent."*
+
+That is a logic bug in the deliverable, caught by reading the diff.
+
+**4 · Correction, then agreement.** Fixed in `f85a033` (round 2). Six more rounds of narrowing
+followed; the reviewer approved in round 7, at `886fe4f`.
+
+**5 · A checkpoint, and a human OK.** STATUS moved to "waiting for OK" in `eabd92f`, the turn ended,
+and nothing else happened until the human answered. The OK is quoted in the ledger's closing section
+and recorded in `39b377e`:
+
+> «OK»
+
+### Does it work outside axel? — one data point
+
+axel was installed into an unrelated active repo with 185 commits and its own documentation. Commit
+`846308f` installed 20 files there; because the repo already had docs this ran as an **adoption**,
+and `4908bfb` closed it with `/adopt`, mapping 8 files onto the convention. Commit `98c70c0` is that
+repo applying the `build/` workaround described below.
+
+Honest scope: **one repo, same author, and an adoption rather than a full review loop.** It answers
+"does this work somewhere that isn't axel" and nothing more.
+
+## Requirements, honestly
+
+- **Claude Code and Codex CLI** — two subscriptions, from two different vendors. That is the cost of
+  cross-vendor review and it is deliberate: a model reviewing itself is not a reviewer.
+- **macOS** — `scripts/awake.sh` and the wrapper around each review call use `caffeinate`. Elsewhere
+  they no-op cleanly and everything else works; what you lose is the machine staying awake through a
+  long unattended run.
+- **git, `python3`, `curl`** — the destination must be a git repo with a clean tree.
+- **Reviews are slow.** At `xhigh` effort a round can take more than 10 minutes.
+
+This is expensive and unhurried on purpose. Better to know now than after installing.
+
+## Install
+
+Standing inside the destination repo:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-Sin argumentos, el instalador **asume dos cosas y las anuncia antes de tocar nada**: la fuente es el repo canónico de axel y el destino es el toplevel del repo git donde estás parado. Verificá dónde estás antes de correrlo (`git rev-parse --show-toplevel`): ese repo, con el árbol limpio, es el que se va a modificar. Fuera de un repo git, la corrida se rechaza sin escribir nada. Cuando el destino es otro, o la fuente es un fork, las formas explícitas siguen valiendo igual que antes:
+**If your `.gitignore` has a `build/` rule** — every Python, Node, Java, Gradle, Maven and C template
+does — the install is refused, because the `/build` skill lives in `.claude/skills/build/`. One line
+in your `.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
+[known issues](docs/install.md#known-issues).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash -s -- --from https://github.com/alexweil/axel <repo-destino>
+Everything else — explicit forms, forks, the `~/.axel` cache, exit codes, what to do if you installed
+into the wrong repo, and the full procedure **for agents** told to "install axel following this URL"
+— is in [docs/install.md](docs/install.md).
+
+## The commands
+
+| Command | What it does |
+|---|---|
+| `/design` | Ping-pong ideas with you, then consolidate the design and close it with a review loop. |
+| `/plan` | Write the prioritised feature plan, in an order agreed between generator and reviewer. |
+| `/feature` | Take the next feature: start gate → detailed spec → implement, iterating with review → RECAP → your OK. |
+| `/build` | Pipeline: chain the phases a request needs, behind one gate and one consolidated OK. |
+| `/adopt` | Close an adoption in a repo that already had its own docs. |
+| `/status` | Say where things stand. Pure read, changes nothing. |
+| `/recap` | Checkpoint on demand: what happened since the last OK, and what comes next. |
+
+You do not have to learn them: a request in plain language is routed by context, and it never starts
+work without hitting a confirmation point first. Full reference:
+[docs/install.md](docs/install.md#the-commands-in-full).
+
+## How it works
+
+```
+/design ─► DESIGN.md ─review─► RECAP ─► OK ─► /plan ─► IMPLEMENTATION.md ─review─► RECAP ─► OK
+                                                              │
+                 ┌────────────────────────────────────────────┘
+                 ▼
+        /feature (fresh session)
+        start gate: summary ─► human confirmation
+        detailed spec ─review─► implement ─commit─► review ─► … ─► APPROVED
+                 │
+                 ▼
+              RECAP ─► human OK ─► next /feature (fresh session)
 ```
 
-**Cómo saber que corrió**: toda corrida termina con una línea `── axel · fin: rc=N · …`. Si no la ves, lo único que podés concluir es que **no hay finalización confirmada**: lo más común es que `curl` haya fallado y `bash` recibido entrada vacía, que retorna 0 sin ejecutar nada (el pipe no propaga el fallo de `curl`), pero también puede ser una corrida interrumpida **después** de empezar a escribir — así que revisá `git status` del destino antes de reintentar. Para uso scripteado, esta variante sí propaga el fallo del transporte:
+Inside a feature: change → commit → review → fix or argue back → commit → review, until
+`VERDICT: APPROVED`. Five rounds without convergence stops the loop and hands you both positions to
+break the tie. The reviewer works in a **worktree snapshot pinned to the commit under review**, where
+it can run tests and builds to verify on its own. Contract:
+[docs/design/review-contract.md](docs/design/review-contract.md).
 
-```bash
-bash -o pipefail -c 'curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash'
-```
+Five principles hold it together:
 
-**Si te equivocaste de repo**: el instalador exige árbol limpio y no commitea, así que todo lo que escribió es exactamente el diff. `git status --short` lo muestra, `git restore .` revierte lo modificado y `git clean -fd` borra lo nuevo (seguro justamente porque el árbol estaba limpio antes). Como red adicional, si el destino asumido resulta ser un clon de la propia fuente —correr el one-liner parado adentro de axel— la corrida se rechaza y te pide el destino explícito.
+1. **State lives in the repo, not the chat.** Any session rebuilds from `AGENTS.md` → `docs/STATUS.md` → design and plan.
+2. **The Claude Code session is the process and the control panel** — you can open it remotely and redirect at any point.
+3. **Generator and reviewer are separate, each with its own context**, renewed between features.
+4. **The human OK is the context boundary.** RECAP → OK → fresh sessions.
+5. **Docs are updated in every commit.** If it was not recorded, it did not happen.
 
-El script piped solo parsea argumentos, clona (o actualiza por fast-forward) un **cache de axel** en `~/.axel` (override: env `AXEL_HOME`) y delega la instalación en el `install.sh` de ese clon — lo que instala es siempre código versionado del cache, verificado contra el commit remoto. El cache se maneja fail-closed: sucio, con commits locales, divergido, en otro branch u otro origin ⇒ rechazo con instrucciones, jamás se pisa nada. Con un clon local de axel, el modo clásico hace lo mismo sin red — y ahí el destino **sigue siendo obligatorio**, porque la fuente es el clon que tenés a la vista y asumirlo no aportaría nada:
+## What this is not
 
-```bash
-scripts/install.sh /path/al/repo-destino
-```
+- **Not a framework.** It is a pile of markdown and two shell scripts. No dependencies, no lock-in,
+  readable in an afternoon — and that is the point, not an apology. Deleting it is as easy as
+  installing it.
+- **Not cheap.** Two paid subscriptions, and review rounds measured in tens of minutes.
+- **Not autonomous.** It stops and waits for you at every checkpoint, by design.
+- **Not proven at scale.** One repo built itself with this, and one external install exists. That is
+  the entire evidence base, and it is above.
+- **Not English underneath.** The storefront is English; the method documents and commit messages are
+  Spanish, and so is the prose the installer writes into your repo. The machinery is
+  language-agnostic — that text just has not been translated yet. Declared, not hidden:
+  [docs/install.md](docs/install.md#language).
+- **Not a rubber stamp, and the numbers are the argument.** Zero of 23 cycles were approved on their
+  first round. The reviewer runs the tests; it does not only read the diff.
 
-**Forks**: un script bajado de un fork y ejecutado por stdin no puede saber que salió de un fork (no hay `$0` ni procedencia), así que sin `--from` instala el axel canónico. Para instalar desde un fork usá la forma explícita `bash -s -- --from <url-del-fork> <destino>` (o exportá `AXEL_DEFAULT_REMOTE`). El anuncio del arranque siempre dice qué fuente terminó usando.
+## Links
 
-Instala la maquinaria (skills, scripts del loop, contrato, política de permisos) y siembra lo que falte (AGENTS.md + symlink CLAUDE.md, docs, settings). Tres modos, sin flags: instalación desde cero; **adopción** si el repo ya tiene docs propios — los docs y semillas preexistentes quedan intactos, los hallazgos van a `docs/ADOPTION.md` y el cierre se hace con `/adopt` en el destino —; y **actualización** al re-correrlo, con axel como fuente de verdad: los archivos de **maquinaria** (skills, scripts, contrato, política) se sobreescriben aunque los hayas tocado, los docs y settings del proyecto no se tocan nunca, y a `.gitignore` solo se le agrega la entrada `.claude/state/` si falta. Exige repo git con árbol limpio y python3; no commitea: el diff queda para tu proceso. Exit 0 = sin pendientes, 1 = pendientes en `docs/ADOPTION.md`, 2 = rechazo sin tocar el destino — salvo los casos, señalados con aviso explícito, de un instalador interrumpido o que no llegó a completarse a mitad de escritura (revisar `git status`). Tests: `tests/install.sh`.
+- [AGENTS.md](AGENTS.md) — the process and the rules, loaded by both agents
+- [docs/STATUS.md](docs/STATUS.md) — where this repo stands right now
+- [docs/DESIGN.md](docs/DESIGN.md) — the design · [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) — the plan
+- [docs/design/review-contract.md](docs/design/review-contract.md) — the generator↔reviewer contract
+- [docs/install.md](docs/install.md) — the install manual
+- [LICENSE](LICENSE) — MIT
 
-### Para agentes (Claude Code)
-
-Si te pidieron "instalá axel siguiendo esta URL", este es tu procedimiento completo:
-
-1. **Precondiciones**: el destino es un repo git con **árbol limpio** (commiteá o stasheá antes); `git`, `curl` y `python3` disponibles. El destino es el **toplevel** del repo: `git rev-parse --show-toplevel`.
-2. **Corré el one-liner** de arriba. Si tenés certeza de estar parado en el repo destino, la forma corta sin argumentos alcanza (asume ese toplevel y lo anuncia); **si no estás seguro, pasá el destino explícito** con `bash -s -- --from https://github.com/alexweil/axel <toplevel>` — el destino asumido es la única parte del comando que depende de dónde estés parado. No necesitás clonar axel: el comando baja y cachea todo en `~/.axel`.
-3. **Chequeá primero la línea final**: la salida de una corrida real termina en `── axel · fin: rc=N · …`. Si esa línea no está, no hay **finalización confirmada** y el exit code no dice nada sobre la instalación: lo más común es que fallara la descarga y `bash` recibiera entrada vacía (retorna 0 sin ejecutar nada), pero una corrida interrumpida después de escribir deja diff parcial — **revisá `git status` del destino antes de reintentar**, y usá `bash -o pipefail -c '…'` si querés que el fallo del transporte se propague.
-4. **Reaccioná según el exit code**:
-   - `0` — instalado sin pendientes: revisá el diff (`git status`), commitealo con el proceso del proyecto y corré `/status` para ubicarte (`/design` si el proyecto arranca de cero).
-   - `1` — instalado con pendientes: revisá y commiteá el diff igual, y cerrá la adopción con `/adopt` (los hallazgos están en `docs/ADOPTION.md`).
-   - `2` — leé el reporte: si es un **rechazo** (precondiciones, preflight, cache, destino asumido fuera de un repo git o que resulta ser la propia fuente), no se escribió nada en el destino (el cache `~/.axel` sí pudo crearse o actualizarse) — resolvé la causa y reintentá; si el aviso dice que el instalador fue **interrumpido** o que **no llegó a completarse**, revisá `git status` del destino antes de seguir: puede haber diff parcial.
-5. **Desde adentro de una sesión de Claude Code**: las skills instaladas (`/status`, `/design`, `/adopt`, …) se cargan en caliente y podés usarlas ya; los permisos del `.claude/settings.json` sembrado rigen plenos recién en la **sesión siguiente** — hasta entonces puede haber prompts de confirmación. El instalador nunca commitea: el commit es tuyo, con el proceso del destino.
-
-Para auditar antes de ejecutar: el camino en dos pasos hace exactamente lo mismo, con el instalador a la vista. Cloná axel **fuera del destino** (adentro ensuciaría el árbol que el instalador exige limpio) y pasale el toplevel:
-
-```bash
-AXEL_SRC="$(mktemp -d)/axel" && git clone https://github.com/alexweil/axel "$AXEL_SRC" && "$AXEL_SRC/scripts/install.sh" "$(git rev-parse --show-toplevel)"
-```
+> **Coming in feature 14, and deliberately not linked yet:** the **reviewer metrics document** — the
+> versioned round-log snapshot, the cut commit, and the exact command behind every figure on this
+> page — and **how to give feedback**, a `CONTRIBUTING.md` plus issue templates. Both are named here
+> in prose on purpose: this page ships with zero broken links, and these two become links when the
+> artefacts exist.
