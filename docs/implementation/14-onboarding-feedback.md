@@ -284,9 +284,37 @@ Inglés, orientado a **qué feedback busca esta ronda**:
 
 ### `.github/ISSUE_TEMPLATE/`
 
-- `install-failed.yml` — campos requeridos: la línea final `── axel · fin: rc=N · … ──`, la salida completa, sistema operativo y versión de git, y el estado del `.gitignore` del destino respecto de `build/`. Requerido también un checkbox de que el árbol estaba limpio, porque es la causa de rechazo más común después de la colisión.
-- `friction-or-question.yml` — qué estabas haciendo, qué esperabas, qué pasó, dónde buscaste primero. El último campo es el que dice si el problema es el producto o el manual.
-- `config.yml` — `blank_issues_enabled: true` y un `contact_links` con las tres claves que el esquema exige (`name`, `url`, `about`). El `url` tiene que ser **absoluto**, así que queda fijado acá y no se decide al implementar: `https://github.com/alexweil/axel/blob/main/CONTRIBUTING.md`.
+Los campos van **enumerados con su tipo y su requiredness**, no descritos en prosa: es lo que C15 recorre contra el archivo final, y una descripción no es verificable.
+
+**`install-failed.yml`**
+
+| # | `type` | Qué pide | `required` |
+|---|---|---|---|
+| F1 | `markdown` | una línea de contexto: qué hace útil este reporte | — |
+| F2 | `input` | sistema operativo con su versión, y versión de `git` | **sí** |
+| F3 | `textarea` | la **línea final** `── axel · fin: rc=N · … ──` | **sí** |
+| F4 | `textarea` | la salida completa del instalador | **sí** |
+| F5 | `textarea` | las líneas del `.gitignore` del destino que mencionan `build/`, o «ninguna» | **sí** |
+| F6 | `dropdown` | el **modo anunciado** (`initial` · `adoption` · `update` · no llegó a anunciarse) | **sí** |
+| F7 | `checkboxes` | atestación de que el árbol estaba limpio antes de correr | **sí** |
+
+F5 y F6 no son ornamento: son los dos problemas conocidos que el manual documenta —la colisión `build/` y el modo mal anunciado— convertidos en campos, de modo que el reporte llegue con la respuesta ya adentro en vez de costar una ida y vuelta. F7 cubre la otra causa frecuente de rechazo.
+
+**`friction-or-question.yml`**
+
+| # | `type` | Qué pide | `required` |
+|---|---|---|---|
+| G1 | `markdown` | una línea que aclare que las preguntas entran acá | — |
+| G2 | `textarea` | qué estabas haciendo | **sí** |
+| G3 | `textarea` | qué esperabas que pasara | **sí** |
+| G4 | `textarea` | qué pasó | **sí** |
+| G5 | `checkboxes` | dónde buscaste primero (README · `docs/install.md` · `CONTRIBUTING.md` · las skills · en ningún lado) | **no** |
+
+G5 es el campo que dice si el problema es el producto o el manual, y por eso existe.
+
+**Semántica de `required` en `checkboxes`, que decide el diseño de F7 y G5**: en un elemento `checkboxes`, `validations.required: true` exige que **todas** sus opciones queden marcadas. Por eso F7 es un `checkboxes` de **una sola** opción —funciona como atestación, y exigirla es lo correcto— y G5, que es multiselección genuina, **no puede** ser `required`. Confundir esto produce un formulario que nadie puede enviar; queda fijado acá para que no se decida al implementar.
+
+**`config.yml`** — `blank_issues_enabled: true` y un `contact_links` con las tres claves que el esquema exige (`name`, `url`, `about`). El `url` tiene que ser **absoluto**, así que queda fijado acá: `https://github.com/alexweil/axel/blob/main/CONTRIBUTING.md`.
 
 **Las invariantes del esquema que el chequeo valida — lista cerrada.** La r2 marcó que enumerar `name`/`description`/`body` y llamarlo «cumple el esquema» era otra promesa más ancha que su chequeo: GitHub documenta más causas de descarte que ésas. Se enumeran, entonces, y la afirmación se acota a lo enumerado:
 
@@ -353,6 +381,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
+| **C15** | **Completitud contra los artefactos.** Los criterios anteriores verifican que lo publicado sea correcto, y **ninguno verifica que esté entregado lo diseñado** — hueco que la r4 expuso con un contraejemplo que pasaba C3, C6 y C8–C10: un informe con solo la matriz, un `CONTRIBUTING.md` con solo el aviso MIT y dos formularios válidos con un textarea genérico. Existen **y tienen contenido**: (a) los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; (b) los **cuatro** bloques de `CONTRIBUTING.md`; (c) los campos **F1–F7** y **G1–G5** con **exactamente** la requiredness de sus tablas, incluido el checkbox de atestación; (d) `config.yml` con el contenido ya fijado, URL absoluto incluido | recorrido de las cuatro listas cerradas **localizando cada elemento en el archivo final** —encabezado, campo o clave— y registrando el locator. *Que la lista esté escrita en esta bajada no verifica que esté implementada*: es el defecto que el feature 13 tuvo que corregir con sus C6–C9, y se hereda el remedio en vez de redescubrirlo |
 
 ## Riesgos
 
@@ -363,8 +392,19 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 5. **El corte envejece mientras se trabaja.** Las rondas de esta misma unidad entran al `rounds-log`. Mitigación: es exactamente lo que el corte neutraliza; la consecuencia (el snapshot no incluye las rondas de los features 13 y 14) se **publica**.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Sigue siendo una línea a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
 7. **Ampliar la edición del README.** El contrato dice «activar dos referencias», no «revisar la vidriera». Mitigación: C7 acota, y ante una tercera cosa que parezca necesaria se registra y se pregunta en vez de decidir solo.
+8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r4 (base `6ec4b48`, HEAD `e0b1136`) — CHANGES_REQUESTED · **1 punto**, aceptado sin argumentar
+
+Las dos correcciones de la r3 quedaron **cerradas y verificadas**: `3ab6794` prueba el ciclo completo y `2f7c814` quedó acotado a la r1; E1–E11 tienen fixture negativo aislado y camino positivo. C12 sigue pasando sobre los cuatro commits del hijo. Sin contadores móviles nuevos.
+
+1. **Los catorce criterios permitían artefactos semánticamente incompletos** — el único hallazgo, y bloqueante. Todos verificaban que **lo publicado fuera correcto**; ninguno verificaba que **estuviera entregado lo diseñado**, o sea que ninguno miraba la **ausencia**. El contraejemplo de Codex es concreto y pasa: un informe compuesto solo por la matriz, un `CONTRIBUTING.md` con únicamente el aviso MIT y dos formularios válidos con un textarea genérico satisfacen C3, C6, C8–C10 y el resto, incumpliendo el plan entero. Cerrado con **C15**, que recorre cuatro listas cerradas —los ocho componentes del informe, los cuatro bloques de `CONTRIBUTING.md`, los campos F1–F7 y G1–G5 con su requiredness exacta, y `config.yml`— **localizando cada elemento en el archivo final**. Aproveché para convertir la descripción en prosa de los formularios en dos tablas con tipo y requiredness por campo, porque una descripción no es verificable; y quedó fijada de paso la semántica de `required` en `checkboxes` (exige **todas** las opciones marcadas), que decide que F7 sea de una sola opción y que G5 no pueda ser requerido — confundirlo produce un formulario que nadie puede enviar.
+
+   **Es el riesgo 7 de la unidad `13`**, literalmente («no perder nada» no es «entregar lo diseñado»), que allá costó cuatro criterios nuevos en su r1. Se hereda el remedio en vez de redescubrirlo, y se agrega como riesgo 8 de esta bajada para que quede en la lista y no solo en el criterio.
+
+**Señal de churn, condición aplicada por segunda vez: no se cumple, y además se revirtió.** El punto **no reabre nada** —las dos correcciones de la r3 están cerradas— y **no cae sobre una corrección previa**: Codex declara explícitamente que «pertenece a los criterios originales y debí señalarlo antes; no fue introducido por la corrección de la r3». O sea que la señal que existía en la r2 y la r3 desapareció en esta. Con la profundidad bajando **6 → 3 → 2 → 1** y el último hallazgo apuntando al plan original en vez de a las correcciones, el régimen es de convergencia.
 
 ### r3 (base `6ec4b48`, HEAD `9f56b39`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados sin argumentar ninguno
 
