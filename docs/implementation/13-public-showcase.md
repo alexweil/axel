@@ -213,7 +213,7 @@ El diseño fija **dos bloques con procedencia propia** y **ninguna línea invent
 
 | Afirmación | Verificación |
 |---|---|
-| axel instalado en un repo activo ajeno | commit `846308f` (2026-07-29), 20 archivos, 1330 inserciones; el repo tiene 185 commits |
+| axel instalado en un repo activo ajeno | commit `846308f` (2026-07-29), 20 archivos, 1330 inserciones. Tamaño del repo **anclado a un SHA, no vigente** (r19): `git rev-list --count 4908bfb` ⇒ **185**, que es el commit del cierre de la adopción; en `846308f` eran **184**. Publicar «el repo tiene 185 commits» sin corte era un contador móvil —el repo es ajeno y sigue vivo— **y además atribuía a `846308f` una cifra que es de `4908bfb`** |
 | era modo adopción, no instalación limpia | el commit dejó `docs/ADOPTION.md` con 21 docs preexistentes listados |
 | la adopción **se cerró** con `/adopt` | commit `4908bfb`: 8 archivos (`M AGENTS.md`, `D DESIGN.md`, `M README.md`, `D docs/ADOPTION.md`, `M docs/DESIGN.md`, `M docs/IMPLEMENTATION.md`, `M docs/STATUS.md`, `R075 IMPLEMENTATION.md → docs/implementation/bitacora.md`); hoy `docs/ADOPTION.md` no existe |
 | el workaround de `build/` se aplicó ahí de verdad | commit `98c70c0`, con la trampa de `!.claude/` explicada en el propio `.gitignore` |
@@ -528,7 +528,7 @@ Los tres artefactos existen. Tamaños **medidos con `wc -l` / `wc -c` sobre el c
 | Artefacto | Líneas | Bytes |
 |---|---|---|
 | `LICENSE` | 21 | 1 065 |
-| `README.md` | 183 | 10 989 |
+| `README.md` | 183 | 11 042 |
 | `docs/install.md` | 374 | 21 148 |
 
 Evidencia por criterio.
@@ -537,14 +537,14 @@ Evidencia por criterio.
 
 **C2 — estructura del README.** Las nueve secciones, en el orden aprobado y con los requisitos **antes** del comando: título+cifras (§1, sin encabezado), `The problem`, `What a session actually looks like`, `Requirements, honestly`, `Install`, `The commands`, `How it works`, `What this is not`, `Links`. Verificado con `grep -n '^## ' README.md`.
 
-**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **183**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070 bytes**; el README nuevo está wrappeado a ~100, y su línea más larga es de **338 bytes**. Comparado por **bytes** —`wc -c`, que es lo reproducible; la r7 marcó que yo los llamaba «caracteres», y en UTF-8 no son lo mismo: el baseline da 7971 caracteres Unicode contra 8142 bytes—, pasa de **8142** a **10 989** bytes — **+35.0 %**, derivado con las mismas magnitudes de la tabla y no estimado a ojo (la r8 marcó que mi «30 %» había envejecido al crecer el README), cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
+**Desvío de tamaño, declarado.** El objetivo era «~120 líneas» y el resultado son **183**. No es inflado: es un cambio de unidad de medida que la bajada no anticipó. El baseline tiene 69 líneas **sin wrappear**, con líneas de hasta **1070 bytes**; el README nuevo está wrappeado a ~100, y su línea más larga es de **338 bytes**. Comparado por **bytes** —`wc -c`, que es lo reproducible; la r7 marcó que yo los llamaba «caracteres», y en UTF-8 no son lo mismo: el baseline da 7971 caracteres Unicode contra 8142 bytes—, pasa de **8142** a **11 042** bytes — **+35.6 %**, derivado con las mismas magnitudes de la tabla y no estimado a ojo (la r8 marcó que mi «30 %» había envejecido al crecer el README), cargando además todo lo que el viejo no tenía (posicionamiento, transcript bilingüe, requisitos, seis objeciones) y habiendo mudado 50 líneas de casuística al manual. La vara del diseño no es de líneas sino de pantallas —«si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló»—, y el gancho, las tres cifras y `The problem` entran en la primera.
 
 **C3 — cero afirmación no verificable.** Pasada por oración sobre los dos artefactos, clasificando cada una en las tres clases del contrato editorial. Los casos que no son trivialmente «hecho derivable»:
 
 | Afirmación | Clase | Sustento |
 |---|---|---|
 | «88 logged review rounds · 59 rejections · zero first-round approvals», «29 approvals», «123», «35», «23 cycles» | hecho derivable | comandos de §«El corte de métricas», corte `b0bdf4d` |
-| «185 commits», «20 files», «8 files» de la prueba externa | hecho derivable | commits `846308f`, `4908bfb`, `98c70c0`, verificados en ese repo |
+| «185 commits at `4908bfb`», «20 files», «8 files» de la prueba externa | hecho derivable **anclado a SHA** | `git rev-list --count 4908bfb` ⇒ 185 (en `846308f` son 184); los 20 y los 8 salen de `git show --stat` de `846308f` y `4908bfb`. **Corregido en la r19**: la versión anterior publicaba los 185 sin corte y atribuidos al SHA equivocado |
 | «a round can take more than 10 minutes» | **limitación declarada** | `AGENTS.md` §Convenciones; no se publica como cifra medida |
 | «closing the lid still sleeps the machine, unless it is on power *and* driving an external display» | **limitación declarada** | `AGENTS.md` §Convenciones, «límite físico» |
 | «two subscriptions, from two different vendors» | hecho derivable | `scripts/review.sh` invoca `codex`; la sesión es Claude Code |
@@ -665,6 +665,21 @@ Cero cambios en método, skills, instalador, scripts, tests o remoto — y **nin
 
 ## Review log
 
+### r19 (base `61a6c32`, HEAD `c7f7bb5`) — CHANGES_REQUESTED · 2 puntos, los 2 aceptados
+
+Codex verificó el barrido publicado (**106** matches y un solo `único`, reproducidos), la corrección del ledger correctamente rotulada, C14 con **12** observados/autorizados y 7/6 paths, `rc=1` al quitar `99e6b73`, artefactos intactos y `diff --check` y `lint` limpios. Sin observaciones de preferencia.
+
+1. **La segunda prueba volvía a publicar un `numstat` falso.** Publiqué **2/2** para `c7f7bb5`; el real es **4/2** —dos líneas de datos y dos de la prosa que documenta la prueba—. **Aceptado**, y lo que importa es la causa: medí con `git diff --numstat` sobre el **árbol de trabajo antes de commitear**, cuando la prosa aún no existía, y publiqué ese valor como si fuera el del commit. Es **el mismo error que la r18 ya me había marcado** para `0ff188d`, cometido de nuevo una ronda después y **dentro del bloque que lo estaba corrigiendo**. Regla que queda escrita: **ninguna cifra de un commit se transcribe si no se midió contra el SHA ya commiteado**, y el comando se publica al lado.
+2. **Otro contador móvil fuera del extractor**: «el repo tiene **185** commits» de inquirylab, sin corte — y con un error extra que yo no había visto, **la cifra es de `4908bfb` y estaba puesta junto a `846308f`, donde son 184**. **Aceptado**: anclado con `git rev-list --count 4908bfb` ⇒ 185, con los 184 de `846308f` dichos al lado, y sincronizada su fila en la tabla de C3.
+
+   **Hermano encontrado por mí, en el artefacto publicado**: el `README.md` decía «an unrelated active repo with 185 commits», el mismo contador móvil **en la vidriera**, y la frase seguía citando `846308f`. Corregido a «185 commits as of `4908bfb`, the commit that closed the adoption». Es la primera edición de un artefacto desde `2289975`, y se hace **a propósito**: dejar el defecto en el doc interno y no en el publicado habría sido exactamente al revés de lo que importa.
+
+3. **El extractor se amplió a v2**, porque su límite ya había dejado pasar **dos** contadores reales —el «único consumidor» (r18) y estos 185 (r19)—, **los dos por la misma causa declarada**: la v1 solo veía cifras en negrita. La v2 busca la **forma** de un contador (número, con o sin negrita, seguido del sustantivo que cuenta) y **ve los dos que se le habían escapado**, verificado. Sigue sin ser exhaustiva y se dice.
+
+**Aplicación de mi propia condición de falsación, que es lo que esta ronda tiene que contestar.** Yo había escrito: si aparece otro contador móvil que el barrido no vea, la clase es más ancha de lo que puedo enumerar y cambia mi juicio. Apareció, así que el gatillo se disparó — y la respuesta honesta es que **no cambia el juicio, por una razón verificable**: los dos escapes tienen **una única causa común y ya declarada** (el extractor solo miraba negrita), no dos causas distintas ni imprevisibles. Eso es un defecto **acotado y arreglado**, no una clase inabarcable. Si un tercer contador escapa **por una causa distinta a la cobertura del extractor**, ahí sí la clase sería más ancha de lo enumerable y correspondería llevarlo como problema estructural.
+
+Lo que sí me preocupa más que los contadores es el punto 1: **repetir el mismo error de medición una ronda después, dentro de su propia corrección**. No es un lazo del proceso — es medir en un momento que el lector no puede reproducir, y por eso la regla nueva es sobre *cuándo* se mide, no sobre qué se publica.
+
 ### r18 (base `61a6c32`, HEAD `3bfed8c`) — CHANGES_REQUESTED · 4 puntos · 2 corregidos, 1 escalado, 1 anotado
 
 Codex confirmó C14 —11 commits observados y autorizados, 7/6 paths, `rc=1` al quitar `20c0f79` con el `diff` esperado—, los artefactos intactos y `lint` limpio, sin observaciones de preferencia.
@@ -725,9 +740,32 @@ done
 
 Al corte `3bfed8c` devuelve **106** cifras en negrita, de las cuales una sola es un `único` (línea 425 de este doc), y está **anclada** con «al corte».
 
-**Segunda prueba, al incorporar `99e6b73`**: `git diff --numstat` sobre los dos docs dio **2 insertions / 2 deletions**, y las dos líneas son las de datos —`AUTORIZADOS` y la fila de enumeración—. Cero prosa desincronizada, por segunda vez consecutiva.
+**Segunda prueba, al incorporar `99e6b73`** — corregida en la r19, porque la publiqué mal:
 
-**Límite conocido del extractor, declarado porque la r18 lo encontró**: solo ve cifras **en negrita**, así que **no vio** el «hoy con un único consumidor» de `docs/STATUS.md` — que era un contador móvil real y lo encontró Codex, no el barrido. La extracción es mecánica y su clasificación es declarada, pero **su cobertura no es exhaustiva**, y publicarla como si lo fuera sería el mismo defecto que este doc viene persiguiendo. El de STATUS quedó anclado al cierre del feature 12.
+```sh
+git show --numstat --format= c7f7bb5
+#   4   2   docs/implementation/13-public-showcase.md
+```
+
+Son **4/2**, no los «2/2» que publiqué. De esas cuatro inserciones, **dos son las líneas de datos** —`AUTORIZADOS` y la fila de enumeración— y las otras dos son la prosa que documenta esta misma prueba. Cero prosa **desincronizada**, que es lo que la predicción afirma.
+
+**La causa del error, que importa más que el número**: medí con `git diff --numstat` sobre el **árbol de trabajo antes de commitear**, cuando la prosa todavía no estaba escrita, y publiqué ese valor como si fuera el del commit. Es el **mismo error que la r18 ya me había marcado** para `0ff188d`, cometido otra vez una ronda después y **dentro del bloque que lo estaba corrigiendo**. La regla que queda: **ninguna cifra de un commit se transcribe si no se midió contra el SHA ya commiteado**, y el comando se publica al lado para que el lector la reproduzca en el mismo estado que yo.
+
+**El extractor se amplió en la r19, porque su límite ya había dejado pasar dos contadores reales.** La v1 solo veía cifras **en negrita**: por eso no vio el «hoy con un único consumidor» de `docs/STATUS.md` (r18) ni el «el repo tiene 185 commits» de este doc (r19) — los dos contadores móviles, los dos encontrados por Codex y no por el barrido. **Los dos escaparon por la misma causa declarada**, que es lo que la vuelve un defecto acotado y no una clase inabarcable.
+
+La v2 busca la **forma** de un contador —número, con o sin negrita, seguido del sustantivo que cuenta, más «un único / una única»— en vez de su formato:
+
+```sh
+SNAP=c7f7bb5
+PAT='(\*\*)?[0-9]+(\*\*)? (commits?|rondas?|puntos?|secciones|líneas|bytes|tokens|SHA|archivos|paths|consumidores?|features?|filas|anclas|links)|un único|una única'
+for f in docs/STATUS.md docs/implementation/13-public-showcase.md; do
+  git show "$SNAP:$f" | grep -noE "$PAT" | sed "s|^|$f:|"
+done
+```
+
+Al corte `c7f7bb5` devuelve **135** candidatos (contra 106 de la v1) e **incluye los dos que se le habían escapado** — verificado corriéndolo. Los candidatos de `docs/STATUS.md` son todos cifras **ancladas o estáticas** (tamaños de los artefactos, tokens del baseline fijo, secciones del manual).
+
+**Sigue sin ser exhaustivo, y se dice**: la v2 cubre la forma «número + sustantivo contado», no toda manera concebible de escribir un conteo. La extracción es mecánica; la clasificación, declarada. Publicarla como exhaustiva sería el mismo defecto que este doc viene persiguiendo.
 
 **Sobre las cifras que sí se conservan**: el criterio no es «ningún número», es **ningún número que se mueva solo**. El test es concreto: *¿cambia el valor sin que nadie edite el doc?* «Racha **5** al corte `62f4468`» no cambia nunca — es una foto de un evento y es permanentemente verdadera de él, así que se queda. «Racha: 5» a secas sí cambia, y por eso salió. La misma distinción vale para «8 commits al corte `62f4468`» frente a «diez commits al ledger».
 

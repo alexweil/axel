@@ -65,8 +65,8 @@ and recorded in `39b377e`:
 
 ### Does it work outside axel? — one data point
 
-axel was installed into an unrelated active repo with 185 commits and its own documentation. Commit
-`846308f` installed 20 files there; because the repo already had docs this ran as an **adoption**,
+axel was installed into an unrelated active repo with its own documentation — 185 commits as of
+`4908bfb`, the commit that closed the adoption. Commit `846308f` installed 20 files there; because the repo already had docs this ran as an **adoption**,
 and `4908bfb` closed it with `/adopt`, mapping 8 files onto the convention. Commit `98c70c0` is that
 repo applying the `build/` workaround described below.
 
