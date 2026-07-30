@@ -515,6 +515,14 @@ La r1 objetó que los criterios anteriores garantizaban **no perder nada** pero 
 
 ## Review log
 
+### r5 (base `284ace4`, HEAD `61a6c32`) — **APPROVED de la bajada**
+
+Sin observaciones accionables. Codex reprodujo la matriz positiva (10 eventos → 7 rondas, `NO_VERDICT` terminal y retries válidos solo tras `PROC_FAIL`), **las dos negativas** (retroceso y repetición inválida ⇒ `rc=1` y **exactamente 0 filas**), el snapshot real con sus 88 rondas y todas las cifras, los 45 tokens byte a byte, la coherencia de `STATUS.md`, el alcance en los dos docs y `lint.sh` limpio. Dejó anotado que **C3 y C5 se verifican durante la implementación** contra el README y el manual reales, que es lo que el propio criterio establece.
+
+**Cinco rondas, trece pedidos —3 en r1, 3 en r2, 4 en r3, 3 en r4—, los trece aceptados sin argumentar ninguno, y ninguno movió una sola cifra publicada.** Los trece fueron la misma clase de defecto, cada vez un nivel más adentro: **procedimientos que verificaban su propio enunciado en vez del artefacto**. La reconstrucción del corte fallaba abierta; los reductores contaban filas y no rondas del contrato; el extractor se comía tres clases de contenido invariante, una por ronda (backticks, links, paths desnudos); la guarda de topología dejaba pasar el caso que yo mismo había señalado; y `die()` rechazaba el input pero igual dejaba el artefacto escrito. En dos de esas rondas la diferencia entre una opinión y un hallazgo la puso el reviewer **reproduciendo el daño** en vez de argumentarlo, incluida una duda que yo había planteado y él contestó sobreescribiendo un `APPROVED` en un fixture. Quedó como riesgo 8 del doc para que la implementación no lo redescubra.
+
+Nota de cierre del ciclo: la racha llegó a **4** —la r5 era la última que `review.sh` permitía antes de bloquear por deadlock— y el `APPROVED` la devolvió a 0.
+
 ### r4 (base `284ace4`, HEAD `aa6c910`) — CHANGES_REQUESTED · 3 puntos, los 3 aceptados
 
 **Dos cierres explícitos**, que es lo que esta ronda aporta además de los tres puntos: el **extractor quedó cerrado** —45 tokens, lista publicada idéntica byte a byte, `CLAUDE.md` incluido, y «no encontré otra clase invariante perdida; los encabezados y demás prosa corresponden al mapa semántico»—, y **C3 y el recorrido de C5 quedaron aceptados como verificaciones humanas legítimas**, «porque operan contra los artefactos finales y listas cerradas». Las dos eran preguntas mías. Cifras reproducidas sin cambios, alcance en los dos docs, `lint.sh` limpio.
