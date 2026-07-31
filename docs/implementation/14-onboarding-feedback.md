@@ -49,6 +49,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
 - `71c78be` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `380eb74` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
 - `341c957` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
 - `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
 - `ae28842` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
@@ -67,7 +68,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 ```bash
 #!/bin/bash
 # C12 — alcance por commit, fail-closed de verdad: comprueba el rc de cada git.
-AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957"
+AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957 380eb74"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
 HIJO='docs/STATUS.md docs/IMPLEMENTATION.md docs/implementation/14-onboarding-feedback.md'
 BASE="${1:-2985447}"
@@ -171,6 +172,8 @@ Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregi
 | el comando de enumeración que se auto-matchea | en la corrección que **reemplazaba un contador por ese comando** |
 
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
+
+**Y un refinamiento del método que salió de la r12, formulado por el padre**: *hermanos de la clase* no reemplaza a *hermanos del síntoma* — **son dos barridos distintos y hay que hacer los dos**. En la r12 cerré la clase con éxito (los tres «mecanismos declarados que no ejecutan», incluido uno que todavía no había sido señalado) y **el síntoma se escapó por el otro lado**: cambié las secciones y no los criterios que las citaban. Barrer la clase responde «¿dónde más cometí este tipo de error?»; barrer el síntoma responde «¿qué más apunta al texto que acabo de cambiar?». La segunda pregunta es mecánica y es la que se saltea cuando la primera sale bien.
 
 De ahí la única salida que funciona: **mover la garantía del autor al mecanismo**. Que la propiedad no dependa de que alguien recuerde aplicarla, sino de que su violación sea detectable —o imposible— por construcción. Las formas que esta unidad terminó usando son ejemplos de lo mismo:
 
