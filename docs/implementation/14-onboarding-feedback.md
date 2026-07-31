@@ -50,6 +50,10 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `71c78be` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
 - `380eb74` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
+- `7c0aa7c` — **reescritura completa del `## Cierre`**, en vez de una sexta corrección puntual. El bloque deja de publicar cantidades, letras, cuantificadores y comandos que agreguen las interrupciones, y **separa los dos dominios que el comando anterior mezclaba** —deadlock contra indisponibilidad del reviewer—, porque un comando que los cuente juntos es falso por construcción. Toca **solo** el ledger.
+
+  > **El caso más denso del patrón que produjo el pipeline, y es del padre.** Cinco correcciones sucesivas al mismo párrafo, cada una introduciendo el defecto de la siguiente: contador → cuantificador universal → **segundo cuantificador sobrevivido dentro de la corrección del primero** → comando que se contaba a sí mismo → comando que mezclaba dominios. La salida no fue una sexta corrección puntual sino **reescribirlo entero**, que es la decisión que la tercera ya pedía.
+
 - `84002a0` — **retiro de una segunda universal del mismo párrafo del `## Cierre`**: al sacar «todos con a)» quedó viva «ninguno terminó la corrida», que vuelve a ampliar su universo con cada corte nuevo. Lo notable es la causa que el padre declaró: **su barrido anterior buscaba esos cuantificadores solo en negrita**, y ésta no la tenía — o sea que declaró «cero afirmaciones universales vivas» sobre un barrido que no podía verlas. Rehecho sin depender del formato y **revisando los matches caso por caso en vez de declarar cero**. Toca **solo** el ledger.
 - `341c957` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
 - `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
@@ -70,7 +74,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 #!/bin/bash
 # C12 — alcance por commit, fail-closed. Identidad por SHA COMPLETO: `--short`
 # depende de core.abbrev y de colisiones de prefijo, asi que no es identidad.
-AUT="84002a0009fcf00c550e2575ebb44f3cf0f8db55 380eb749b6a635c76d5093286c60557b8128855d 341c9577afdd816e189171cdfc192682039ac7f0 505325120381ba7e66c0471f1ad2489fee5f1166 140ad61ef2aa553b8ba73f7db06d995accb5ec40 ae2884223eb103f73deaf4880e9ba22d6e4eeb0f 7f5749495bc2ba4d15ce79ddea7d0dbe7f6b2b31 68a2fe52f33cd604f8ee54ecd9558cfb3621bbc2 e5ee8f23f4e6891ecc12679147d7219bb15ce339 71c78bee5dd2db85daccc8de87543a5ea9d9e4da 2fc4dd47e07db0064b99d6d658cfffecec31a792 "
+AUT="7c0aa7c455b85a6e4a540967566027f10751a8a9 84002a0009fcf00c550e2575ebb44f3cf0f8db55 380eb749b6a635c76d5093286c60557b8128855d 341c9577afdd816e189171cdfc192682039ac7f0 505325120381ba7e66c0471f1ad2489fee5f1166 140ad61ef2aa553b8ba73f7db06d995accb5ec40 ae2884223eb103f73deaf4880e9ba22d6e4eeb0f 7f5749495bc2ba4d15ce79ddea7d0dbe7f6b2b31 68a2fe52f33cd604f8ee54ecd9558cfb3621bbc2 e5ee8f23f4e6891ecc12679147d7219bb15ce339 71c78bee5dd2db85daccc8de87543a5ea9d9e4da 2fc4dd47e07db0064b99d6d658cfffecec31a792"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
 HIJO='docs/STATUS.md
 docs/IMPLEMENTATION.md
@@ -195,6 +199,38 @@ Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregi
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
 
 **Y un refinamiento del método que salió de la r12, formulado por el padre**: *hermanos de la clase* no reemplaza a *hermanos del síntoma* — **son dos barridos distintos y hay que hacer los dos**. En la r12 cerré la clase con éxito (los tres «mecanismos declarados que no ejecutan», incluido uno que todavía no había sido señalado) y **el síntoma se escapó por el otro lado**: cambié las secciones y no los criterios que las citaban. Barrer la clase responde «¿dónde más cometí este tipo de error?»; barrer el síntoma responde «¿qué más apunta al texto que acabo de cambiar?». La segunda pregunta es mecánica y es la que se saltea cuando la primera sale bien.
+
+#### El barrido del síntoma, mecanizado (r15)
+
+El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r14 la cité y no la apliqué: cerré los symlinks dentro de `.github/` sin preguntarme qué otros entregables tenían la misma superficie. Su lectura, que es la correcta y lo incluye: **una lección que depende de acordarse es exactamente la clase de garantía que esta unidad viene moviendo del autor al mecanismo**. Entonces deja de ser lección:
+
+```bash
+#!/bin/bash
+# Barrido de HERMANOS DEL SINTOMA, mecanizado: toda referencia §«...» de la PROSA
+# debe resolver a un encabezado existente. Es el defecto de la r12 —criterios
+# citando secciones que ya no existian— convertido en chequeo en vez de leccion.
+# Excluye los bloques de codigo: si no, el propio script publicado se lee a si
+# mismo y sus literales de regex aparecen como referencias huerfanas.
+DOC="${1:-docs/implementation/14-onboarding-feedback.md}"
+[ -r "$DOC" ] || { echo "FALLA: doc no legible"; exit 1; }
+norm() { sed -E 's/[*`]+//g'; }
+sin_codigo() { awk '/^`{3,4}/{f=!f; next} !f'; }
+encabezados=$(cat "$DOC" docs/implementation/13-public-showcase.md docs/design/public-surface.md 2>/dev/null \
+              | grep -E '^#{2,4} ' | sed -E 's/^#+ //' | norm)
+[ -z "$encabezados" ] && { echo "FALLA: cero encabezados; el patron no puede estar bien"; exit 1; }
+refs=$(sin_codigo < "$DOC" | grep -oE '§«[^»]+»' | sed -E 's/^§«//; s/»$//' | norm | sort -u)
+[ -z "$refs" ] && { echo "FALLA: cero referencias; el patron no puede estar bien"; exit 1; }
+viol=0
+while read -r r; do
+  [ -z "$r" ] && continue
+  grep -qF "$r" <<< "$encabezados" || { echo "HUERFANA: §«$r» no resuelve a ningun encabezado"; viol=1; }
+done <<< "$refs"
+[ "$viol" -eq 0 ] && { echo "HERMANOS OK"; exit 0; } || { echo "HERMANOS FALLA"; exit 1; }
+```
+
+Verifica lo que la r12 rompió —criterios citando secciones que ya no existían— y **corre en cada ronda**, no cuando alguien se acuerde. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
+
+*(Su calibración vale como caso, y necesitó **tres** pasadas: la primera versión marcó dos huérfanas que eran **falsos positivos** —el énfasis markdown dentro de un encabezado, y una referencia cruzada legítima al doc del feature 13—, y mi primera prueba negativa renombraba una sección **que nadie referencia**, así que no probaba nada. Un chequeo que grita sin motivo es tan inútil como uno que nunca rechaza, y una prueba negativa que no ejercita la rama es la misma trampa una vez más. Y la tercera: **al publicar el script dentro del doc que revisa, sus propios literales de regex se leyeron como referencias huérfanas** — un chequeo que se rompe al ser publicado, que es la autorreferencia de esta unidad en su forma más literal. Cerrado excluyendo los bloques de código.)*
 
 De ahí la única salida que funciona: **mover la garantía del autor al mecanismo**. Que la propiedad no dependa de que alguien recuerde aplicarla, sino de que su violación sea detectable —o imposible— por construcción. Las formas que esta unidad terminó usando son ejemplos de lo mismo:
 
