@@ -812,6 +812,16 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r23 (base `6ec4b48`, HEAD `b0fa345`) — **APPROVED de la bajada**
+
+Cierra el ciclo de bajada. **`b0fa345` era HEAD al aprobarse y el árbol estaba limpio**, así que el veredicto cubre todo el ciclo: **cero commits posteriores, cero no-revisados**.
+
+**Balance, derivado del propio Review log y no de memoria**: **21 rondas con veredicto registrado** —r1–r9 y r11–r22; la r10 salió `PROC_FAIL` en sus dos intentos por cuota agotada del reviewer y no produjo veredicto—, **84 pedidos, todos aceptados sin argumentar ninguno**. Cinco intervenciones humanas: tres desempates de deadlock, la decisión de mover la construcción de los verificadores al ciclo de implementación (2026-07-30) y la de retirar `B` y `C16` del alcance (2026-07-31).
+
+**El corte entre sustancia y sincronía, que es lo que explica el largo**: el reviewer declaró la sustancia lista en la **r21** y lo mantuvo en la r22 y la r23. Las rondas r11–r20 no discutieron el entregable —los YAML canónicos quedaron sólidos desde la r11 y no se movieron— sino **la maquinaria de verificarlo**; las r21–r22, solo sincronía de estado.
+
+**Lo que la bajada entrega**: la especificación de `A` (alcance, 12 filas atomizadas), `C` (plantillas, `C1–C6` con inventario `N0–N11`) y `D` (edición del README, `D1–D3` con inventario `P0–P5`), más los literales canónicos de los tres YAML y las tres sustituciones del README. **Cada fila es un modo de falla reproducido por el reviewer**, no una precaución imaginada — y eso es lo que hace que las herramientas puedan construirse en la implementación sin repetirlos.
+
 ### r22 (base `6ec4b48`, HEAD `da11fdc`) — CHANGES_REQUESTED · **2 bloqueantes, los dos de sincronía**
 
 **Codex mantuvo la declaración de la r21** —«*la especificación sustantiva de `A`/`C`/`D` sigue lista para implementar*»— y explicitó que **no reabre la bajada sustantiva**. Los dos puntos son de estado:
