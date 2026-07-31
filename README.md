@@ -177,4 +177,3 @@ Five principles hold it together:
 - [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the command behind each
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round is looking for
 - [LICENSE](LICENSE) — MIT
-
