@@ -171,6 +171,8 @@ Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregi
 | el comando de enumeración que se auto-matchea | en la corrección que **reemplazaba un contador por ese comando** |
 | un bloque de código que no compila | en la corrección que **publicaba el verificador**, con la verificación cortando donde yo quería y no donde el bloque terminaba |
 | una universal viva sin negrita | en el barrido que **declaraba cero universales vivas**, y que solo miraba negrita |
+| un doc destruido por una edición scripteada | en el commit que **corregía el estado del loop**, y que no verificó su propio resultado |
+| una biyección que no detectaba ausencias | en el mecanismo escrito **para detectar ausencias** |
 
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
 
@@ -206,7 +208,8 @@ De ahí la única salida que funciona: **mover la garantía del autor al mecanis
 
 - **auditar por commit y no por diff agregado** — el instrumento conserva la distinción que el criterio necesita, en vez de exigir que la redacción la recupere;
 - **no publicar contadores móviles** — la cifra se deriva o se ancla, así que no hay prosa que pueda desincronizarse;
-- **fijar el contenido literal en vez de enumerar lo prohibido** — la condición de cierre pasa de un conjunto abierto ajeno a un artefacto cerrado propio.
+- **fijar el contenido literal en vez de enumerar lo prohibido** — la condición de cierre pasa de un conjunto abierto ajeno a un artefacto cerrado propio;
+- **verificar el resultado de toda edición scripteada antes de commitear**, y no que el commit se haya hecho. El caso que lo motiva es real y grave: un `find` mal citado devolvió `-1`, el slice se comió **33 de 36 líneas** de `docs/STATUS.md` —el **token de reentrada** del loop, no un párrafo cualquiera— y el commit salió igual. La guarda es una comparación de conteo de líneas contra `HEAD` que falla cuando un doc pierde una fracción grande sin declararlo; probada contra ese mismo caso. *(Se describe como mecanismo y no se publica como script: la bajada entrega especificación, no herramientas.)*
 
 **Alcance de la observación, dicho para no repetir el defecto que describe**: sale de una unidad y de un ciclo de review; no está medida contra otras. Lo que sí es verificable es la lista de arriba, y que las veinte rondas de la unidad `13` —donde los commits del padre y los del hijo se mezclaban en un rango común y cada corrección movía la evidencia del otro— son de esta forma.
 
