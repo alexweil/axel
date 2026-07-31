@@ -52,6 +52,8 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `380eb749b6a635c76d5093286c60557b8128855d` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
 - `47d5a7c5cd677c45ecde96af3de0d8a1e2683c7f` — **desempate humano «a)» del deadlock contractual**: tras restaurar la racha a su valor real, la unidad quedó en deadlock y el humano desempató por la **vía contractual**, que es lo que habilita `reset-deadlock`. Toca `docs/STATUS.md` y el ledger.
 - `d45c7b25ffac54b110f281f30f1658b297abf80e` — **reversión del reset no contractual**, más el `## Cierre` sin enumerar sus propias correcciones. El padre volvió al contrato versionado y **descartó la distinción que había propuesto** («el humano decide sobre la sustancia» contra «se despeja un obstáculo»): no es regla, y si va a gobernar el estado del loop tiene que entrar al contrato por su propia vía. Toca `docs/STATUS.md` y el ledger.
+- `6c89003547865c77df2e5dbc3d1e5814cee5f2c4` — **desempate humano «a)» del corte de la r21**: seguir. El reset **sí está cubierto por el contrato** —desempate tras llegar a 5—, a diferencia del que el padre había hecho por interpretación y tuvo que revertir. Toca `docs/STATUS.md` y el ledger.
+- `9a15c7123df38846576fea07c7288ffe5001da76` — **registro del corte de la r21** por tope de racha. Toca `docs/STATUS.md` y el ledger.
 - `6ac99495f8e6c2be8e50d8e852e59e79f2210add` — **elevación al humano del diagnóstico sobre `B`**, con racha 4 y una ronda disponible, más la corrección del `## Cierre` que declaraba no enumerar y enumeraba. **Lo encontró la derivación, no la declaración**: el padre pasó solo el SHA de la decisión. Es la **segunda** vez que ocurre, y la segunda que lo atrapa `AUTORIZADOS` en vez de una lectura. Toca `docs/STATUS.md` y el ledger.
 - `d2357312facefe19856de05450e93ccfc07be10c` — **decisión humana: `B` y `C16` salen del alcance**. El barrido de referencias es higiene de un doc de trabajo interno, no toca ningún archivo publicable y no formaba parte de la vidriera que el gate autorizó: se agregó durante la bajada. `A`, `C` y `D` quedan intactos. Toca `docs/STATUS.md` y el ledger.
 - `b05359c2c1aa6372ce1287732ba9c8f6fe0af714` — **decisión humana «a)»**: la construcción de los verificadores se mueve al ciclo de implementación, con los criterios intactos. Toca `docs/STATUS.md` y el ledger.
@@ -763,7 +765,7 @@ Es **chequeable comparando el conjunto de IDs definidos contra la unión de los 
 
 > **Decisión humana del 2026-07-30 («a)»), registrada en el ledger (`b05359c`).** No es un hueco de esta bajada: es dónde se decidió construir las herramientas, y el argumento queda escrito para que ninguna ronda futura lo lea como algo que falta.
 
-**Los criterios quedan intactos.** Lo que se movió es el lugar donde se construyen y depuran los programas que los comprueban.
+**Los criterios quedaron intactos *en esa decisión*.** Lo que se movió el 2026-07-30 es el lugar donde se construyen y depuran los programas que los comprueban. *(Una **segunda** decisión humana, del 2026-07-31, sí cambió el conjunto: retiró `B` y `C16` del alcance. Las dos son distintas y conviene no leerlas como una — la de arriba movió **dónde** se construye; la de abajo quitó **qué** se verifica.)*
 
 **El argumento, que es el que el humano aceptó**: la bajada decide *qué tiene que ser verdad*, y eso está entregado — criterios, literales canónicos de los tres YAML, las tres sustituciones del README, las listas cerradas y los modos de falla prohibidos. Pero **un verificador es código nuevo, y su único banco de pruebas son los artefactos que todavía no existen**. C7 es el caso puro: verifica una edición del README que no ocurrió, así que solo puede probarse por **simulación** — y la simulación es exactamente donde están los puntos ciegos del que la escribe. Se rompió dos veces con casos que mi simulación no modelaba.
 
@@ -771,7 +773,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 **Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `C1–C6` y `D1–D3` son el producto real de las rondas de bajada —cada fila anclada a la ronda que la descubrió, en su propia columna—: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
 
-**Lo que esto no es**: no es bajar la vara. Los criterios de cierre no se relajaron, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature.
+**Lo que la decisión del 2026-07-30 no fue**: no fue bajar la vara. Ningún criterio se relajó ese día, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature. **El alcance vigente son `A`, `C` y `D`**, tras el retiro de `B` y `C16` el 2026-07-31.
 
 ## Criterios de cierre
 
@@ -806,6 +808,14 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r21 (base `6ec4b48`, HEAD `1b2c3c1`) — CHANGES_REQUESTED · **3 bloqueantes** · corte por tope → desempate humano «a)»
+
+**Codex declaró la sustancia lista**: «*la especificación sustantiva de `A`/`C`/`D` quedó lista para implementar*», con `AUTORIZADOS` 18/18 y el ledger corregido. Los tres bloqueantes son **sincronía de estado**, y de los tres dijo que **no impiden implementar**. La racha llegó a 5, el humano desempató con «a)» y el reset **sí está cubierto por el contrato** —desempate tras llegar a 5—, a diferencia del que el padre había hecho por interpretación y tuvo que revertir.
+
+1. **El token de ronda de `STATUS`**: declaraba la ronda lanzada con «Esperando: nada del humano». Durante una review lanzada el vocabulario contractual es *esperando el desenlace de la review*. **Parte de esa línea la escribió el padre** al registrar la decisión sobre `B`, y yo lancé la ronda sobre ella sin auditarla — declarar el token al lanzar es mío, el texto era suyo.
+2. **La extracción de `B` no llegó al estado vivo**: `STATUS` conservaba como pendiente una falsedad del ledger que `6ac9949` ya había corregido, y seguía afirmando que el barrido retirado «ahora es un chequeo corrido en cada ronda» —contradiciendo la decisión humana registrada dos líneas más arriba—. Es el **barrido del síntoma** otra vez: saqué `B` del doc del feature y no del estado.
+3. **Las frases en presente de la sección de herramientas** —«los criterios quedan intactos», «no se relajaron»— mezclaban **dos decisiones humanas distintas**: la del 2026-07-30 movió **dónde** se construyen los verificadores; la del 2026-07-31 quitó **qué** se verifica. Acotadas a su fecha y distinguidas explícitamente.
 
 ### r20 (base `6ec4b48`, HEAD `69bd9e2`) — CHANGES_REQUESTED · **6 bloqueantes** · **la condición falsable del hijo se falsó**
 
