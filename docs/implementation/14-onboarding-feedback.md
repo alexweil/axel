@@ -809,6 +809,13 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r22 (base `6ec4b48`, HEAD `da11fdc`) — CHANGES_REQUESTED · **2 bloqueantes, los dos de sincronía**
+
+**Codex mantuvo la declaración de la r21** —«*la especificación sustantiva de `A`/`C`/`D` sigue lista para implementar*»— y explicitó que **no reabre la bajada sustantiva**. Los dos puntos son de estado:
+
+1. **`STATUS` quedaba atrás del contrato** —veredicto y racha de dos rondas antes— y, peor, **anticipaba el ciclo de implementación con la review en vuelo**: describía como hecho lo que la ronda todavía no había resuelto. Es la tercera vez que este bloque se desincroniza, y la causa es siempre la misma: lo edito al final del turno, cuando ya estoy pensando en el paso siguiente. Ahora se audita línea por línea antes de commitear, no se parchea.
+2. **La fila viva de la unidad `14` en el ledger** sigue diciendo «reanudada tras el segundo corte» con eventos posteriores registrados — un **ordinal móvil** en la única fila que debe describir el estado vigente. Es del padre.
+
 ### r21 (base `6ec4b48`, HEAD `1b2c3c1`) — CHANGES_REQUESTED · **3 bloqueantes** · corte por tope → desempate humano «a)»
 
 **Codex declaró la sustancia lista**: «*la especificación sustantiva de `A`/`C`/`D` quedó lista para implementar*», con `AUTORIZADOS` 18/18 y el ledger corregido. Los tres bloqueantes son **sincronía de estado**, y de los tres dijo que **no impiden implementar**. La racha llegó a 5, el humano desempató con «a)» y el reset **sí está cubierto por el contrato** —desempate tras llegar a 5—, a diferencia del que el padre había hecho por interpretación y tuvo que revertir.
