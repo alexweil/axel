@@ -200,10 +200,10 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | M2 | referencia rota sobre una sección **efectivamente citada** | B2 |
 | M3 | una secuencia con `§` **fuera de la forma única** ⇒ debe hacer fallar el doc, no ignorarse | B2 |
 | M4 | un subencabezado **movido bajo otro padre**, con ambas partes existiendo | B2 |
-| M7 | referencia cuyo nombre **existe como encabezado en otro doc** pero no acá ⇒ debe fallar | B3 |
-| M9 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar | B4 |
+| M5 | referencia cuyo nombre **existe como encabezado en otro doc** pero no acá ⇒ debe fallar | B3 |
+| M6 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar | B4 |
 
-**Inventario cerrado por fila**: `B1` → `M1`; `B2` → `M2, M3, M4`; `B3` → `M7`; `B4` → `M9`; *(positivo)* → `M0`.
+**Inventario cerrado por fila**: `B1` → `M1`; `B2` → `M2, M3, M4`; `B3` → `M5`; `B4` → `M6`; *(positivo)* → `M0`.
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían—. **Debe correr en cada ronda del ciclo de implementación**, no cuando alguien se acuerde: es el punto entero de haberlo sacado del terreno de las lecciones. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
@@ -810,9 +810,9 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §«Procedencia», con su prueba de aceptación — la lista de modos de falla prohibidos es lo que quince rondas de review produjeron, y cada fila fue un defecto reproducido |
+| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §«Procedencia», con su prueba de aceptación — cada fila fue un defecto reproducido, con la ronda que lo encontró en su propia columna |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
-| **C16** | **El barrido de referencias existe, corre y pasa** sobre el doc del feature al cerrar. Sin este criterio `B` no tenía consumidor: `A` lo consume C12, `C` lo consume C6 y `D` lo consume C7, pero **el feature podía cerrar sin el barrido** aunque sus filas estuvieran escritas (r18) | la herramienta se construye en la implementación. **`B1–B4`** de §«El barrido del síntoma, mecanizado», con su inventario cerrado **`M0–M9`** |
+| **C16** | **El barrido de referencias existe, corre y pasa** sobre el doc del feature al cerrar. Sin este criterio `B` no tenía consumidor: `A` lo consume C12, `C` lo consume C6 y `D` lo consume C7, pero **el feature podía cerrar sin el barrido** aunque sus filas estuvieran escritas (r18) | la herramienta se construye en la implementación. **`B1–B4`** de §«El barrido del síntoma, mecanizado», con su inventario cerrado **`M0–M6`** |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §«`docs/metrics.md` — el informe»; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
 
@@ -828,6 +828,22 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r20 (base `6ec4b48`, HEAD `69bd9e2`) — CHANGES_REQUESTED · **6 bloqueantes** · **la condición falsable del hijo se falsó**
+
+**Antes de la ronda declaré una condición**: si la r20 volvía con hallazgos sobre `B`, la causa **no** era la multiplicidad de formas y esto **no cierra en el margen**. **Volvió con tres**, así que la condición se cumple y la conclusión se aplica tal cual, sin interpretarla a favor de nadie.
+
+Los tres sobre `B`, y los tres son consecuencia de que mi propia corrección estructural quedara **incompletamente aplicada**:
+
+1. **Las cruzadas no salieron del dominio `§`**: sigue existiendo un uso cruzado y `B3` conserva la lista de excepciones que yo declaré eliminada. Peor: mover las cruzadas a **prosa libre** las vuelve **mecánicamente indistinguibles** —un verificador no puede separar una cruzada declarada de una no declarada—, o sea que la «solución» empeoró la verificabilidad.
+2. **`M4` quedó inimplementable**: exige rechazar un subencabezado **movido bajo otro padre**, pero la forma única codifica solo el texto del encabezado, y el padre no es observable. Un caso que la especificación pide y su propia forma impide.
+3. **El inventario se desincronizó de `C16`**: borré casos y no renumeré, así que `C16` seguía exigiendo un rango con tres IDs inexistentes.
+
+**La lectura que sale de esto, y que va al humano**: `B` es **autorreferencial de un modo que `A`, `C` y `D` no son**. Su sujeto es este documento, que se edita en cada ronda para corregir los otros criterios — así que **cada intento de arreglar `B` es una edición al documento que `B` especifica**. No es un problema de esfuerzo ni de una forma mal elegida: es que el criterio no puede estabilizarse mientras su sujeto siga cambiando, y su sujeto deja de cambiar recién al cerrar.
+
+**Lo que el hijo propone y no decide**: sacar `B` y `C16` del alcance —el barrido de referencias es higiene del doc del método, no parte de la vidriera que el gate autorizó—, o especificar y construir `B` **después** de que el doc deje de cambiar. `A`, `C` y `D` no están en discusión: sus sujetos son estables (commits, YAML, README) y sus inventarios cierran.
+
+Los otros tres puntos: `STATUS` volvió a quedar atrás del contrato —declaraba la ronda lanzada conservando el veredicto y la racha de dos rondas antes—, el ledger sigue diciendo que no enumera y enumerando (del padre), y `C12` conservaba el contador móvil «quince rondas» que la ronda anterior había retirado de otro lado.
 
 ### r19 (base `6ec4b48`, HEAD `315ea17`) — CHANGES_REQUESTED · **5 bloqueantes** · **la ronda que expuso por qué `B` no convergía**
 
