@@ -8,9 +8,9 @@ A *round* is one pass of the review contract — not one feature. The 29 approva
 (a detailed spec, an implementation step, a plan cycle), so there are more approvals than features;
 counting them as features would be exactly the sloppiness that makes numbers like these worthless.
 88 is what the round log covers since instrumentation began on day two; the full history is 123,
-with the earlier 35 recovered from a separate source. *Coming in feature 14: the metrics document
-that publishes the snapshot and the exact command behind every figure — not yet published, so for
-now these numbers are only as good as this repo's git history, which you can read.*
+with the earlier 35 recovered from a separate source. Every figure on this page is derived in
+[docs/metrics.md](docs/metrics.md), which publishes the versioned snapshot, the cut commit and the
+exact command behind each one.
 
 ## The problem
 
@@ -174,10 +174,7 @@ Five principles hold it together:
 - [docs/DESIGN.md](docs/DESIGN.md) — the design · [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) — the plan
 - [docs/design/review-contract.md](docs/design/review-contract.md) — the generator↔reviewer contract
 - [docs/install.md](docs/install.md) — the install manual
+- [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the command behind each
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round is looking for
 - [LICENSE](LICENSE) — MIT
 
-> **Coming in feature 14, and deliberately not linked yet:** the **reviewer metrics document** — the
-> versioned round-log snapshot, the cut commit, and the exact command behind every figure on this
-> page — and **how to give feedback**, a `CONTRIBUTING.md` plus issue templates. Both are named here
-> in prose on purpose: this page ships with zero broken links, and these two become links when the
-> artefacts exist.

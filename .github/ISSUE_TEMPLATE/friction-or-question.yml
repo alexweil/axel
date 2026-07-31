@@ -1,0 +1,36 @@
+name: Friction or a question
+description: Something was unclear, harder than it should be, or you are not sure how it is meant to work
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Questions belong here too. If the answer was not obvious from the README
+        or the install manual, that is a documentation bug worth reporting.
+  - type: textarea
+    id: what-you-were-doing
+    attributes:
+      label: What you were doing
+    validations:
+      required: true
+  - type: textarea
+    id: what-you-expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened instead
+    validations:
+      required: true
+  - type: checkboxes
+    id: where-you-looked
+    attributes:
+      label: Where you looked first
+      options:
+        - label: The README
+        - label: The install manual
+        - label: The contributing guide
+        - label: The skill files
+        - label: Nowhere yet

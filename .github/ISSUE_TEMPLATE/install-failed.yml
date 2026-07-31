@@ -1,0 +1,53 @@
+name: Install failed
+description: The installer refused, errored, or wrote something unexpected
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying axel. The fields below are the ones that make a failed
+        install diagnosable without a round trip.
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and git version
+      placeholder: macOS 15.5, git 2.49.0
+    validations:
+      required: true
+  - type: textarea
+    id: final-line
+    attributes:
+      label: The installer's final line
+      description: "The line beginning with `── axel · fin: rc=`"
+    validations:
+      required: true
+  - type: textarea
+    id: full-output
+    attributes:
+      label: Full installer output
+    validations:
+      required: true
+  - type: textarea
+    id: gitignore-rules
+    attributes:
+      label: Lines in the destination .gitignore that mention build/
+      description: Write "none" if there are no such lines.
+    validations:
+      required: true
+  - type: dropdown
+    id: announced-mode
+    attributes:
+      label: Which mode did the installer announce?
+      options:
+        - initial
+        - adoption
+        - update
+        - it did not get that far
+    validations:
+      required: true
+  - type: checkboxes
+    id: clean-tree
+    attributes:
+      label: Destination state before running
+      options:
+        - label: The destination repository had a clean working tree
+          required: true
