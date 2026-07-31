@@ -67,19 +67,32 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 ```bash
 #!/bin/bash
-# C12 — alcance por commit, fail-closed de verdad: comprueba el rc de cada git.
+# C12 — alcance por commit, fail-closed. Comprueba el rc de cada git y desactiva
+# la deteccion de renames, que ocultaba el origen prohibido de un path permitido.
 AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957 380eb74"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
-HIJO='docs/STATUS.md docs/IMPLEMENTATION.md docs/implementation/14-onboarding-feedback.md'
+# Todos los paths finales de §Alcance, incluidos los que crea la implementacion.
+HIJO='docs/STATUS.md
+docs/IMPLEMENTATION.md
+docs/implementation/14-onboarding-feedback.md
+CONTRIBUTING.md
+README.md
+docs/metrics.md
+docs/metrics/rounds-log-b0bdf4d.tsv
+docs/metrics/cut.awk
+docs/metrics/normalize.awk
+.github/ISSUE_TEMPLATE/config.yml
+.github/ISSUE_TEMPLATE/install-failed.yml
+.github/ISSUE_TEMPLATE/friction-or-question.yml'
 BASE="${1:-2985447}"
 viol=0
 if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then
   echo "FALLA: git rev-list $BASE..HEAD no pudo ejecutarse"; exit 1
 fi
-[ -z "$commits" ] && { echo "FALLA: el rango no tiene commits; se esperaba al menos uno"; exit 1; }
+[ -z "$commits" ] && { echo "FALLA: rango vacio; se esperaba al menos un commit"; exit 1; }
 while read -r c; do
   s=$(git rev-parse --short "$c") || { echo "FALLA: rev-parse de $c"; exit 1; }
-  if ! paths=$(git show --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then
+  if ! paths=$(git show --no-renames --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then
     echo "FALLA: git show de $s no pudo ejecutarse"; exit 1
   fi
   [ -z "$paths" ] && { echo "FALLA: $s no declara paths; un commit vacio no es auditable"; exit 1; }
@@ -89,7 +102,7 @@ while read -r c; do
     done <<< "$paths"
   else
     while read -r p; do [ -z "$p" ] && continue
-      case " $HIJO " in *" $p "*) ;; *) echo "VIOLACION hijo $s: $p"; viol=1;; esac
+      grep -qxF "$p" <<< "$HIJO" || { echo "VIOLACION hijo $s: $p"; viol=1; }
     done <<< "$paths"
   fi
 done <<< "$commits"
@@ -608,10 +621,12 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Se reemplaza por un validador único, real, y **corrido**:
 
-```ruby
+````ruby
 #!/usr/bin/env ruby
-# Extrae los bloques canonicos de la bajada, los compara byte a byte contra los
-# archivos reales y verifica el inventario exacto del directorio. Fail-closed.
+# verify-templates.rb <spec.md> <dir>
+# Extrae los bloques canonicos de la bajada, exige exactamente uno por archivo,
+# compara byte a byte, rechaza lo que no sea archivo regular, parsea, y exige
+# que el directorio sea un directorio real con exactamente esos tres archivos.
 require 'yaml'
 spec_path, dir = ARGV[0], ARGV[1]
 NAMES = %w[config.yml friction-or-question.yml install-failed.yml].freeze
@@ -621,12 +636,18 @@ def bad(m) warn "FAIL: #{m}"; end
 abort("FAIL: spec no legible: #{spec_path}") unless File.readable?(spec_path)
 spec = File.read(spec_path, encoding: "UTF-8")
 
-# 1. inventario exacto del directorio
-actual = Dir.exist?(dir) ? Dir.children(dir).sort : nil
-if actual.nil?
-  bad "directorio ausente: #{dir}"; failed = true
-elsif actual != NAMES.sort
-  bad "inventario != esperado: #{actual.inspect} vs #{NAMES.sort.inspect}"; failed = true
+begin
+  dst = File.lstat(dir)
+  bad("#{dir}: no es un directorio real (#{dst.ftype})") || failed = true unless dst.directory?
+rescue SystemCallError
+  bad "#{dir}: ausente"; failed = true
+end
+
+if !failed
+  actual = Dir.children(dir).sort
+  if actual != NAMES.sort
+    bad "inventario != esperado: #{actual.inspect} vs #{NAMES.sort.inspect}"; failed = true
+  end
 end
 
 NAMES.each do |n|
@@ -646,28 +667,6 @@ NAMES.each do |n|
   unless st.file?
     bad "#{n}: no es un archivo regular (#{st.ftype}) — git versionaria eso y no el YAML"; failed = true; next
   end
-  actual_bytes = File.read(path, encoding: "UTF-8")
-  if actual_bytes != canon
-    bad "#{n}: difiere del bloque canonico (#{actual_bytes.bytesize} vs #{canon.bytesize} bytes)"; failed = true; next
-  end
-  begin
-    YAML.load(canon)
-  rescue => e
-    bad "#{n}: el bloque canonico no parsea: #{e.class}"; failed = true
-  end
-end
-
-if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK (#{NAMES.size} archivos)"; exit 0 end
-```yaml\n(.*?)^```\s*$/m
-  blocks = spec.scan(re).map(&:first)
-  if blocks.size != 1
-    bad "#{n}: se exige exactamente 1 bloque canonico, hay #{blocks.size}"; failed = true; next
-  end
-  canon = blocks.first
-  path = File.join(dir, n)
-  unless File.readable?(path)
-    bad "#{n}: archivo ausente"; failed = true; next
-  end
   if File.read(path, encoding: "UTF-8") != canon
     bad "#{n}: difiere del bloque canonico"; failed = true; next
   end
@@ -679,26 +678,42 @@ if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK (#{NAMES.size} 
 end
 
 if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK"; exit 0 end
-```
+````
 
 **Un solo programa hace las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
 
-**Corrido, con su camino positivo y siete casos negativos** — y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
+**Corrido, con su camino positivo y los casos negativos de la tabla de abajo** —sin publicar la cantidad, que crece cada vez que una ronda encuentra una vía nueva (ya pasó en la r12 y en la r13)—, y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
 
 | Caso | Resultado |
 |---|---|
 | los tres archivos idénticos a sus bloques | `VERIFY: OK`, `rc=0` |
 | un byte cambiado (`blank_issues_enabled: true` → `false`) | `rc=1`, «difiere del bloque canonico» |
 | **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | `rc=1`, «difiere del bloque canonico» |
-| **symlink con los bytes canónicos** — git versionaría el enlace, no el YAML | `rc=1`, «no es un archivo regular (link)» |
-| **directorio con el nombre de una plantilla** | `rc=1`, «no es un archivo regular (directory)» |
+| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | `rc=1`, «no es un archivo regular (link)» |
+| **el directorio entero es symlink** a uno externo con los tres archivos (r13) | `rc=1`, «no es un directorio real (link)» |
+| directorio con el nombre de una plantilla | `rc=1`, «no es un archivo regular (directory)» |
 | archivo de más en el directorio | `rc=1`, «inventario != esperado» |
-| archivo ausente | `rc=1`, inventario **y** archivo ausente |
+| archivo ausente | `rc=1`, archivo ausente |
 | bloque ausente en la spec | `rc=1`, «se exige exactamente 1 bloque canonico, hay 0» |
 | bloque duplicado en la spec | `rc=1`, «…hay 2» |
 | spec ilegible | `rc=1`, aborta |
+| **el bloque publicado no compila** | el harness aborta antes de correrlo |
 
-**Cómo se reproducen**, porque «corrido» sin procedimiento es otra declaración sin ejecutar: se extraen los tres bloques de este doc a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado (editar un byte, anteponer una línea, reemplazar un archivo por un symlink o un directorio, agregar o quitar un archivo, o pasar una spec alterada por `sed`/`awk`). Ninguno toca el repo.
+**El harness que extrae y corre — publicado, porque sin él «corrido tal como se publica» es otra declaración sin ejecutar** (r13):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+DOC="$1"; DIR="$2"; TMP=$(mktemp -d)
+test "$(grep -c '^````ruby$' "$DOC")" -eq 1 || { echo "FALLA: se exige exactamente 1 bloque ruby"; exit 1; }
+awk '/^````ruby$/{f=1;next} f&&/^````$/{exit} f' "$DOC" > "$TMP/v.rb"
+/usr/bin/ruby -c "$TMP/v.rb" >/dev/null || { echo "FALLA: el bloque publicado no compila"; exit 1; }
+/usr/bin/ruby "$TMP/v.rb" "$DOC" "$DIR"
+```
+
+**El fence del validador es de cuatro backticks a propósito, y ésa es la raíz del defecto de la r13.** El programa contiene la cadena ` ```yaml ` dentro de su propio regex, así que **un extractor que corta en la primera línea de tres backticks se detiene ahí**. Eso fue exactamente lo que pasó: mi extractor cortaba justo al final del programa nuevo y devolvía algo válido, mientras el bloque publicado arrastraba una cola huérfana del validador anterior y **no compilaba**. Mi verificación coincidía con lo que yo quería publicar, no con lo publicado — y el harness de arriba lo cierra, porque exige **exactamente un** bloque, corta con el fence largo y comprueba `ruby -c` **antes** de correr.
+
+**Cómo se reproducen los negativos**: se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
 
 **El validador aceptaba symlinks, y eso lo encontró la r12 reproduciéndolo**: `Dir.children`, `File.readable?` y `File.read` **siguen enlaces**, así que reemplazar `config.yml` por un symlink a un archivo externo con los bytes canónicos daba `VERIFY: OK`. Git versionaría el enlace y no el YAML que GitHub necesita — o sea que el verificador aprobaba un artefacto defectuoso. Cerrado con `File.lstat` y el rechazo explícito de todo lo que no sea archivo regular, con sus dos negativos corridos.
 
@@ -722,7 +737,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal», **son archivos regulares**, **parsean**, y el directorio **no contiene nada más**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro—; la r9 la materializó con los bloques literales y la r11 la volvió **ejecutable**. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | **el validador de §Enfoque·«El verificador de plantillas», corrido**: un único programa que exige exactamente un bloque canónico por archivo, compara byte a byte, rechaza lo que no sea archivo regular, parsea y verifica el inventario exacto del directorio. Evidencia de cierre = su camino positivo **más los nueve casos negativos publicados en la tabla de esa sección**, cada uno reproducible con el procedimiento que la tabla declara |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal», **son archivos regulares**, **parsean**, y el directorio **no contiene nada más**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro—; la r9 la materializó con los bloques literales y la r11 la volvió **ejecutable**. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | **el validador de §Enfoque·«El verificador de plantillas», corrido**: un único programa que exige exactamente un bloque canónico por archivo, compara byte a byte, rechaza lo que no sea archivo regular, parsea y verifica el inventario exacto del directorio. Evidencia de cierre = su camino positivo **más los casos negativos publicados en la tabla de esa sección**, cada uno reproducible con el procedimiento que la tabla declara |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
@@ -746,6 +761,18 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r13 (base `6ec4b48`, HEAD `6ff155c`) — CHANGES_REQUESTED · **5 bloqueantes, cero preferencias**
+
+Volví a pedir ojo adversarial sobre los dos verificadores corregidos. **No volvieron limpios, y es el mismo camino: verificador que falla abierto por una vía no probada.** Pero el primero es de otro orden, porque **invalidó mi verificación misma**.
+
+1. **El bloque Ruby publicado no compilaba, y yo había afirmado haberlo corrido «tal como se publica».** El programa contiene la cadena ` ```yaml ` dentro de su propio regex, así que **mi extractor cortaba en esa línea** — justo al final del programa nuevo— y devolvía algo válido, mientras el bloque publicado arrastraba una **cola huérfana** del validador anterior y no compilaba. La verificación coincidía con lo que yo quería publicar, no con lo publicado. Cerrado en la raíz: **fence de cuatro backticks** (que el feature 13 ya usaba por esta misma razón) y un **harness publicado** que exige exactamente un bloque, corta con el fence largo y comprueba `ruby -c` **antes** de correr.
+2. **El validador aceptaba que el propio directorio fuera un symlink.** Yo hacía `lstat` de los hijos pero `Dir.exist?`/`Dir.children` **siguen el enlace del directorio**, así que un `ISSUE_TEMPLATE` que fuera enlace a una carpeta externa con los tres archivos daba `VERIFY: OK`. Cerrado con `File.lstat(dir)` y su negativo corrido.
+3. **C12 rechazaba el alcance legítimo y ocultaba renames prohibidos.** La allowlist del hijo tenía solo los tres docs internos, así que **el primer commit de la implementación —el que agrega `CONTRIBUTING.md`— habría fallado el criterio**: literalmente impedía empezar. Y con detección de renames activa, mover `scripts/awake.sh` a `CONTRIBUTING.md` mostraba **solo el destino permitido** — reproducido: sin `--no-renames` sale `CONTRIBUTING.md`; con `--no-renames` salen los dos. Cerrado con todos los paths finales de §Alcance y `--no-renames`.
+4. **Dos conteos desincronizados** («siete casos negativos» contra una tabla de nueve). Retirados de la sección vigente y de STATUS; se conservan solo donde son historia anclada a su ronda.
+5. **Otra universal viva en el `## Cierre` del ledger** —«ninguno terminó la corrida»—, que vuelve a ampliar su universo con cada corte nuevo. Es del padre y no se toca.
+
+**Dos defectos propios encontrados al corregir, y los dos de la misma forma que el punto 1**: mi allowlist multi-línea no matcheaba con `grep -qxF` porque tres paths compartían la primera línea, y **mi prueba negativa devolvía el `rc` de `tail` en vez del script** — el fallo abierto del pipe, otra vez, ahora en el arnés de prueba.
 
 ### r12 (base `6ec4b48`, HEAD `8d97931`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · **el ojo adversarial sobre los verificadores nuevos dio resultado**
 
