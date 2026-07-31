@@ -1,6 +1,6 @@
 # Feature 14 — Onboarding y feedback: CONTRIBUTING + `.github/` + métricas versionadas
 
-> Bajada fina de la §14 de [../IMPLEMENTATION.md](../IMPLEMENTATION.md). Diseño: [../design/public-surface.md](../design/public-surface.md). Contrato con el feature 13: [13-public-showcase.md](13-public-showcase.md).
+> Bajada fina de la sección 14 de [../IMPLEMENTATION.md](../IMPLEMENTATION.md). Diseño: [../design/public-surface.md](../design/public-surface.md). Contrato con el feature 13: [13-public-showcase.md](13-public-showcase.md).
 
 ## Procedencia y autorización
 
@@ -15,7 +15,7 @@ SHA de arranque de la unidad: `6ec4b48`.
 | Rango | De quién | Qué toca |
 |---|---|---|
 | `6ec4b48..2985447` | **padre** — registro del arranque | `docs/STATUS.md` y el ledger |
-| `2985447..HEAD` | **hijo** — el trabajo de esta unidad | la lista cerrada de §Alcance, **sin el ledger** |
+| `2985447..HEAD` | **hijo** — el trabajo de esta unidad | la lista cerrada de §«Alcance», **sin el ledger** |
 
 El baseline del trabajo del hijo es **`2985447`**, no `6ec4b48`. El primero se audita aparte y ya está verificado arriba.
 
@@ -30,7 +30,7 @@ La causa es el **diff agregado**: aplana commits de dos autores con permisos dis
 | Autor | Cómo se identifica | Paths permitidos |
 |---|---|---|
 | **padre** | su SHA está en `AUTORIZADOS` | el ledger y/o `docs/STATUS.md` — nada más |
-| **hijo** | cualquier otro commit del rango | la lista cerrada de §Alcance, que **no** incluye el ledger |
+| **hijo** | cualquier otro commit del rango | la lista cerrada de §«Alcance», que **no** incluye el ledger |
 
 Un commit del hijo que toque el ledger **falla**. Un commit no declarado que toque el ledger **falla**. Un commit del padre declarado que toque, digamos, `README.md`, **falla**. No hay estado en que las dos cláusulas se contradigan, porque ya no hay dos cláusulas: hay una, aplicada commit por commit.
 
@@ -74,7 +74,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **Origen de las filas `A1–A8`.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
-**Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance. Y todo entregable versionado es un **archivo regular**.
+**Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance». Y todo entregable versionado es un **archivo regular**.
 
 **Modos de falla prohibidos, derivados uno por uno de las rondas.** Cada uno fue un defecto real y reproducido; la lista **es** la especificación:
 
@@ -103,7 +103,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 ## Alcance
 
-Entra: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/`, el informe de métricas, el snapshot del `rounds-log` **y los dos `awk` que lo derivan** (§2 — el comando declarado tiene que correr), la **activación de las dos referencias pendientes** del `README.md`, este doc, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`.
+Entra: `CONTRIBUTING.md`, `.github/ISSUE_TEMPLATE/`, el informe de métricas, el snapshot del `rounds-log` **y los dos `awk` que lo derivan** (§«Cómo se reconstruye mecánicamente el corte» — el comando declarado tiene que correr), la **activación de las dos referencias pendientes** del `README.md`, este doc, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`.
 
 No entra, y tocarlo es divergencia ⇒ corte: el método (`AGENTS.md` y su espejo `templates/AGENTS.md` — incluida la **deuda normativa declarada** de la línea «Docs, commits y comunicación en español», que el diseño dejó explícitamente fuera de la ruta), las skills, el instalador, los scripts, los tests, el ledger del pipeline (territorio del padre), `.claude/state/` como directorio versionado, y toda acción sobre el remoto. Del `README.md` se tocan **solo** las dos referencias pendientes y lo que su activación arrastra; el resto de su prosa no se reabre.
 
@@ -113,12 +113,12 @@ El padre la detectó en el pre-arranque y la pasó a esta unidad en vez de resol
 
 | Fuente | Qué dice |
 |---|---|
-| §14 de `IMPLEMENTATION.md` | «**80** rondas registradas al corte `e1e1282`» |
+| sección 14 del plan de `IMPLEMENTATION.md` | «**80** rondas registradas al corte `e1e1282`» |
 | Unidad `13`, §«El corte de métricas» | corte **`b0bdf4d`**, **88** rondas |
 
-**Gana `b0bdf4d`, y no por antigüedad sino por contrato.** El contrato entre features fija que el **13 declara** un commit de corte que ya exista y que el **14 reconstruya exactamente ese corte**, «no saca foto nueva» (§14, «Contrato con el 13»). La cifra que la §14 cita es una **foto anterior**, heredada del delta de diseño, que se escribió cuando el corte vigente era `e1e1282`; el 13 declaró el suyo después, y es el que el contrato manda reconstruir.
+**Gana `b0bdf4d`, y no por antigüedad sino por contrato.** El contrato entre features fija que el **13 declara** un commit de corte que ya exista y que el **14 reconstruya exactamente ese corte**, «no saca foto nueva» (sección 14 del plan, «Contrato con el 13»). La cifra que la sección 14 cita es una **foto anterior**, heredada del delta de diseño, que se escribió cuando el corte vigente era `e1e1282`; el 13 declaró el suyo después, y es el que el contrato manda reconstruir.
 
-Las dos cifras son ciertas **cada una en su corte** y ninguna está mal medida: `e1e1282` es anterior a las dos unidades de delta de este pipeline, cuyos ciclos (4 rondas cada uno) más el resto explican la diferencia. No se corrige la §14 —es del plan, aprobado, y su cita describe correctamente el estado en que se escribió—; se la trata como **histórica**. Lo que este feature publica sale del corte `b0bdf4d`.
+Las dos cifras son ciertas **cada una en su corte** y ninguna está mal medida: `e1e1282` es anterior a las dos unidades de delta de este pipeline, cuyos ciclos (4 rondas cada uno) más el resto explican la diferencia. No se corrige la sección 14 —es del plan, aprobado, y su cita describe correctamente el estado en que se escribió—; se la trata como **histórica**. Lo que este feature publica sale del corte `b0bdf4d`.
 
 Es además la tercera vez en este pipeline que el mismo fenómeno aparece —el diseño lo registró como su hallazgo 3, el 13 lo vio en vivo cuando su propia r1 movió el log de 88 a 89 filas—, y es la razón entera por la que la evidencia se publica como foto fechada.
 
@@ -187,26 +187,23 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | B1 | leer **su propio código** como prosa: los literales de sus comentarios y de sus regex aparecen como referencias huérfanas | r15 |
-| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado, enumerado contra lo que la prosa efectivamente usa** (r17): (i) `§«Nombre con espacios»`; (ii) `§Nombre` de una palabra, **o `§N` numérica** cuando la sección es una de las preguntas numeradas de este doc; (iii) **compuesta** `§Nombre·«Sub»`, donde **las dos partes deben resolver** a encabezados —dejar el sufijo sin comprobar hacía fallar abierto: renombrar la subsección pasaba (r18)—. **El sufijo numérico queda prohibido**, porque no resuelve a nada y su única ocurrencia se reescribió; (iv) **cruzada declarada**, solo las de `B3`. Cualquier otra forma **no es referencia** y el chequeo debe rechazar el doc si aparece una — no ignorarla en silencio | r15, r17 |
-| B3 | resolver contra un **pool de docs**. **Lista cerrada de cruzadas, con su destino materializado** (r17): `§«El corte de métricas»` → `docs/implementation/13-public-showcase.md`; `§14` → `docs/IMPLEMENTATION.md`. *(`§2` **no** es cruzada: apunta a la segunda de las cinco preguntas numeradas de este doc, y la primera versión de esta fila lo declaró mal por agruparlo con `§14` sin verificarlo — el mismo defecto que la fila de al lado prohíbe.)* Toda otra referencia debe resolver **localmente**, y una cruzada no declarada es un fallo | r15, r17 |
+| B2 | admitir **más de una forma**. El lenguaje es **una sola**: `§«Texto exacto del encabezado»`. Cualquier otra secuencia que empiece con `§` **hace fallar el doc**, no se ignora. *(La r19 mostró por qué: mientras el lenguaje admitía varias formas —simple, numérica, compuesta, cruzada— **cada ronda de correcciones introducía una forma nueva en la prosa**, y la especificación perseguía a su propio sustrato. Colapsarlo a una forma corta el lazo: no hay sufijo que dejar sin comprobar ni parte que pueda romperse por separado.)* | r15, r17, r19 |
+| B3 | resolver contra un **pool de docs**. **Lista cerrada de cruzadas, con su destino materializado** (r17): `§«El corte de métricas»` → `docs/implementation/13-public-showcase.md`; `sección 14 del plan` → `docs/IMPLEMENTATION.md`. *(`§«Cómo se reconstruye mecánicamente el corte»` **no** es cruzada: apunta a la segunda de las cinco preguntas numeradas de este doc, y la primera versión de esta fila lo declaró mal por agruparlo con `sección 14 del plan` sin verificarlo — el mismo defecto que la fila de al lado prohíbe.)* Toda otra referencia debe resolver **localmente**, y una cruzada no declarada es un fallo | r15, r17 |
 | B4 | confundir **mención con uso**: una marca entre backticks cita la sintaxis, no referencia una sección — la distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo | r15 |
 
-**Prueba de aceptación**, un caso por fila:
+**Prueba de aceptación**, con el inventario cerrado de abajo:
 
 | ID | Caso | Ejercita |
 |---|---|---|
 | M0 | el doc tal como está | *(positivo)* |
 | M1 | el código del propio chequeo contiene las marcas que busca ⇒ no debe reportarlas | B1 |
-| M2 | referencia rota en forma `§«Nombre»` sobre una sección **efectivamente citada** | B2 |
-| M3 | referencia rota en forma `§Nombre` | B2 |
-| M4 | referencia compuesta con el **prefijo** roto | B2 |
-| M5 | referencia compuesta con el **sufijo** roto | B2 |
-| M6 | una forma **fuera** del lenguaje cerrado ⇒ debe hacer fallar el doc, no ignorarse | B2 |
-| M7 | referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual | B3 |
-| M8 | una cruzada **no declarada** ⇒ debe fallar | B3 |
+| M2 | referencia rota sobre una sección **efectivamente citada** | B2 |
+| M3 | una secuencia con `§` **fuera de la forma única** ⇒ debe hacer fallar el doc, no ignorarse | B2 |
+| M4 | un subencabezado **movido bajo otro padre**, con ambas partes existiendo | B2 |
+| M7 | referencia cuyo nombre **existe como encabezado en otro doc** pero no acá ⇒ debe fallar | B3 |
 | M9 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar | B4 |
 
-**Inventario cerrado por fila**: `B1` → `M1`; `B2` → `M2, M3, M4, M5, M6`; `B3` → `M7, M8`; `B4` → `M9`; *(positivo)* → `M0`.
+**Inventario cerrado por fila**: `B1` → `M1`; `B2` → `M2, M3, M4`; `B3` → `M7`; `B4` → `M9`; *(positivo)* → `M0`.
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían—. **Debe correr en cada ronda del ciclo de implementación**, no cuando alguien se acuerde: es el punto entero de haberlo sacado del terreno de las lecciones. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
@@ -297,7 +294,7 @@ Regla de publicación, fijada por el diseño y no negociable: **dos cifras rotul
 
 ### 5. Topics y homepage — valores concretos, argumentados, y **no ejecutados**
 
-El gate autorizó «los comandos exactos», y la §14 fija la vara: los tres tienen que **pegarse en una terminal sin editarlos**, con herramienta, sintaxis y precondiciones declaradas y **cero huecos**. Proponer no es decidir — el humano es quien los corre y puede cambiar cualquier valor antes.
+El gate autorizó «los comandos exactos», y la sección 14 fija la vara: los tres tienen que **pegarse en una terminal sin editarlos**, con herramienta, sintaxis y precondiciones declaradas y **cero huecos**. Proponer no es decidir — el humano es quien los corre y puede cambiar cualquier valor antes.
 
 **Herramienta**: `gh` (GitHub CLI), verificado presente en esta máquina en la versión **2.94.0**. **Precondiciones**: `gh auth status` sin error, y estar parado dentro del repo. Sin `gh`, los dos últimos se hacen desde *Settings → General* y la caja *About* en la web; el push no lo necesita.
 
@@ -358,7 +355,7 @@ La decisión que el diseño le asignó a este feature, con la distinción de pla
 |---|---|---|---|
 | Informe de métricas | `docs/metrics.md` | **vidriera ⇒ inglés** | prosa para el lector de afuera; hermano de `docs/install.md`, que ya es vidriera bajo `docs/` |
 | Snapshot del log | `docs/metrics/rounds-log-b0bdf4d.tsv` | **dato ⇒ neutro de idioma** | el corte va **en el nombre del archivo**: vuelve imposible confundir dos fotos, y un re-corte futuro **agrega** un archivo en vez de pisar el anterior — que es lo que el diseño pide cuando habla de re-cortar |
-| Recorte al corte | `docs/metrics/cut.awk` | **herramienta ⇒ neutro**, mensajes en inglés | el comando declarado tiene que **correr**; ver §2 |
+| Recorte al corte | `docs/metrics/cut.awk` | **herramienta ⇒ neutro**, mensajes en inglés | el comando declarado tiene que **correr**; ver §«Cómo se reconstruye mecánicamente el corte» |
 | Normalizador a rondas | `docs/metrics/normalize.awk` | ídem | ídem |
 | Cómo dar feedback | `CONTRIBUTING.md` | **vidriera ⇒ inglés** | la raíz, que es la ubicación convencional y la que el plan nombró. *(La versión anterior justificaba el path afirmando que «GitHub lo levanta y lo ofrece al abrir un issue o un PR» — comportamiento que **no verifiqué contra ninguna fuente**, así que se retira: el path no depende de él.)* |
 | Plantillas | `.github/ISSUE_TEMPLATE/{install-failed,friction-or-question,config}.yml` | **vidriera ⇒ inglés** | path fijado por GitHub |
@@ -700,7 +697,7 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 ### `README.md` — edición acotada, y ahora **verificada como diff cerrado**
 
-Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, que este feature activa. La r14 encontró que «acotada» **no estaba verificado por nada**: `README.md` está en la allowlist de C12, así que una reescritura arbitraria devolvía `C12 PASA` —lo reprodujo—, y C7 solo exigía los dos links y la desaparición de la marca. Una implementación podía conservar los links y cambiar toda la prosa alrededor, incumpliendo §Alcance.
+Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, que este feature activa. La r14 encontró que «acotada» **no estaba verificado por nada**: `README.md` está en la allowlist de C12, así que una reescritura arbitraria devolvía `C12 PASA` —lo reprodujo—, y C7 solo exigía los dos links y la desaparición de la marca. Una implementación podía conservar los links y cambiar toda la prosa alrededor, incumpliendo §«Alcance».
 
 **La edición se fija como literal, igual que los YAML**, y C7 la verifica por **reconstrucción**: se aplica al README base cada sustitución declarada —cada una debe matchear **exactamente una vez**— y el resultado se compara **byte a byte** con el archivo final.
 
@@ -793,7 +790,7 @@ Es **chequeable comparando el conjunto de IDs definidos contra la unión de los 
 
 Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el contenido entregable quedó sólido en la r11 y no se movió**; lo que produjo un bloqueante por ronda, cinco rondas seguidas, fue la maquinaria de verificarlo. Cada herramienta agregada para cerrar un hueco era superficie nueva sin revisar, y la ronda siguiente la encontraba.
 
-**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `B1–B4`, `C1–C6` y `D1–D3` son el producto real de esas quince rondas: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
+**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `B1–B4`, `C1–C6` y `D1–D3` son el producto real de las rondas de bajada —cada fila anclada a la ronda que la descubrió, en su propia columna—: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
 
 **Lo que esto no es**: no es bajar la vara. Los criterios de cierre no se relajaron, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature.
 
@@ -803,27 +800,27 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 |---|---|---|
 | C1 | El snapshot es la **reconstrucción exacta** del corte `b0bdf4d` que declaró el 13: `rc=0`, **88** filas, última fila con ese SHA | corrida de `cut.awk` con sus tres postcondiciones |
 | C2 | El snapshot es **prefijo literal** del `rounds-log` vivo — ni una línea editada | comparación mecánica contra las primeras 88 líneas del archivo vivo |
-| C3 | El informe publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §«La especificación literal» y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
+| C3 | El informe publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §«`docs/metrics.md` — el informe» y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: `C1–C6`** de §Enfoque, con su inventario cerrado `N0–N11` |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: `C1–C6`** de §«Enfoque», con su inventario cerrado `N0–N11` |
 | C7 | **La edición del README es acotada**: aplicando al README base las tres sustituciones declaradas —cada una exactamente una vez— el resultado coincide **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda marca de «pendiente para el 14» | ídem. **`D1`, `D2a`, `D2b` y `D3`** de §«`README.md` — edición acotada», con sus casos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §Procedencia, con su prueba de aceptación — la lista de modos de falla prohibidos es lo que quince rondas de review produjeron, y cada fila fue un defecto reproducido |
+| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §«Procedencia», con su prueba de aceptación — la lista de modos de falla prohibidos es lo que quince rondas de review produjeron, y cada fila fue un defecto reproducido |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | **C16** | **El barrido de referencias existe, corre y pasa** sobre el doc del feature al cerrar. Sin este criterio `B` no tenía consumidor: `A` lo consume C12, `C` lo consume C6 y `D` lo consume C7, pero **el feature podía cerrar sin el barrido** aunque sus filas estuvieran escritas (r18) | la herramienta se construye en la implementación. **`B1–B4`** de §«El barrido del síntoma, mecanizado», con su inventario cerrado **`M0–M9`** |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
-| **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
+| **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §«`docs/metrics.md` — el informe»; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
 
 ## Riesgos
 
 1. **La regla de fuente única es interpretable, y una regla interpretable churnea.** Es el riesgo más probable de esta unidad. Mitigación: la línea está **fijada por escrito antes de implementar** (§«Fuente única»), con la clase incluida, la clase excluida y el chequeo mecánico que la aplica. Si el reviewer no acepta la línea, se discute la línea una vez — no cifra por cifra.
 2. **Contadores móviles reapareciendo en prosa.** Es la causa de las dos rachas de la unidad 13. Mitigación: la regla adoptada arriba, aplicada también a este doc; donde hace falta un número que se mueve, va el comando.
-3. **YAML que GitHub rechaza y nosotros no vemos.** El riesgo real no es que GitHub calle —la fuente dice que los errores pueden aparecer «*when creating, saving, or viewing issue forms*»—, sino que **nosotros no llegamos a verlos**: mirarlos exige que el archivo esté en el remoto, y esta unidad tiene prohibido pushear. Ésa es la asimetría, y la afirmación anterior («no avisa, simplemente no aparece») era una generalización sobre GitHub que la fuente no sostiene — otra premisa externa, corregida en la r7. Mitigación parcial y declarada como parcial: C6 valida con un parser real **y** verifica conformidad con la especificación literal de C15, mientras las reglas documentadas se satisfacen por construcción con su elección registrada (§Enfoque). El validador de GitHub sigue siendo la autoridad final, y **puede tener reglas que su documentación no publica** — eso no se descarta desde acá. El riesgo se reduce, no se elimina, y el criterio lo dice. *(Las menciones de rangos viejos de invariantes dentro del Review log se conservan: describen el estado de su ronda.)*
+3. **YAML que GitHub rechaza y nosotros no vemos.** El riesgo real no es que GitHub calle —la fuente dice que los errores pueden aparecer «*when creating, saving, or viewing issue forms*»—, sino que **nosotros no llegamos a verlos**: mirarlos exige que el archivo esté en el remoto, y esta unidad tiene prohibido pushear. Ésa es la asimetría, y la afirmación anterior («no avisa, simplemente no aparece») era una generalización sobre GitHub que la fuente no sostiene — otra premisa externa, corregida en la r7. Mitigación parcial y declarada como parcial: C6 valida con un parser real **y** verifica conformidad con la especificación literal de C15, mientras las reglas documentadas se satisfacen por construcción con su elección registrada (§«Enfoque»). El validador de GitHub sigue siendo la autoridad final, y **puede tener reglas que su documentación no publica** — eso no se descarta desde acá. El riesgo se reduce, no se elimina, y el criterio lo dice. *(Las menciones de rangos viejos de invariantes dentro del Review log se conservan: describen el estado de su ronda.)*
 4. **Tentación de correr los comandos de GitHub** —están escritos, verificados y a un `Enter` de distancia—. Mitigación: el corte está declarado como consecuencia, y C11b **no finge** que la no-ejecución sea demostrable desde el commit: es una invariante operativa que se sostiene por el contrato del pipeline y se asienta como registro, no como prueba. Prometer una prueba mecánica que no existe habría sido peor que no prometer nada — daba una garantía falsa exactamente donde importa.
 5. **El corte envejece mientras se trabaja.** Las rondas de esta misma unidad entran al `rounds-log`. Mitigación: es exactamente lo que el corte neutraliza; la consecuencia (el snapshot no incluye las rondas de los features 13 y 14) se **publica**.
 6. **Tentación de cerrar la deuda normativa de `AGENTS.md`.** Sigue siendo una línea a la vista. Mitigación: está fuera de la ruta autorizada — tocarla es divergencia ⇒ corte.
@@ -831,6 +828,16 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r19 (base `6ec4b48`, HEAD `315ea17`) — CHANGES_REQUESTED · **5 bloqueantes** · **la ronda que expuso por qué `B` no convergía**
+
+**Los cinco son absorbibles como filas o correcciones de especificación; ninguno es de otra naturaleza.** Pero dos de ellos vuelven sobre `B` por cuarta ronda seguida, y eso dejó ver la causa:
+
+**`B` es el único de los cuatro cuyo sujeto es este mismo documento**, y el documento cambia todas las rondas —porque es donde escribo las correcciones de los otros criterios—. Mientras el lenguaje admitía varias formas (simple, numérica, compuesta, cruzada), **cada ronda de correcciones introducía una forma nueva en la prosa** y la especificación perseguía a su propio sustrato. `A`, `C` y `D` especifican chequeos sobre artefactos estables —commits, YAML, README—; `B` no.
+
+**La salida es estructural y se aplicó acá: el lenguaje colapsa a una sola forma**, `§«Texto exacto del encabezado»`, y **las referencias cruzadas salen del dominio del signo `§`** —lo que apunta a otro doc va en prosa o como link—. Con eso desaparecen de golpe: el sufijo que no se comprobaba, la parte que podía romperse por separado, la lista de excepciones (que ya había nacido con un destino mal declarado), y la posibilidad de que una edición futura introduzca una forma no prevista. Normalizadas las referencias del doc; el barrido pasa.
+
+Los otros tres: **C3 apuntaba a la sección equivocada** —al reemplazar la referencia compuesta en la r18 quedó señalando los YAML en vez de la matriz de cifras, o sea que la corrección creó el defecto siguiente—; la prosa publicaba **«esas quince rondas»**, un contador móvil, cuando `M`, `P` y `C16` nacieron después; y `STATUS` no usaba el **vocabulario fijo** del contrato en «Esperando».
 
 ### r18 (base `6ec4b48`, HEAD `7486a5a`) — CHANGES_REQUESTED · **7 bloqueantes, cero preferencias**
 
