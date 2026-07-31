@@ -89,7 +89,6 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 |---|---|---|
 | A1 | usar el **diff agregado** del rango: aplana commits de autores con permisos distintos y no distingue una violación de una excepción autorizada | r2 |
 | A2a | aprobar cuando falla **`git rev-list`**: sin commits, el recorrido no encuentra violaciones | r12 |
-| A2b | aprobar cuando falla **`git rev-parse`** | r12 |
 | A2c | aprobar cuando falla **`git show`**: sin paths, no hay nada que comparar | r12 |
 | A2d | aprobar cuando falla **`git ls-files`** | r15 |
 | A3 | perder el estado de error **en un pipe**: el `rc` de una tubería es el del último comando | r12, r15 |
@@ -100,7 +99,26 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A8a | tomar un **rango vacío** como éxito | r12 |
 | A8b | tomar un **commit sin paths** como éxito | r12 |
 
-**Prueba de aceptación**: **un caso negativo por fila** —no por familia— más el camino positivo. Las filas están atomizadas justamente para que ninguna rama quede sin ejercitar: agrupar cuatro invocaciones de git en una sola fila permitía cubrir una y declarar la fila probada (r16).
+**Matriz de aceptación, corrida** (r25). Cada fila con su condición, cómo se produce y el `rc` observado:
+
+| Fila | Condición producida | `rc` |
+|---|---|---|
+| A1 | *(estructural)* el recorrido es por commit sobre `rev-list`; el diff agregado no se usa en ningún punto | — |
+| A2a | `git rev-list` con un rango inválido | **1** |
+| A2c | `git show` con una opción inválida | **1** |
+| A2d | `GIT_INDEX_FILE` inválido ⇒ `git ls-files` falla | **1** |
+| A3 | *(estructural)* ninguna comprobación toma su estado de un pipe | — |
+| A4 | `core.abbrev=12` ⇒ **debe pasar**, porque la identidad es el SHA completo | **0** |
+| A5 | rename de `scripts/awake.sh` a un path permitido: sin `--no-renames` git muestra **solo el destino**; con él, ambos | **1** |
+| A6 | un path fuera de la lista del hijo | **1** |
+| A7 | entregable creado como symlink ⇒ git lo registra con modo `120000` | **1** |
+| A8a | rango vacío | **1** |
+| A8b | commit sin paths | **1** |
+| — | positivo sobre el rango real | **0** |
+
+*(`A2b` —«aprobar cuando falla `git rev-parse`»— **se retira**: el chequeo dejó de invocar `rev-parse` cuando la identidad pasó al SHA completo de `rev-list`, así que la fila describía una rama que ya no existe. Retirarla es más honesto que inventarle un caso.)*
+
+**Las dos filas estructurales no tienen caso negativo y eso se declara**, en vez de fabricarles uno: `A1` y `A3` son propiedades de la **forma** del chequeo —recorrer por commit, no depender del `rc` de un pipe—, y se verifican leyendo el script, no ejecutándolo. Un caso que "probara" A1 estaría probando otra cosa. Las filas están atomizadas justamente para que ninguna rama quede sin ejercitar: agrupar cuatro invocaciones de git en una sola fila permitía cubrir una y declarar la fila probada (r16).
 
 *(Historia, anclada a la r12–r15: durante esas rondas existió un prototipo de este chequeo que llegó a pasar su positivo y sus negativos. **Ese prototipo ya no está en el doc** —la decisión humana lo movió a la implementación— y sus resultados no valen como evidencia de cierre: valen como el origen de las filas `A1–A8`, que es lo que quedó.)*
 
@@ -815,6 +833,15 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r25 (base `b0fa345`, HEAD `bdb20b1`) — CHANGES_REQUESTED · **4 bloqueantes**
+
+**Dos tocan los artefactos, uno la maquinaria y uno es bookkeeping** — y el cuarto es el más incómodo, porque **afirmé haber publicado algo que no publiqué**.
+
+1. **`docs/metrics.md` seguía incompleto en C3**: las filas de peor caso llevaban **instrucciones en prosa** («same as the median command, replacing…») que, interpretadas literalmente, devuelven una línea vacía y no `11`/`5`; el compuesto de 23 ciclos no decía cómo verificar los cinco anteriores al log; y la frase «all figures … cut at `b0bdf4d`» **contradecía** las cifras externas, ancladas a SHA de otro repositorio. Los tres cerrados: comandos pegables completos, los cinco ciclos previos con **un comando por ciclo**, y el alcance del corte acotado con la excepción declarada.
+2. **La aceptación de `A` no cubría una fila por caso**: faltaban `A1`, `A2b`, `A3`, `A5`, `A7` y `A8b`. Corridos y registrados en una matriz con condición y `rc` observado. Dos hallazgos al hacerlo: **`A2b` se retira** —el chequeo dejó de invocar `rev-parse` cuando la identidad pasó al SHA completo, así que la fila describía una rama inexistente—, y **`A1` y `A3` son estructurales** y no admiten caso negativo: son propiedades de la forma del chequeo, y se declara así en vez de fabricarles uno.
+3. **El requisito de inglés seguía incumplido** en tres restos: `recorte` en `cut.awk` y en `metrics.md`, e `ídem` en dos filas. Traducidos.
+4. **Afirmé en el pedido de la r25 que había publicado las dos cifras de `loop.sh` con su causa, y no lo había hecho** — lo dije en el pedido, no en el artefacto. Es la misma clase que ya cometí con `b05359c`: **declarar por hecho lo que no verifiqué**. Anclado ahora en la entrada de la r24, que es donde vivía la evidencia falsa: **293 acá, 287 en el sandbox del reviewer**, y los seis de diferencia son el smoke no contractual de `caffeinate`.
+
 ### r24 (base `b0fa345`, HEAD `17eb93a`) — CHANGES_REQUESTED · **5 bloqueantes** · **primera del ciclo de implementación**
 
 **Tres de los cinco tocan los artefactos**, y es la primera vez en la unidad que el grueso de una review cae sobre lo que se publica en vez de sobre la maquinaria:
@@ -822,6 +849,8 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 1. **`docs/metrics.md` no cumplía C3/C5**: la matriz **omitía las cifras de la instalación externa** (185/20/8), no desglosaba las 35 históricas en sus tres fuentes, y reemplazaba comandos exactos por descripciones («lengths per cycle, then median»). Las tres cosas eran justamente lo que C3 exige. Completada: cada cifra con fuente, corte y comando **verificado corriéndolo**, y las externas rotuladas como derivables solo contra `alexweil/inquirylab`.
 2. **`CONTRIBUTING.md` decía «cinco cosas» donde la plantilla pide seis** — faltaba explicar por qué se piden sistema operativo y versión de git. Corregido con la justificación que faltaba: todo lo registrado corrió en macOS, así que el primer reporte desde otra plataforma es el dato más valioso de ese issue.
 3. **`cut.awk` conservaba comentarios en español** contra C4, que exige inglés en los dos `awk` publicados. Traducido, con la lógica intacta.
+
+**Corrección de una evidencia histórica falsa**: el pedido de la r24 declaró `loop.sh 293/0` como si fuera reproducible por el reviewer, y **no lo es**. En su sandbox da **287 ok · 0 fail**: la diferencia son los **seis** asserts del smoke no contractual de `caffeinate`, que se saltean donde `ps` está restringido. Es la misma discrepancia que documentó el feature 13, y queda anclada acá con las **dos** cifras y su causa — publicar solo una da un número que una de las dos partes no puede reproducir.
 
 Los otros dos: faltaba **correr los negativos de `A`, `N8–N11` y `P1–P5`** —la evidencia cubría solo los siete de `C`—, y el estado versionado no reconstruía el ciclo (`STATUS` publicaba una racha arrastrada de dos rondas antes, `IMPLEMENTATION` seguía diciendo «bajada fina escrita, en review»).
 

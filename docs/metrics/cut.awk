@@ -1,5 +1,5 @@
 # cut.awk — reconstructs the round-log snapshot at a cut commit.
-# Fails if the SHA is absent or appears more than once: a recorte that fails
+# Fails if the SHA is absent or appears more than once: a cut that fails
 # open is worse than having none at all.
 #   awk -v cut=<sha> -f cut.awk <round-log> > snapshot.tsv
 BEGIN { FS = "\t" }

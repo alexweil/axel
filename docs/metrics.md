@@ -6,9 +6,14 @@ you can check them instead of trusting them.
 
 ## What this is, and what it is not
 
-It is a **dated photograph**, not a live counter. All figures below are cut at
-commit **`b0bdf4d`**, and the raw data at that cut is versioned in this repository
-as [`metrics/rounds-log-b0bdf4d.tsv`](metrics/rounds-log-b0bdf4d.tsv).
+It is a **dated photograph**, not a live counter. Every figure drawn from this
+repository is cut at commit **`b0bdf4d`**, and the raw data at that cut is
+versioned here as
+[`metrics/rounds-log-b0bdf4d.tsv`](metrics/rounds-log-b0bdf4d.tsv).
+
+Three rows are the exception and say so in the table: the **external-install**
+figures are anchored to commits of a **different** repository, so they carry their
+own SHAs and are not covered by this cut.
 
 **The snapshot does not include the rounds of features 13 and 14** — the two
 features that produced this page. That is a property of any photograph, not a
@@ -52,18 +57,18 @@ presenting a sum as a derivation would be the same sloppiness in another form.
 | verdict of each cycle's round 1 | **18 of 18 rejected** | snapshot | `awk -F'\t' '$1>=1 && $2==1{print $3}' rounds.tsv \| sort \| uniq -c` |
 | median rounds per cycle | **4** | snapshot | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
 | median rounds per milestone | **3** | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
-| worst case per cycle | **11** | snapshot | same as the median command, replacing the last stage with `END{print a[NR]}` |
-| worst case per milestone | **5** | snapshot | same, over the per-milestone lengths |
+| worst case per cycle | **11** | snapshot | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| tail -1` |
+| worst case per milestone | **5** | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| tail -1` |
 | milestones approved with no rejection | **1** (`2dbbdfc`) | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{if(n==1) print $4; n=0}' rounds.tsv` |
 | rounds of features 00, 01, 02 | **25** | the plan at the cut, via each feature's closing round | `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -E '^\| 0[0-2] \|' \| sed -E 's/.*\(r([0-9]+).*/\1/' \| awk '{s+=$1} END{print s}'` |
 | rounds of feature 03 before the log | **5** | `implementation/03-loop-hardening.md`; cross-checked against the snapshot | `awk -F'\t' 'NR==1{print $3-1}' docs/metrics/rounds-log-b0bdf4d.tsv` |
 | rounds of the initial plan cycle | **5** | commits and historical STATUS — **second source** | `echo $(( $(git log --oneline 6afb57d..3ab6794 \| grep -cE ' plan r[0-9]+:') + 1 ))` |
 | rounds before instrumentation | **35** — *composite* | the three rows above | 25 + 5 + 5 |
 | full history | **123** — *composite* | logged rounds + the row above | 88 + 35 |
-| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 predating the log | 18 + 5 |
+| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 predating the log | 18 + 5; the five earlier ones are checked one by one, below |
 | external install: commits at `4908bfb` | **185** | **`alexweil/inquirylab`** — *not derivable from a clone of axel* | `git rev-list --count 4908bfb`, run **in that repository** |
-| external install: files installed | **20** | ídem, commit `846308f` | `git show --stat 846308f`, run **in that repository** |
-| external install: files mapped by `/adopt` | **8** | ídem, commit `4908bfb` | `git show --stat 4908bfb`, run **in that repository** |
+| external install: files installed | **20** | same repository, commit `846308f` | `git show --stat 846308f`, run **in that repository** |
+| external install: files mapped by `/adopt` | **8** | same repository, commit `4908bfb` | `git show --stat 4908bfb`, run **in that repository** |
 | commits, days, closed features | **212**, **3**, **13** | this repo's git history at the cut | `git rev-list --count b0bdf4d` · `git log b0bdf4d --format='%ad' --date=short \| sort -u \| wc -l` · `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -cE '^\| [0-9]+ \|.*\*\*Cerrado\*\*'` |
 
 Closed features is counted against the plan **as it was at the cut**, not against
@@ -84,8 +89,8 @@ awk -f docs/metrics/normalize.awk docs/metrics/rounds-log-b0bdf4d.tsv > rounds.t
 ```
 
 All three must exit `0`; that is a postcondition, not a courtesy.
-[`cut.awk`](metrics/cut.awk) fails if the cut SHA is missing or duplicated — a
-recorte that fails open is worse than none — and
+[`cut.awk`](metrics/cut.awk) fails if the cut SHA is missing or duplicated — a cut
+that fails open is worse than none — and
 [`normalize.awk`](metrics/normalize.awk) rejects a log whose round sequence is
 inconsistent rather than silently merging cycles.
 
@@ -134,6 +139,21 @@ would otherwise look like a lucky regularity: those 25 come from the **closing
 round** each feature records in the plan, not from counting review-log entries.
 They are not the same — feature 01's review log lists ten entries and its closing
 round is the eleventh. Counting entries would quietly give 10.
+
+**The five cycles predating the log, checked individually** — each command prints
+the first round's verdict for its cycle:
+
+```sh
+grep -m1 -E '^- \*\*Ronda 1:' docs/implementation/00-bootstrap.md
+grep -m1 -E '^- \*\*Ronda 1:' docs/implementation/01-installer.md
+grep -m1 -E '^- \*\*Ronda 1:' docs/implementation/02-remote-install.md
+grep -m1 -E '^- \*\*Ronda 1:' docs/implementation/03-loop-hardening.md
+git show 2f7c814:docs/STATUS.md | grep -m1 -o 'la ronda 1 [^:]*'
+```
+
+All five report a rejection. The fifth reads `la ronda 1 pidió cambios` — *round 1
+asked for changes* — which is the historical STATUS of the plan cycle, the only one
+of the five without a document under `implementation/`.
 
 *"Zero first-round approvals" spans all 23 cycles, and is shown by the verdict of
 each cycle's first round — not by its closing round, which proves nothing about
