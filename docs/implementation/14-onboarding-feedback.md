@@ -42,11 +42,13 @@ La generalización: **cuando un criterio no cierra después de dos intentos de r
 
 Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte rondas de la unidad `13` fueron exactamente esto — sus commits al ledger y los del hijo se mezclaban en un solo rango, así que cada corrección de uno movía la evidencia del otro, y el ciclo persiguió con redacciones un problema que era de instrumento.
 
-**`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango.** El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
+**`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango, y ahora *derivada* y no recordada.** Tras el olvido de `ae28842`, el padre adoptó el método correcto: `git log --format=%H 2985447..HEAD -- <ledger>` y declarar **todo** lo que salga. El hijo lo re-derivó por su cuenta y **las dos derivaciones coinciden**, que es lo que vuelve creíble la lista. El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
 
 - `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
 - `71c78be` — registro del **tercer desempate humano («a»)** que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `341c957` — **tercer desempate humano, «c)»**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
+- `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
 - `ae28842` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
 
 > **Por qué se justifica `AUTORIZADOS`, y es por esta vez y no por las otras.** Hasta acá el mecanismo venía **registrando**; ésta es la vez que **detectó** — y detectó un error de quien lleva la lista, que es exactamente el caso para el que existe. Un criterio de este tipo no se justifica por las veces que pasa: se justifica por la vez que atrapa algo que ninguna lectura habría visto. Si no hubiera estado, el commit del corte habría quedado dentro del rango del hijo sin declarar y C12 habría fallado —o peor, habría pasado inadvertido.
@@ -58,16 +60,33 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **El chequeo tiene que ser fail-closed de verdad, y el mío no lo era.** Al re-correrlo tras el corte por cuota, mi versión anterior recorría los commits en un `for … done | head`, así que el flag de violación quedaba en el subshell del pipe y **el chequeo imprimía «pasa» mientras había impreso una violación dos líneas arriba**. Reescrito sin pipeline y con **prueba negativa**: quitando un SHA de `AUTORIZADOS`, el chequeo devuelve `rc=1` y nombra la violación. Un verificador que nunca rechazó nada no está verificado — es el mismo criterio que la unidad aplicó a los fixtures, aplicado ahora a su propia auditoría.
 
-**Auditoría por commit re-corrida al incorporarlos**, que es la razón por la que la lista existe. El resultado se publica como **procedimiento y desenlace**, no como inventario:
+**El chequeo real de C12, ejecutable y corrido.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
-```sh
-# por cada commit del rango, la lista que le corresponde según esté o no en AUTORIZADOS
-for c in $(git rev-list 2985447..HEAD); do git show --name-only --format= "$c"; done
+```bash
+#!/bin/bash
+# C12 — alcance por commit, fail-closed. Sin pipeline: el flag debe sobrevivir.
+AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957"
+LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
+HIJO='docs/STATUS.md docs/IMPLEMENTATION.md docs/implementation/14-onboarding-feedback.md'
+viol=0
+while read -r c; do
+  s=$(git rev-parse --short "$c")
+  if [[ " $AUT " == *" $s "* ]]; then
+    while read -r p; do [ -z "$p" ] && continue
+      case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre $s: $p"; viol=1;; esac
+    done <<< "$(git show --name-only --format= "$c")"
+  else
+    while read -r p; do [ -z "$p" ] && continue
+      case " $HIJO " in *" $p "*) ;; *) echo "VIOLACION hijo $s: $p"; viol=1;; esac
+    done <<< "$(git show --name-only --format= "$c")"
+  fi
+done < <(git rev-list 2985447..HEAD)
+[ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
 ```
 
-Desenlace: **pasa, fail-closed** — todo commit del padre toca solo `docs/STATUS.md` y/o el ledger, y ningún commit del hijo toca el ledger.
+**Corrido**: `C12 PASA`, `rc=0`. **Prueba negativa corrida**: quitando `ae28842` de `AUTORIZADOS`, devuelve `rc=1` y `VIOLACION hijo ae28842: docs/implementation/pipeline-2026-07-29-3.md`. Un verificador que nunca rechazó nada no está verificado.
 
-*(Este párrafo publicaba antes «los cinco commits del hijo» con su lista, y la r6 lo encontró **desincronizado apenas nació**: el commit que lo escribía ya era el sexto. Es la regla de contadores móviles violada dentro del párrafo que demuestra el mecanismo que la hace cumplir — la forma más pura del defecto en toda la unidad. `AUTORIZADOS` es la **única** lista necesaria, porque es cerrada por construcción: la escribe el padre cuando commitea. La del hijo se deriva.)*
+**El chequeo anterior fallaba abierto, y es el peor modo posible.** Recorría los commits en un `for … done | head`, así que el flag moría en el subshell del pipe: imprimió `VIOLACION: ae28842` y **dos líneas después** `C12 pasa`. Ruidoso y aprobatorio a la vez — quien lee se queda con el veredicto. La forma de arriba no tiene pipeline y por eso el flag sobrevive.
 
 **Y la observación que vale más que el caso** (pedida por el padre para el cierre, y escrita acá porque es donde ocurrió): **es la primera vez que el mecanismo se ejerce con commits reales del padre dentro del rango, y pasó. Con el diff agregado habría roto.** No es una anécdota: es la evidencia de la tesis que la r2 dejó escrita —que el instrumento importa más que la redacción— producida por el propio proceso que la tesis describe.
 
@@ -525,7 +544,11 @@ contact_links:
     about: What this round of feedback is looking for, and what is out of scope today.
 ```
 
-**Claves opcionales deliberadamente omitidas**, declaradas porque «la especificación es completa» tiene que incluir lo que *no* está: `title`, `labels`, `assignees`, `projects` y `type` en la raíz (`labels` en particular queda fuera por la decisión ya registrada de no referenciar etiquetas que no existen); `render` en los `textarea`; `description` y `placeholder` donde no aparecen; y `multiple` en el `dropdown`. El conjunto de atributos usado es `value` en `markdown`, `label` y `placeholder` en `input`, `label` y `description` en `textarea`, `label` y `options` en `dropdown` y en `checkboxes`.
+**Los bloques de arriba son la autoridad, y lo que no está en ellos no está.** La versión anterior enumeraba «las claves opcionales omitidas» como si esa lista pudiera ser completa, y la r11 mostró que no lo era —faltaban `value` en `input`/`textarea` y `default` en `dropdown`, entre otras—. **Volver a enumerar la especificación de un tercero es exactamente lo que la inversión manda no hacer**: es la misma condición de cierre abierta que costó cuatro rondas, reapareciendo en la sección que la reemplazó.
+
+Entonces no se enumeran las omisiones. Se conserva **una sola**, porque necesita justificación local y no se deduce de los bloques:
+
+- **`labels` queda fuera a propósito.** Aplicar una etiqueta que no existe en el repo es un settings de GitHub, y crear etiquetas está fuera del alcance por el ajuste (b) del gate. Declarar `labels` apuntando a etiquetas inexistentes sería publicar una afirmación que no podemos verificar ni volver verdadera.
 
 **Cómo se valida, y por qué esto cambió en la r8.** Hasta la r7 el chequeo era «enumerar las causas por las que GitHub descarta un formulario y verificar que ninguna ocurra». Las rondas r5, r6, r7 y r8 encontraron, cada una, **causas nuevas que la enumeración anterior no tenía** — y no por descuido: la lista de causas es de GitHub, vive en su documentación, y **yo no puedo acotarla**. Un criterio cuya condición de cierre es «haber agotado la especificación de un tercero» no cierra nunca. Es exactamente la clase abierta que esta unidad diagnosticó, alojada dentro del criterio que debía cerrarla.
 
@@ -567,35 +590,73 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 **Límite declarado, y ahora es honesto porque el chequeo ya no promete lo contrario**: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa prohibida en esta unidad. Esta tabla registra **las reglas que la documentación publica y que conocemos**; que GitHub tenga otras no documentadas es posible y no se puede descartar desde acá. Lo que sí se garantiza es lo acotado: los archivos coinciden con una especificación cerrada, y esa especificación fue elegida contra las reglas de arriba.
 
-### El comparador: `diff` byte a byte, no igualdad de objetos
+### El verificador de plantillas — ejecutable, corrido, con sus casos negativos
 
-La r9 encontró que «coincide con la especificación» no se puede verificar parseando y comparando objetos, y lo **reprodujo**: `name: injected` seguido de `name: expected` produce el mismo objeto que `name: expected` solo. O sea que un archivo con una **clave duplicada** —una vía de inyección, no una torpeza— pasaba un comparador estructural mientras contradecía C6.
+La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Se reemplaza por un validador único, real, y **corrido**:
 
-**El comparador es `diff` byte a byte contra el bloque canónico extraído de esta bajada**, más el parseo como chequeo independiente:
+```ruby
+#!/usr/bin/env ruby
+# verify-templates.rb <spec.md> <dir>
+# Extrae los bloques canonicos de la bajada, exige exactamente uno por archivo,
+# compara byte a byte, parsea, y verifica el inventario exacto del directorio.
+require 'yaml'
+spec_path, dir = ARGV[0], ARGV[1]
+NAMES = %w[config.yml friction-or-question.yml install-failed.yml].freeze
+failed = false
+def bad(m) warn "FAIL: #{m}"; end
 
-```sh
-# extraer el bloque canónico de la bajada y comparar
-diff <(extraer_bloque install-failed) .github/ISSUE_TEMPLATE/install-failed.yml   # debe ser vacío
-/usr/bin/ruby -ryaml -e 'YAML.load_file(ARGV[0])' .github/ISSUE_TEMPLATE/install-failed.yml   # debe salir 0
+abort("FAIL: spec no legible: #{spec_path}") unless File.readable?(spec_path)
+spec = File.read(spec_path, encoding: "UTF-8")
+
+actual = Dir.exist?(dir) ? Dir.children(dir).sort : nil
+if actual.nil?
+  bad "directorio ausente: #{dir}"; failed = true
+elsif actual != NAMES.sort
+  bad "inventario != esperado: #{actual.inspect} vs #{NAMES.sort.inspect}"; failed = true
+end
+
+NAMES.each do |n|
+  marker = "`.github/ISSUE_TEMPLATE/#{n}`"
+  re = /^#{Regexp.escape(marker)}\s*\n+```yaml\n(.*?)^```\s*$/m
+  blocks = spec.scan(re).map(&:first)
+  if blocks.size != 1
+    bad "#{n}: se exige exactamente 1 bloque canonico, hay #{blocks.size}"; failed = true; next
+  end
+  canon = blocks.first
+  path = File.join(dir, n)
+  unless File.readable?(path)
+    bad "#{n}: archivo ausente"; failed = true; next
+  end
+  if File.read(path, encoding: "UTF-8") != canon
+    bad "#{n}: difiere del bloque canonico"; failed = true; next
+  end
+  begin
+    YAML.load(canon)
+  rescue => e
+    bad "#{n}: el bloque canonico no parsea: #{e.class}"; failed = true
+  end
+end
+
+if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK"; exit 0 end
 ```
 
-Los dos chequeos son distintos y los dos hacen falta: el `diff` prueba **literalidad** —ninguna clave de más, ninguna duplicada, ningún byte distinto— y el parseo prueba que el bloque canónico **es YAML válido**, que el `diff` por sí solo no diría. Con esto la política sobre aliases, documentos múltiples y claves repetidas deja de necesitar redacción: cualquiera de esas construcciones es una diferencia de bytes.
+**Un solo programa hace las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
 
-*(Verificado al escribir esto, y encontró un defecto real: el primer bloque **no parseaba**. La `description` del campo `final-line` contenía `fin: rc=` sin comillas, y los dos puntos seguidos de espacio hacían que YAML lo leyera como un mapa anidado. Corregido con comillas. Es exactamente lo que un chequeo corrido encuentra y uno razonado no — la misma disciplina con que el padre verificó el comando del ledger.)*
+**Corrido, con su camino positivo y siete casos negativos** — y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
 
-### Fixtures: mutaciones de los archivos reales
+| Caso | Resultado |
+|---|---|
+| los tres archivos idénticos a sus bloques | `VERIFY: OK`, `rc=0` |
+| un byte cambiado (`blank_issues_enabled: true` → `false`) | `rc=1`, «difiere del bloque canonico» |
+| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | `rc=1`, «difiere del bloque canonico» |
+| archivo de más en el directorio | `rc=1`, «inventario != esperado» |
+| archivo ausente | `rc=1`, inventario **y** archivo ausente |
+| bloque ausente en la spec | `rc=1`, «se exige exactamente 1 bloque canonico, hay 0» |
+| bloque duplicado en la spec | `rc=1`, «…hay 2» |
+| spec ilegible | `rc=1`, aborta |
 
-Con la inversión, los fixtures dejan de ser formularios sintéticos que violan reglas ajenas y pasan a ser **mutaciones de los tres archivos reales**, una por cada sitio que C15 fija. Es lo que responde el punto de la r8 sobre la biyección: la clave de comparación ya no es la invariante sino **el sitio**.
+**Dos defectos que encontró la corrida y ninguna lectura habría visto**: el Ruby de sistema lee en **US-ASCII** por defecto, así que `File.read` sin `encoding:` explotaba con `invalid byte sequence` sobre los guiones largos del doc; y la comparación tenía que ser de texto en la misma codificación, no `binread` contra un string UTF-8. Es la tercera vez en la unidad que correr encuentra lo que razonar no.
 
-| Familia de mutación | Se genera | Esperado |
-|---|---|---|
-| clave faltante | quitando cada clave fijada, una por vez | rechazo, nombrando la clave |
-| clave extra | agregando una clave ajena en cada nivel fijado (raíz, elemento, `attributes`) | rechazo, nombrando la clave |
-| tipo cambiado | cambiando el tipo de cada valor fijado | rechazo |
-| valor cambiado | alterando cada valor fijado | rechazo |
-| **positivo** | los tres archivos sin mutar | aceptación, `rc=0` |
-
-**La cobertura se deriva del artefacto, no se declara**: los sitios salen de recorrer la especificación de C15, así que «un fixture por sitio» es comprobable enumerando la especificación — y **crece solo si crece la especificación**, que es nuestra. Eso es lo que la vuelve una condición de cierre alcanzable, a diferencia de la anterior.
 ### `README.md` — edición acotada
 
 Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, y que este feature activa:
@@ -638,6 +699,20 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r11 (base `6ec4b48`, HEAD `8c941ad`) — CHANGES_REQUESTED · **5 puntos, cero preferencias** · **segundo corte por tope** → tercer desempate humano «c)»
+
+Codex declaró **sólido el contenido canónico de los YAML** frente a la documentación pública. Lo que no cerraba era **la maquinaria alrededor**, y los cinco puntos tienen un nombre que esta unidad ya había acuñado: **mecanismo declarado que no ejecuta**. El humano eligió «c)» — reanudar con el alcance intacto, sin recortes, habiendo el padre recomendado cerrar sin la unidad y ofrecido recortar el andamiaje.
+
+1. **El comparador publicado no era ejecutable**: invocaba un `extraer_bloque` inexistente, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —uno que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Reemplazado por **un validador Ruby único, real y corrido**, con camino positivo y **siete casos negativos**, todos ejecutados.
+2. **El chequeo fail-closed de C12 estaba declarado pero no publicado**: el procedimiento del doc solo corría `git show`, sin comparar contra `AUTORIZADOS`, sin allowlists, sin flag, terminando siempre en `0`. Materializado, corrido, y con **prueba negativa corrida**.
+3. **C6/C15 no exigían el inventario completo del directorio**: un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El validador lo cubre, y de paso vuelve mecánica la unicidad de `name` entre todas las plantillas.
+4. **Hermano del contador móvil** en STATUS («Los tres son del mismo bloque»), retirado.
+5. **La lista de «claves opcionales omitidas» se presentaba como completa y no lo era.** La salida coherente con la inversión no es completarla sino **dejar de enumerar la spec ajena**: los bloques literales son la autoridad, y se conserva una sola omisión —`labels`— porque necesita justificación local.
+
+**El tercero de la clase, cerrado en la misma ronda.** El padre observó que los puntos 1 y 2 eran ambos «mecanismo declarado que no ejecuta» y sugirió buscar un tercero antes de que apareciera solo. Lo había: **la tabla de «familias de mutación»** de los fixtures —descritas en prosa, sin generador—. Queda disuelta: las mutaciones son ahora los siete casos negativos **ejecutados** del validador.
+
+**Y otra vez, correr encontró lo que leer no**: el Ruby de sistema lee en **US-ASCII** por defecto, así que el validador explotaba con `invalid byte sequence` sobre los guiones largos del doc antes de comparar un solo byte. Es la tercera aparición del mismo fenómeno en la unidad.
 
 ### r9 (base `6ec4b48`, HEAD `3f270ff`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · la ronda que materializó la inversión
 
