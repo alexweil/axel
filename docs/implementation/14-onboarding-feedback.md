@@ -68,11 +68,10 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 ```bash
 #!/bin/bash
-# C12 — alcance por commit, fail-closed. Comprueba el rc de cada git y desactiva
-# la deteccion de renames, que ocultaba el origen prohibido de un path permitido.
-AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957 380eb74 84002a0"
+# C12 — alcance por commit, fail-closed. Identidad por SHA COMPLETO: `--short`
+# depende de core.abbrev y de colisiones de prefijo, asi que no es identidad.
+AUT="84002a0009fcf00c550e2575ebb44f3cf0f8db55 380eb749b6a635c76d5093286c60557b8128855d 341c9577afdd816e189171cdfc192682039ac7f0 505325120381ba7e66c0471f1ad2489fee5f1166 140ad61ef2aa553b8ba73f7db06d995accb5ec40 ae2884223eb103f73deaf4880e9ba22d6e4eeb0f 7f5749495bc2ba4d15ce79ddea7d0dbe7f6b2b31 68a2fe52f33cd604f8ee54ecd9558cfb3621bbc2 e5ee8f23f4e6891ecc12679147d7219bb15ce339 71c78bee5dd2db85daccc8de87543a5ea9d9e4da 2fc4dd47e07db0064b99d6d658cfffecec31a792 "
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
-# Todos los paths finales de §Alcance, incluidos los que crea la implementacion.
 HIJO='docs/STATUS.md
 docs/IMPLEMENTATION.md
 docs/implementation/14-onboarding-feedback.md
@@ -92,21 +91,27 @@ if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then
 fi
 [ -z "$commits" ] && { echo "FALLA: rango vacio; se esperaba al menos un commit"; exit 1; }
 while read -r c; do
-  s=$(git rev-parse --short "$c") || { echo "FALLA: rev-parse de $c"; exit 1; }
   if ! paths=$(git show --no-renames --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then
-    echo "FALLA: git show de $s no pudo ejecutarse"; exit 1
+    echo "FALLA: git show de $c no pudo ejecutarse"; exit 1
   fi
-  [ -z "$paths" ] && { echo "FALLA: $s no declara paths; un commit vacio no es auditable"; exit 1; }
-  if [[ " $AUT " == *" $s "* ]]; then
+  [ -z "$paths" ] && { echo "FALLA: $c no declara paths; un commit vacio no es auditable"; exit 1; }
+  if [[ " $AUT " == *" $c "* ]]; then
     while read -r p; do [ -z "$p" ] && continue
-      case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre $s: $p"; viol=1;; esac
+      case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre ${c:0:7}: $p"; viol=1;; esac
     done <<< "$paths"
   else
     while read -r p; do [ -z "$p" ] && continue
-      grep -qxF "$p" <<< "$HIJO" || { echo "VIOLACION hijo $s: $p"; viol=1; }
+      grep -qxF "$p" <<< "$HIJO" || { echo "VIOLACION hijo ${c:0:7}: $p"; viol=1; }
     done <<< "$paths"
   fi
 done <<< "$commits"
+# Todo entregable versionado debe ser archivo REGULAR: un symlink entra con modo
+# 120000 y las lecturas lo siguen, asi que el chequeo de contenido no lo ve.
+while read -r p; do [ -z "$p" ] && continue
+  m=$(git ls-files -s -- "$p" | awk '{print $1}')
+  [ -z "$m" ] && continue
+  [ "$m" = "100644" ] || { echo "VIOLACION modo: $p es $m y no un archivo regular"; viol=1; }
+done <<< "$HIJO"
 [ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
 ```
 
@@ -722,14 +727,59 @@ awk '/^````ruby$/{f=1;next} f&&/^````$/{exit} f' "$DOC" > "$TMP/v.rb"
 
 **Dos defectos que encontró la corrida y ninguna lectura habría visto**: el Ruby de sistema lee en **US-ASCII** por defecto, así que `File.read` sin `encoding:` explotaba con `invalid byte sequence` sobre los guiones largos del doc; y la comparación tenía que ser de texto en la misma codificación, no `binread` contra un string UTF-8. Es la tercera vez en la unidad que correr encuentra lo que razonar no.
 
-### `README.md` — edición acotada
+### `README.md` — edición acotada, y ahora **verificada como diff cerrado**
 
-Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, y que este feature activa:
+Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, que este feature activa. La r14 encontró que «acotada» **no estaba verificado por nada**: `README.md` está en la allowlist de C12, así que una reescritura arbitraria devolvía `C12 PASA` —lo reprodujo—, y C7 solo exigía los dos links y la desaparición de la marca. Una implementación podía conservar los links y cambiar toda la prosa alrededor, incumpliendo §Alcance.
 
-1. El bloque en cursiva del encabezado, que dice que el doc de métricas llega en el feature 14 ⇒ pasa a citar `docs/metrics.md` como link.
-2. El blockquote final, que nombra en prosa el doc de métricas y la vía de feedback ⇒ desaparece como marca de pendiente; sus dos destinos entran a §Links como links.
+**La edición se fija como literal, igual que los YAML**, y C7 la verifica como **diff cerrado**: el conjunto de líneas quitadas y el de agregadas deben ser **exactamente** los declarados.
 
-Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta.
+Líneas que se quitan:
+
+````readme-quita
+with the earlier 35 recovered from a separate source. *Coming in feature 14: the metrics document
+that publishes the snapshot and the exact command behind every figure — not yet published, so for
+now these numbers are only as good as this repo's git history, which you can read.*
+> **Coming in feature 14, and deliberately not linked yet:** the **reviewer metrics document** — the
+> versioned round-log snapshot, the cut commit, and the exact command behind every figure on this
+> page — and **how to give feedback**, a `CONTRIBUTING.md` plus issue templates. Both are named here
+> in prose on purpose: this page ships with zero broken links, and these two become links when the
+> artefacts exist.
+````
+
+Líneas que se agregan:
+
+````readme-pone
+with the earlier 35 recovered from a separate source. Every figure on this page is derived in
+[docs/metrics.md](docs/metrics.md), which publishes the versioned snapshot, the cut commit and the
+exact command behind each one.
+- [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the command behind each
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round is looking for
+````
+
+Los conjuntos salieron de **simular la edición en un worktree descartable** y capturar el diff real, no de escribirlos a mano — que es la misma disciplina de los bloques canónicos: el literal se deriva del artefacto, no al revés.
+
+```bash
+#!/bin/bash
+# C7 — la edicion del README es ACOTADA, verificada como diff cerrado.
+# El conjunto de lineas quitadas y agregadas debe ser EXACTAMENTE el declarado.
+BASE="${1:-2985447}"; DOC="${2:-docs/implementation/14-onboarding-feedback.md}"
+esperado_quita=$(awk '/^````readme-quita$/{f=1;next} f&&/^````$/{exit} f' "$DOC")
+esperado_pone=$(awk '/^````readme-pone$/{f=1;next} f&&/^````$/{exit} f' "$DOC")
+[ -z "$esperado_quita" ] && { echo "FALLA: no se pudo extraer el bloque readme-quita"; exit 1; }
+[ -z "$esperado_pone" ]  && { echo "FALLA: no se pudo extraer el bloque readme-pone"; exit 1; }
+if ! d=$(git diff "$BASE..HEAD" -- README.md 2>/dev/null); then
+  echo "FALLA: git diff no pudo ejecutarse"; exit 1
+fi
+real_quita=$(printf '%s\n' "$d" | grep '^-' | grep -v '^---' | sed 's/^-//')
+real_pone=$(printf '%s\n' "$d"  | grep '^+' | grep -v '^+++' | sed 's/^+//')
+rc=0
+diff <(printf '%s\n' "$esperado_quita") <(printf '%s\n' "$real_quita") >/dev/null || { echo "FALLA: las lineas QUITADAS no son las declaradas"; rc=1; }
+diff <(printf '%s\n' "$esperado_pone")  <(printf '%s\n' "$real_pone")  >/dev/null || { echo "FALLA: las lineas AGREGADAS no son las declaradas"; rc=1; }
+[ "$rc" -eq 0 ] && echo "C7 PASA" || echo "C7 FALLA"
+exit $rc
+```
+
+Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
 
 ## Criterios de cierre
 
@@ -764,6 +814,17 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r14 (base `6ec4b48`, HEAD `511c803`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias**
+
+**El harness aguantó el ataque, y ésa es la primera evidencia positiva de la unidad.** Codex lo atacó a pedido mío y reporta: «*extraído literalmente devuelve `VERIFY: OK`, y rechaza bloque no compilable, opener duplicado y directorio-symlink*» — incluidos dos ataques que yo no había corrido. **La clase «lo que corro puede diferir de lo que publico» quedó cerrada**, que es lo que sostiene el diagnóstico de convergencia frente a los dos anteriores, que se apoyaban en que los puntos bajaban.
+
+Los cuatro puntos nuevos son de **otra forma**: no verificadores que fallan sobre sí mismos, sino **verificación cuyo alcance no cubría lo que decía cubrir**.
+
+1. **C12 usaba una abreviatura configurable como identidad.** `AUTORIZADOS` tenía SHA de siete caracteres y la identidad salía de `git rev-parse --short`, que depende de `core.abbrev`. Reproducido con `core.abbrev=12`: los once autorizados pasan a doce caracteres, ninguno coincide, y **C12 falla sobre un rango válido**. Más el riesgo de colisión de prefijo. Cerrado comparando los **SHA completos** que produce `rev-list`; la abreviatura queda solo para los mensajes. Verificado en las dos versiones: con `core.abbrev=12` la anterior falla y la nueva pasa.
+2. **La edición «acotada» del README no estaba verificada por nada.** `README.md` está en la allowlist de C12, así que una **reescritura arbitraria** devolvía `C12 PASA` —Codex lo reprodujo—, y C7 solo exigía los dos links. Cerrado convirtiendo C7 en un **diff cerrado**: las líneas quitadas y las agregadas deben ser exactamente las declaradas, y los dos conjuntos se derivaron **simulando la edición en un worktree descartable**, no escribiéndolos a mano. Probado en los dos sentidos: acepta la edición prevista exacta y **rechaza esa misma edición más una sola línea de prosa cambiada**.
+3. **El barrido del síntoma «symlink» había quedado limitado a los YAML.** Codex creó el snapshot de métricas como enlace: git lo registró con modo `120000`, las lecturas siguieron el enlace y C12 aprobó. **Es exactamente el barrido de síntoma que el padre me había enseñado a hacer dos rondas antes y que no hice**: cerré la clase dentro de `.github/` y no me pregunté qué otros entregables tenían la misma superficie. Cerrado exigiendo modo `100644` a **todos** los paths de §Alcance vía `git ls-files -s`.
+4. **La corrección del ledger conserva el defecto denunciado** —«cada corte lleva su desenlace» sigue siendo universal sobre un conjunto creciente— y su comando mezcla dominios: devuelve también el corte que fue **por indisponibilidad y no por deadlock**. Es del padre y no se toca.
 
 ### r13 (base `6ec4b48`, HEAD `6ff155c`) — CHANGES_REQUESTED · **5 bloqueantes, cero preferencias**
 
