@@ -1,6 +1,6 @@
-# cut.awk — reconstruye el snapshot del round log a un commit de corte.
-# Falla si el SHA no aparece o aparece más de una vez: un recorte que falla
-# abierto es peor que no tenerlo.
+# cut.awk — reconstructs the round-log snapshot at a cut commit.
+# Fails if the SHA is absent or appears more than once: a recorte that fails
+# open is worse than having none at all.
 #   awk -v cut=<sha> -f cut.awk <round-log> > snapshot.tsv
 BEGIN { FS = "\t" }
 { line[NR] = $0 }

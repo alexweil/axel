@@ -43,9 +43,13 @@ the contribution.
 ## Reporting an install failure
 
 The [install-failed template](.github/ISSUE_TEMPLATE/install-failed.yml) asks for
-five things. Here is why each one matters, so you can judge what to include if you
+six things. Here is why each one matters, so you can judge what to include if you
 report some other way:
 
+- **Your operating system and git version.** Everything recorded so far has run on
+  macOS, and `git` behaviour around ignore rules and clean-tree checks is the part
+  most likely to differ elsewhere. If your report is the first from another
+  platform, that line is the most valuable thing in it.
 - **The final line.** Every controlled exit prints `── axel · fin: rc=N · … ──`.
   Its absence means the run was interrupted rather than refused, which is a
   different problem with a different fix.

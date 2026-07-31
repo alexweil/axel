@@ -814,6 +814,20 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r24 (base `b0fa345`, HEAD `17eb93a`) — CHANGES_REQUESTED · **5 bloqueantes** · **primera del ciclo de implementación**
+
+**Tres de los cinco tocan los artefactos**, y es la primera vez en la unidad que el grueso de una review cae sobre lo que se publica en vez de sobre la maquinaria:
+
+1. **`docs/metrics.md` no cumplía C3/C5**: la matriz **omitía las cifras de la instalación externa** (185/20/8), no desglosaba las 35 históricas en sus tres fuentes, y reemplazaba comandos exactos por descripciones («lengths per cycle, then median»). Las tres cosas eran justamente lo que C3 exige. Completada: cada cifra con fuente, corte y comando **verificado corriéndolo**, y las externas rotuladas como derivables solo contra `alexweil/inquirylab`.
+2. **`CONTRIBUTING.md` decía «cinco cosas» donde la plantilla pide seis** — faltaba explicar por qué se piden sistema operativo y versión de git. Corregido con la justificación que faltaba: todo lo registrado corrió en macOS, así que el primer reporte desde otra plataforma es el dato más valioso de ese issue.
+3. **`cut.awk` conservaba comentarios en español** contra C4, que exige inglés en los dos `awk` publicados. Traducido, con la lógica intacta.
+
+Los otros dos: faltaba **correr los negativos de `A`, `N8–N11` y `P1–P5`** —la evidencia cubría solo los siete de `C`—, y el estado versionado no reconstruía el ciclo (`STATUS` publicaba una racha arrastrada de dos rondas antes, `IMPLEMENTATION` seguía diciendo «bajada fina escrita, en review»).
+
+**Dos casos negativos míos estaban mal construidos y no ejercitaban nada**, cosa que descubrí al correrlos: `P5` usaba como base un commit donde el README **no había cambiado** respecto del baseline, y `P4` no tenía forma de matchear dos veces. Reconstruidos con worktrees descartables que sí producen la condición —una base con una reescritura ajena y una con el bloque de links duplicado—: ahora los dos fallan por su causa.
+
+> **El argumento retrospectivo más fuerte de la corrida, y merece quedar acá.** La primera versión del verificador de plantillas **no compilaba**, así que sus siete negativos devolvían `rc=1` sin haber corrido nunca. **Quince rondas de bajada contra un banco simulado no lo detectaron; el primer uso contra artefactos reales, sí.** Es evidencia dura de que la decisión humana del 2026-07-30 —construir los verificadores en la implementación— era correcta, y de que la razón que la justificaba no era teórica.
+
 ### r23 (base `6ec4b48`, HEAD `b0fa345`) — **APPROVED de la bajada**
 
 Cierra el ciclo de bajada. **`b0fa345` era HEAD al aprobarse y el árbol estaba limpio**, así que el veredicto cubre todo el ciclo: **cero commits posteriores, cero no-revisados**.

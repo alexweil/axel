@@ -50,13 +50,20 @@ presenting a sum as a derivation would be the same sloppiness in another form.
 | complete cycles | **18** | snapshot | `awk -F'\t' '$1>=1{c[$1]=1} END{print length(c)}' rounds.tsv` |
 | …and all of them closed | **18** | snapshot | `awk -F'\t' '$1>=1{l[$1]=$3} END{n=0; for(k in l) if(l[k]=="APPROVED") n++; print n}' rounds.tsv` |
 | verdict of each cycle's round 1 | **18 of 18 rejected** | snapshot | `awk -F'\t' '$1>=1 && $2==1{print $3}' rounds.tsv \| sort \| uniq -c` |
-| median rounds per cycle | **4** | snapshot | lengths per cycle, then median |
-| median rounds per milestone | **3** | snapshot | lengths per milestone, then median |
-| worst case | **11** per cycle, **5** per milestone | snapshot | same, taking the maximum |
+| median rounds per cycle | **4** | snapshot | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
+| median rounds per milestone | **3** | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
+| worst case per cycle | **11** | snapshot | same as the median command, replacing the last stage with `END{print a[NR]}` |
+| worst case per milestone | **5** | snapshot | same, over the per-milestone lengths |
 | milestones approved with no rejection | **1** (`2dbbdfc`) | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{if(n==1) print $4; n=0}' rounds.tsv` |
-| rounds before instrumentation | **35** — *composite* | see below | 25 + 5 + 5 |
-| full history | **123** — *composite* | 88 + 35 | — |
-| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 earlier | — |
+| rounds of features 00, 01, 02 | **25** | the plan at the cut, via each feature's closing round | `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -E '^\| 0[0-2] \|' \| sed -E 's/.*\(r([0-9]+).*/\1/' \| awk '{s+=$1} END{print s}'` |
+| rounds of feature 03 before the log | **5** | `implementation/03-loop-hardening.md`; cross-checked against the snapshot | `awk -F'\t' 'NR==1{print $3-1}' docs/metrics/rounds-log-b0bdf4d.tsv` |
+| rounds of the initial plan cycle | **5** | commits and historical STATUS — **second source** | `echo $(( $(git log --oneline 6afb57d..3ab6794 \| grep -cE ' plan r[0-9]+:') + 1 ))` |
+| rounds before instrumentation | **35** — *composite* | the three rows above | 25 + 5 + 5 |
+| full history | **123** — *composite* | logged rounds + the row above | 88 + 35 |
+| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 predating the log | 18 + 5 |
+| external install: commits at `4908bfb` | **185** | **`alexweil/inquirylab`** — *not derivable from a clone of axel* | `git rev-list --count 4908bfb`, run **in that repository** |
+| external install: files installed | **20** | ídem, commit `846308f` | `git show --stat 846308f`, run **in that repository** |
+| external install: files mapped by `/adopt` | **8** | ídem, commit `4908bfb` | `git show --stat 4908bfb`, run **in that repository** |
 | commits, days, closed features | **212**, **3**, **13** | this repo's git history at the cut | `git rev-list --count b0bdf4d` · `git log b0bdf4d --format='%ad' --date=short \| sort -u \| wc -l` · `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -cE '^\| [0-9]+ \|.*\*\*Cerrado\*\*'` |
 
 Closed features is counted against the plan **as it was at the cut**, not against
