@@ -50,6 +50,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `71c78be` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
 - `380eb74` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
+- `84002a0` — **retiro de una segunda universal del mismo párrafo del `## Cierre`**: al sacar «todos con a)» quedó viva «ninguno terminó la corrida», que vuelve a ampliar su universo con cada corte nuevo. Lo notable es la causa que el padre declaró: **su barrido anterior buscaba esos cuantificadores solo en negrita**, y ésta no la tenía — o sea que declaró «cero afirmaciones universales vivas» sobre un barrido que no podía verlas. Rehecho sin depender del formato y **revisando los matches caso por caso en vez de declarar cero**. Toca **solo** el ledger.
 - `341c957` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
 - `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
 - `ae28842` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
@@ -69,7 +70,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 #!/bin/bash
 # C12 — alcance por commit, fail-closed. Comprueba el rc de cada git y desactiva
 # la deteccion de renames, que ocultaba el origen prohibido de un path permitido.
-AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957 380eb74"
+AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957 380eb74 84002a0"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
 # Todos los paths finales de §Alcance, incluidos los que crea la implementacion.
 HIJO='docs/STATUS.md
@@ -183,6 +184,8 @@ Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregi
 | la matriz de fixtures incompleta | en la corrección que declaraba **haberla vuelto completa** |
 | «buscada y no encontrada» sobre `name` | en el barrido cuyo propósito era **no afirmar sin fuente** |
 | el comando de enumeración que se auto-matchea | en la corrección que **reemplazaba un contador por ese comando** |
+| un bloque de código que no compila | en la corrección que **publicaba el verificador**, con la verificación cortando donde yo quería y no donde el bloque terminaba |
+| una universal viva sin negrita | en el barrido que **declaraba cero universales vivas**, y que solo miraba negrita |
 
 **No es descuido, y tratarlo como descuido es lo que hace perder rondas.** Corregir *es* escribir, y escribir es donde el defecto nace. Un autor que acaba de identificar una clase de error está, en ese preciso momento, produciendo texto nuevo — texto que ninguna revisión ha visto y que la atención puesta en el defecto anterior no protege. La probabilidad de reincidir no baja durante la corrección: **sube**, porque hay más superficie nueva por unidad de tiempo que en cualquier otro momento.
 
