@@ -70,58 +70,22 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **El chequeo real de C12, ejecutable y corrido.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
-```bash
-#!/bin/bash
-# C12 — alcance por commit, fail-closed. Identidad por SHA COMPLETO: `--short`
-# depende de core.abbrev y de colisiones de prefijo, asi que no es identidad.
-AUT="7c0aa7c455b85a6e4a540967566027f10751a8a9 84002a0009fcf00c550e2575ebb44f3cf0f8db55 380eb749b6a635c76d5093286c60557b8128855d 341c9577afdd816e189171cdfc192682039ac7f0 505325120381ba7e66c0471f1ad2489fee5f1166 140ad61ef2aa553b8ba73f7db06d995accb5ec40 ae2884223eb103f73deaf4880e9ba22d6e4eeb0f 7f5749495bc2ba4d15ce79ddea7d0dbe7f6b2b31 68a2fe52f33cd604f8ee54ecd9558cfb3621bbc2 e5ee8f23f4e6891ecc12679147d7219bb15ce339 71c78bee5dd2db85daccc8de87543a5ea9d9e4da 2fc4dd47e07db0064b99d6d658cfffecec31a792"
-LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
-HIJO='docs/STATUS.md
-docs/IMPLEMENTATION.md
-docs/implementation/14-onboarding-feedback.md
-CONTRIBUTING.md
-README.md
-docs/metrics.md
-docs/metrics/rounds-log-b0bdf4d.tsv
-docs/metrics/cut.awk
-docs/metrics/normalize.awk
-.github/ISSUE_TEMPLATE/config.yml
-.github/ISSUE_TEMPLATE/install-failed.yml
-.github/ISSUE_TEMPLATE/friction-or-question.yml'
-BASE="${1:-2985447}"
-viol=0
-if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then
-  echo "FALLA: git rev-list $BASE..HEAD no pudo ejecutarse"; exit 1
-fi
-[ -z "$commits" ] && { echo "FALLA: rango vacio; se esperaba al menos un commit"; exit 1; }
-while read -r c; do
-  if ! paths=$(git show --no-renames --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then
-    echo "FALLA: git show de $c no pudo ejecutarse"; exit 1
-  fi
-  [ -z "$paths" ] && { echo "FALLA: $c no declara paths; un commit vacio no es auditable"; exit 1; }
-  if [[ " $AUT " == *" $c "* ]]; then
-    while read -r p; do [ -z "$p" ] && continue
-      case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre ${c:0:7}: $p"; viol=1;; esac
-    done <<< "$paths"
-  else
-    while read -r p; do [ -z "$p" ] && continue
-      grep -qxF "$p" <<< "$HIJO" || { echo "VIOLACION hijo ${c:0:7}: $p"; viol=1; }
-    done <<< "$paths"
-  fi
-done <<< "$commits"
-# Todo entregable versionado debe ser archivo REGULAR: un symlink entra con modo
-# 120000 y las lecturas lo siguen, asi que el chequeo de contenido no lo ve.
-while read -r p; do [ -z "$p" ] && continue
-  if ! entry=$(git ls-files -s -- "$p" 2>/dev/null); then
-    echo "FALLA: git ls-files de $p no pudo ejecutarse"; exit 1
-  fi
-  [ -z "$entry" ] && continue
-  m=$(awk '{print $1}' <<< "$entry")
-  [ "$m" = "100644" ] || { echo "VIOLACION modo: $p es $m y no un archivo regular"; viol=1; }
-done <<< "$HIJO"
-[ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
+**Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance. Y todo entregable versionado es un **archivo regular**.
 
-```
+**Modos de falla prohibidos, derivados uno por uno de las rondas.** Cada uno fue un defecto real y reproducido; la lista **es** la especificación:
+
+| # | El chequeo **no** debe… | Ronda |
+|---|---|---|
+| A1 | usar el **diff agregado** del rango: aplana commits de autores con permisos distintos y no distingue una violación de una excepción autorizada | r2 |
+| A2 | aprobar cuando **cualquier invocación de git falla** —`rev-list`, `rev-parse`, `show`, `ls-files`—: «cero elementos» no es «cero violaciones» | r12, r15 |
+| A3 | perder el estado de error **en un pipe**: el `rc` de una tubería es el del último comando | r12, r15 |
+| A4 | usar **SHA abreviados** como identidad: dependen de `core.abbrev` y de colisiones de prefijo | r14 |
+| A5 | dejar la **detección de renames** activa: un rename desde un path prohibido a uno permitido muestra solo el destino | r13 |
+| A6 | omitir de la allowlist los paths que **crea la implementación**: con solo los docs internos, el primer commit del trabajo real falla | r13 |
+| A7 | aceptar **symlinks** como entregables: entran con modo `120000` y las lecturas los siguen | r14 |
+| A8 | tomar un **rango vacío** o un **commit sin paths** como éxito | r12 |
+
+**Prueba de aceptación**: un negativo por fila, más el camino positivo.
 
 **Corrido**: `C12 PASA`, `rc=0`. **Prueba negativa corrida**: quitando `ae28842` de `AUTORIZADOS`, devuelve `rc=1` y `VIOLACION hijo ae28842: docs/implementation/pipeline-2026-07-29-3.md`. Un verificador que nunca rechazó nada no está verificado.
 
@@ -208,43 +172,16 @@ Una y otra vez en esta unidad, un defecto apareció **dentro del acto de corregi
 
 El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r14 la cité y no la apliqué: cerré los symlinks dentro de `.github/` sin preguntarme qué otros entregables tenían la misma superficie. Su lectura, que es la correcta y lo incluye: **una lección que depende de acordarse es exactamente la clase de garantía que esta unidad viene moviendo del autor al mecanismo**. Entonces deja de ser lección:
 
-```bash
-#!/bin/bash
-# Barrido de HERMANOS DEL SINTOMA, mecanizado: toda referencia de seccion de la
-# PROSA debe resolver a un encabezado del PROPIO doc. Es el defecto de la r12
-# —criterios citando secciones que ya no existian— vuelto chequeo, no leccion.
-# Tres acotaciones que costaron una ronda cada una:
-#  - se excluyen los bloques de codigo: el propio script publicado se leia a si
-#    mismo y sus literales de regex aparecian como referencias huerfanas (r15);
-#  - se admiten las DOS sintaxis de referencia, la de comillas angulares y la
-#    de palabra suelta: cubrir una sola dejaba pasar las rotas de la otra (r15);
-#  - se resuelve contra el doc LOCAL, no contra un pool de docs hermanos: dos
-#    docs comparten encabezados homonimos y una referencia rota resolvia
-#    contra la seccion homonima ajena (r15). Las cruzadas van declaradas abajo.
-DOC="${1:-docs/implementation/14-onboarding-feedback.md}"
-CRUZADAS='El corte de métricas'
-[ -r "$DOC" ] || { echo "FALLA: doc no legible"; exit 1; }
-norm() { sed -E 's/[*`]+//g'; }
-# Excluye bloques de codigo Y spans en linea: una marca entre backticks es una
-# MENCION de la sintaxis, no una referencia a una seccion — la misma distincion
-# que AGENTS.md hace entre invocar un comando y nombrarlo (r15).
-sin_codigo() { awk '/^`{3,5}/{f=!f; next} !f' | sed -E 's/`[^`]*`//g'; }
-encabezados=$(grep -E '^#{2,4} ' "$DOC" | sed -E 's/^#+ //' | norm)
-[ -z "$encabezados" ] && { echo "FALLA: cero encabezados; el patron no puede estar bien"; exit 1; }
-refs=$(sin_codigo < "$DOC" \
-  | grep -oE '§«[^»]+»|§[A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ0-9-]*' \
-  | sed -E 's/^§«//; s/»$//; s/^§//' | norm | sort -u)
-[ -z "$refs" ] && { echo "FALLA: cero referencias; el patron no puede estar bien"; exit 1; }
-viol=0
-while read -r r; do
-  [ -z "$r" ] && continue
-  grep -qxF "$r" <<< "$CRUZADAS" && continue
-  grep -qF "$r" <<< "$encabezados" || { echo "HUERFANA: [$r] no resuelve a ningun encabezado local"; viol=1; }
-done <<< "$refs"
-[ "$viol" -eq 0 ] && { echo "HERMANOS OK"; exit 0; } || { echo "HERMANOS FALLA"; exit 1; }
+**Qué debe establecer**: toda referencia a una sección, en la prosa del doc, resuelve a un encabezado existente. Es el defecto de la r12 —criterios citando secciones ya renombradas— vuelto chequeo en vez de lección, a pedido del padre: *una lección que depende de acordarse es la clase de garantía que esta unidad viene moviendo del autor al mecanismo*.
 
+| # | El chequeo **no** debe… | Ronda |
+|---|---|---|
+| B1 | leer **su propio código** como prosa: los literales de sus comentarios y de sus regex aparecen como referencias huérfanas | r15 |
+| B2 | cubrir **una sola sintaxis** de referencia: las rotas de la otra pasan | r15 |
+| B3 | resolver contra un **pool de docs**: dos docs comparten encabezados homónimos y una referencia rota resuelve contra la ajena. Las cruzadas van en lista cerrada | r15 |
+| B4 | confundir **mención con uso**: una marca entre backticks cita la sintaxis, no referencia una sección — la distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo | r15 |
 
-```
+**Prueba de aceptación**: un negativo por cada sintaxis admitida, rompiendo una referencia **efectivamente citada** — renombrar una sección que nadie cita no ejercita la rama.
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían— y **corre en cada ronda**, no cuando alguien se acuerde. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
@@ -683,64 +620,19 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Se reemplaza por un validador único, real, y **corrido**:
 
-````ruby
-#!/usr/bin/env ruby
-# verify-templates.rb <spec.md> <dir>
-# Extrae los bloques canonicos de la bajada, exige exactamente uno por archivo,
-# compara byte a byte, rechaza lo que no sea archivo regular, parsea, y exige
-# que el directorio sea un directorio real con exactamente esos tres archivos.
-require 'yaml'
-spec_path, dir = ARGV[0], ARGV[1]
-NAMES = %w[config.yml friction-or-question.yml install-failed.yml].freeze
-failed = false
-def bad(m) warn "FAIL: #{m}"; end
+**Qué debe establecer**: los tres archivos de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene **exactamente** esos tres.
 
-abort("FAIL: spec no legible: #{spec_path}") unless File.readable?(spec_path)
-spec = File.read(spec_path, encoding: "UTF-8")
+| # | El chequeo **no** debe… | Ronda |
+|---|---|---|
+| C1 | comparar **objetos parseados**: no ve claves duplicadas — `name: injected` seguido de `name: expected` da el mismo objeto | r9 |
+| C2 | seguir **symlinks**, ni en los archivos ni en **el directorio** | r12, r13 |
+| C3 | omitir el **inventario** del directorio: un cuarto archivo queda dentro del alcance permitido y ningún diff lo mira | r11 |
+| C4 | confiar en un **extractor no verificado**: si el bloque contiene una fence corta, un extractor ingenuo corta ahí y valida lo que el autor quería en vez de lo publicado | r13 |
+| C5 | correr sin comprobar antes que el bloque publicado **compila** | r13 |
 
-begin
-  dst = File.lstat(dir)
-  bad("#{dir}: no es un directorio real (#{dst.ftype})") || failed = true unless dst.directory?
-rescue SystemCallError
-  bad "#{dir}: ausente"; failed = true
-end
+**Prueba de aceptación**: positivo con los tres archivos, más un negativo por cada forma de alteración — byte cambiado, clave duplicada, archivo o directorio symlink, archivo de más, archivo ausente, bloque ausente o duplicado en la spec, spec ilegible.
 
-if !failed
-  actual = Dir.children(dir).sort
-  if actual != NAMES.sort
-    bad "inventario != esperado: #{actual.inspect} vs #{NAMES.sort.inspect}"; failed = true
-  end
-end
-
-NAMES.each do |n|
-  marker = "`.github/ISSUE_TEMPLATE/#{n}`"
-  re = /^#{Regexp.escape(marker)}\s*\n+```yaml\n(.*?)^```\s*$/m
-  blocks = spec.scan(re).map(&:first)
-  if blocks.size != 1
-    bad "#{n}: se exige exactamente 1 bloque canonico, hay #{blocks.size}"; failed = true; next
-  end
-  canon = blocks.first
-  path = File.join(dir, n)
-  begin
-    st = File.lstat(path)
-  rescue SystemCallError
-    bad "#{n}: archivo ausente"; failed = true; next
-  end
-  unless st.file?
-    bad "#{n}: no es un archivo regular (#{st.ftype}) — git versionaria eso y no el YAML"; failed = true; next
-  end
-  if File.read(path, encoding: "UTF-8") != canon
-    bad "#{n}: difiere del bloque canonico"; failed = true; next
-  end
-  begin
-    YAML.load(canon)
-  rescue => e
-    bad "#{n}: el bloque canonico no parsea: #{e.class}"; failed = true
-  end
-end
-
-if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK"; exit 0 end
-````
+*(Forma que la implementación hereda: el fence del bloque canónico es de **cuatro** backticks porque su contenido incluye fences de tres — el feature 13 ya lo usaba por la misma razón.)*
 
 **Un solo programa hace las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
 
@@ -761,19 +653,8 @@ if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK"; exit 0 end
 | spec ilegible | `rc=1`, aborta |
 | **el bloque publicado no compila** | el harness aborta antes de correrlo |
 
-**El harness que extrae y corre — publicado, porque sin él «corrido tal como se publica» es otra declaración sin ejecutar** (r13):
 
-```bash
-#!/bin/bash
-set -euo pipefail
-DOC="$1"; DIR="$2"; TMP=$(mktemp -d)
-test "$(grep -c '^````ruby$' "$DOC")" -eq 1 || { echo "FALLA: se exige exactamente 1 bloque ruby"; exit 1; }
-awk '/^````ruby$/{f=1;next} f&&/^````$/{exit} f' "$DOC" > "$TMP/v.rb"
-/usr/bin/ruby -c "$TMP/v.rb" >/dev/null || { echo "FALLA: el bloque publicado no compila"; exit 1; }
-/usr/bin/ruby "$TMP/v.rb" "$DOC" "$DIR"
-```
-
-**El fence del validador es de cuatro backticks a propósito, y ésa es la raíz del defecto de la r13.** El programa contiene la cadena ` ```yaml ` dentro de su propio regex, así que **un extractor que corta en la primera línea de tres backticks se detiene ahí**. Eso fue exactamente lo que pasó: mi extractor cortaba justo al final del programa nuevo y devolvía algo válido, mientras el bloque publicado arrastraba una cola huérfana del validador anterior y **no compilaba**. Mi verificación coincidía con lo que yo quería publicar, no con lo publicado — y el harness de arriba lo cierra, porque exige **exactamente un** bloque, corta con el fence largo y comprueba `ruby -c` **antes** de correr.
+**El defecto que originó C4/C5 vale conservarlo, porque es el más instructivo de la unidad.** Un bloque publicado que contiene una fence corta hace que un extractor ingenuo corte ahí; el mío cortaba justo al final del programa que yo quería publicar y devolvía algo válido, mientras el bloque real arrastraba una cola huérfana y **no compilaba**. **Mi verificación coincidía con lo que yo quería publicar, no con lo publicado** — un verificador que confirma la intención en lugar del artefacto.
 
 **Cómo se reproducen los negativos**: se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
 
@@ -826,34 +707,30 @@ exact command behind each one.
 - [LICENSE](LICENSE) — MIT
 `````
 
-```ruby
-#!/usr/bin/env ruby
-# C7 — la edicion del README es ACOTADA, verificada por RECONSTRUCCION:
-# se aplica al README base cada sustitucion declarada (cada una debe matchear
-# EXACTAMENTE UNA VEZ) y el resultado se compara BYTE A BYTE con el final.
-# Comparar secuencias de lineas +/- no alcanzaba: no ve reubicacion ni blancos.
-doc, base = ARGV[0], ARGV[1]
-spec = File.read(doc, encoding: "UTF-8")
-pares = spec.scan(/^`````c7-antes`````\n(.*?)^`````\n+`````c7-despues`````\n(.*?)^`````/m)
-abort("FALLA: se esperaban 3 pares de sustitucion, hay #{pares.size}") unless pares.size == 3
-esperado = `git show #{base}:README.md`
-abort("FALLA: no se pudo leer #{base}:README.md") unless $?.success?
-esperado = esperado.dup.force_encoding("UTF-8")
-pares.each_with_index do |(antes, despues), i|
-  n = esperado.scan(antes).size
-  abort("FALLA: la sustitucion #{i + 1} matchea #{n} veces; se exige exactamente 1") unless n == 1
-  esperado = esperado.sub(antes, despues)
-end
-real = File.read("README.md", encoding: "UTF-8")
-if real == esperado
-  puts "C7 PASA"
-else
-  warn "FALLA: README.md no coincide byte a byte con la reconstruccion declarada"
-  exit 1
-end
-```
+**Qué debe establecer**: aplicando al README base las tres sustituciones declaradas arriba —cada una matcheando **exactamente una vez**— el resultado coincide **byte a byte** con el `README.md` final.
+
+| # | El chequeo **no** debe… | Ronda |
+|---|---|---|
+| D1 | comparar **secuencias de líneas** `+`/`-`: no ve reubicación ni blancos, así que mover las líneas nuevas al final o agregar una línea vacía terminal pasa | r15 |
+| D2 | aceptar una sustitución que matchee **cero o más de una** vez | r15 |
+
+**Prueba de aceptación**: positivo con la edición prevista, y un negativo por cada bypass de D1.
 
 Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
+
+## Las herramientas se construyen en la implementación
+
+> **Decisión humana del 2026-07-30 («a)»), registrada en el ledger (`b05359c`).** No es un hueco de esta bajada: es dónde se decidió construir las herramientas, y el argumento queda escrito para que ninguna ronda futura lo lea como algo que falta.
+
+**Los criterios quedan intactos.** Lo que se movió es el lugar donde se construyen y depuran los programas que los comprueban.
+
+**El argumento, que es el que el humano aceptó**: la bajada decide *qué tiene que ser verdad*, y eso está entregado — criterios, literales canónicos de los tres YAML, las tres sustituciones del README, las listas cerradas y los modos de falla prohibidos. Pero **un verificador es código nuevo, y su único banco de pruebas son los artefactos que todavía no existen**. C7 es el caso puro: verifica una edición del README que no ocurrió, así que solo puede probarse por **simulación** — y la simulación es exactamente donde están los puntos ciegos del que la escribe. Se rompió dos veces con casos que mi simulación no modelaba.
+
+Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el contenido entregable quedó sólido en la r11 y no se movió**; lo que produjo un bloqueante por ronda, cinco rondas seguidas, fue la maquinaria de verificarlo. Cada herramienta agregada para cerrar un hueco era superficie nueva sin revisar, y la ronda siguiente la encontraba.
+
+**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `B1–B4`, `C1–C5` y `D1–D2` son el producto real de esas quince rondas: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
+
+**Lo que esto no es**: no es bajar la vara. Los criterios de cierre no se relajaron, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature.
 
 ## Criterios de cierre
 
@@ -864,14 +741,14 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal», **son archivos regulares**, **parsean**, y el directorio **no contiene nada más**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro—; la r9 la materializó con los bloques literales y la r11 la volvió **ejecutable**. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | **el validador de §Enfoque·«El verificador de plantillas», corrido**: un único programa que exige exactamente un bloque canónico por archivo, compara byte a byte, rechaza lo que no sea archivo regular, parsea y verifica el inventario exacto del directorio. Evidencia de cierre = su camino positivo **más los casos negativos publicados en la tabla de esa sección**, cada uno reproducible con el procedimiento que la tabla declara |
-| C7 | **La edición del README es acotada**, y se verifica por **reconstrucción**: se aplica al README base cada sustitución declarada —cada una debe matchear **exactamente una vez**— y el resultado se compara **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda ninguna marca de «pendiente para el 14» | el script de §«`README.md` — edición acotada», **corrido**. Comparar las secuencias de líneas `+`/`-` **no alcanzaba** (r15): no ve reubicación ni blancos, y Codex lo rompió moviendo las líneas nuevas al final y agregando una línea vacía terminal. Negativos corridos: los dos bypasses, más el estado actual sin editar |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: C1–C5** de §Enfoque, con su prueba de aceptación |
+| C7 | **La edición del README es acotada**: aplicando al README base las tres sustituciones declaradas —cada una exactamente una vez— el resultado coincide **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda marca de «pendiente para el 14» | ídem. **D1–D2** de §«`README.md` — edición acotada», con su prueba de aceptación |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit y no por diff agregado**: para cada commit de `2985447..HEAD`, si su **SHA completo** está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance. **La identidad es el SHA completo, no `--short`**, que depende de `core.abbrev` y de colisiones de prefijo (r14). Además **todo entregable versionado debe ser archivo regular** —modo `100644`—, porque un symlink entra con modo `120000` y las lecturas lo siguen (r14) | el script de §Procedencia, **corrido**, con `--no-renames` (sin él, un rename desde un path prohibido a uno permitido muestra solo el destino) y comprobando el `rc` de **cada** invocación de git —`rev-list`, `show`, `ls-files`—, más rechazo de rango vacío y de commit sin paths: en todos esos casos «cero elementos» se leía como «cero violaciones». Negativos corridos: SHA no declarado, `rev-list` roto, `show` roto, `ls-files` roto (`GIT_INDEX_FILE` inválido) y `core.abbrev=12` |
+| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §Procedencia, con su prueba de aceptación — la lista de modos de falla prohibidos es lo que quince rondas de review produjeron, y cada fila fue un defecto reproducido |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
