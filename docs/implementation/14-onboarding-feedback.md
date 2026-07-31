@@ -72,7 +72,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **El chequeo tiene que ser fail-closed de verdad, y el mío no lo era.** Al re-correrlo tras el corte por cuota, mi versión anterior recorría los commits en un `for … done | head`, así que el flag de violación quedaba en el subshell del pipe y **el chequeo imprimía «pasa» mientras había impreso una violación dos líneas arriba**. Reescrito sin pipeline y con **prueba negativa**: quitando un SHA de `AUTORIZADOS`, el chequeo devuelve `rc=1` y nombra la violación. Un verificador que nunca rechazó nada no está verificado — es el mismo criterio que la unidad aplicó a los fixtures, aplicado ahora a su propia auditoría.
 
-**El chequeo real de C12, ejecutable y corrido.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
+**Origen de las filas `A1–A8`.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
 **Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance. Y todo entregable versionado es un **archivo regular**.
 
@@ -185,8 +185,8 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | B1 | leer **su propio código** como prosa: los literales de sus comentarios y de sus regex aparecen como referencias huérfanas | r15 |
-| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado admitido**: `§«Nombre con espacios»` y `§Nombre` (una palabra, letras del español, dígitos y guiones). Cualquier otra forma no es referencia | r15 |
-| B3 | resolver contra un **pool de docs**: dos docs comparten encabezados homónimos y una referencia rota resuelve contra la ajena. **Lista cerrada de referencias cruzadas admitidas, materializada**: `El corte de métricas` (al doc del feature 13). Cualquier otra debe resolver **localmente** | r15 |
+| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado, enumerado contra lo que la prosa efectivamente usa** (r17): (i) `§«Nombre con espacios»`; (ii) `§Nombre` de una palabra, **o `§N` numérica** cuando la sección es una de las preguntas numeradas de este doc; (iii) **compuesta** `§Nombre·«Sub»` o `§Nombre·N`, donde **la parte anterior al `·` debe resolver** y lo que sigue es un puntero interno que no se chequea; (iv) **cruzada declarada**, solo las de `B3`. Cualquier otra forma **no es referencia** y el chequeo debe rechazar el doc si aparece una — no ignorarla en silencio | r15, r17 |
+| B3 | resolver contra un **pool de docs**. **Lista cerrada de cruzadas, con su destino materializado** (r17): `§«El corte de métricas»` → `docs/implementation/13-public-showcase.md`; `§14` → `docs/IMPLEMENTATION.md`. *(`§2` **no** es cruzada: apunta a la segunda de las cinco preguntas numeradas de este doc, y la primera versión de esta fila lo declaró mal por agruparlo con `§14` sin verificarlo — el mismo defecto que la fila de al lado prohíbe.)* Toda otra referencia debe resolver **localmente**, y una cruzada no declarada es un fallo | r15, r17 |
 | B4 | confundir **mención con uso**: una marca entre backticks cita la sintaxis, no referencia una sección — la distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo | r15 |
 
 **Prueba de aceptación**, un caso por fila:
@@ -194,8 +194,8 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | Fila | Caso negativo |
 |---|---|
 | B1 | el código del propio chequeo contiene las marcas que busca ⇒ no debe reportarlas |
-| B2 | una referencia rota **de cada** sintaxis del lenguaje cerrado, sobre una sección **efectivamente citada** — renombrar una que nadie cita no ejercita la rama |
-| B3 | una referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual |
+| B2 | una referencia rota **de cada** forma del lenguaje cerrado —simple con comillas, simple de una palabra, y compuesta— sobre una sección **efectivamente citada**; más una forma **fuera** del lenguaje, que debe hacer fallar el doc |
+| B3 | una referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual; y una cruzada **no declarada** ⇒ debe fallar |
 | B4 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar |
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían—. **Debe correr en cada ronda del ciclo de implementación**, no cuando alguien se acuerde: es el punto entero de haberlo sacado del terreno de las lecciones. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
@@ -652,22 +652,34 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 **Un solo programa hace las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
 
-**Corrido, con su camino positivo y los casos negativos de la tabla de abajo** —sin publicar la cantidad, que crece cada vez que una ronda encuentra una vía nueva (ya pasó en la r12 y en la r13)—, y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
+**Casos de aceptación exigidos, en la tabla de abajo** —sin publicar la cantidad, que crece cada vez que una ronda encuentra una vía nueva (ya pasó en la r12 y en la r13)—, y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
 
-| Caso | Ejercita | Resultado |
-|---|---|---|
-| los tres archivos idénticos a sus bloques | *(positivo)* | **acepta** |
-| un byte cambiado (`blank_issues_enabled: true` → `false`) | C1 | **rechaza** |
-| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | C1 | **rechaza** |
-| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | C2 | **rechaza** |
-| **el directorio entero es symlink** a uno externo con los tres archivos | C2 | **rechaza** |
-| **directorio con el nombre de una plantilla** | C6 | **rechaza** |
-| archivo de más en el directorio | C3 | **rechaza** |
-| archivo ausente | C3 | **rechaza** |
-| bloque ausente en la spec | C4 | **rechaza** |
-| bloque duplicado en la spec | C4 | **rechaza** |
-| spec ilegible | C4 | **rechaza** |
-| **el bloque publicado no compila** | C5 | **rechaza** antes de correrlo |
+| ID | Caso | Ejercita | Resultado |
+|---|---|---|---|
+| N0 | los tres archivos idénticos a sus bloques | *(positivo)* | **acepta** |
+| N1 | un byte cambiado (`blank_issues_enabled: true` → `false`) | C1 | **rechaza** |
+| N2 | **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | C1 | **rechaza** |
+| N3 | **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | C2 | **rechaza** |
+| N4 | **el directorio entero es symlink** a uno externo con los tres archivos | C2 | **rechaza** |
+| N5 | **directorio con el nombre de una plantilla** | C6 | **rechaza** |
+| N6 | archivo de más en el directorio | C3 | **rechaza** |
+| N7 | archivo ausente | C3 | **rechaza** |
+| N8 | bloque ausente en la spec | C4 | **rechaza** |
+| N9 | bloque duplicado en la spec | C4 | **rechaza** |
+| N10 | spec ilegible | C4 | **rechaza** |
+| N11 | el bloque publicado no compila | C5 | **rechaza** antes de correrlo |
+
+**Inventario cerrado por fila** — es esto, y no la comparación de conjuntos, lo que detecta una ausencia:
+
+| Fila | Casos requeridos |
+|---|---|
+| C1 | N1, N2 |
+| C2 | N3, N4 |
+| C3 | N6, N7 |
+| C4 | N8, N9, N10 |
+| C5 | N11 |
+| C6 | N5 |
+| *(positivo)* | N0 |
 
 **Cómo se montan los negativos** (para quien construya la herramienta): se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
 
@@ -743,6 +755,8 @@ Es **chequeable comparando las dos columnas de identificadores**, igual que la b
 
 **La generalización, que es lo que vale más allá de este feature**: cuando una reestructuración mueve contenido entre tablas, la garantía no puede ser recordar qué había — tiene que ser una **relación declarada entre las dos** que se rompa sola al perder una punta.
 
+**El patrón «el chequeo funciona de más», cerrado por mecanismo y no por acordarse** (r17). Es distinto de fallar abierto: acá el chequeo **encuentra lo que no debía mirar**, y apareció tres veces —encabezados de otros docs, identificadores homónimos de otra tabla, y el propio código del chequeo leído como prosa—. La cura no es recordar acotar: es que **la pregunta lleve su dominio adentro**. Dos formas, las dos aplicadas acá: **identificadores calificados por tabla** —los modos de falla son `C…` y los casos `N…`, así que ninguna comparación puede confundirlos aunque compartan número— y **extracción acotada a la sección** en vez de al archivo.
+
 *(Calibración, y es la misma de siempre: la primera corrida del chequeo marcó tres filas «sin caso» que eran `C7`, `C8` y `C9` **de la tabla de criterios de cierre** — un identificador homónimo en otra tabla del mismo doc. La extracción tiene que estar **acotada a la sección**, igual que el barrido de referencias tuvo que acotarse al doc local. Es la tercera vez que un chequeo mío falla por alcance más ancho de lo que su pregunta necesita, y por eso entra como requisito y no como anécdota.)*
 
 ## Las herramientas se construyen en la implementación
@@ -755,7 +769,7 @@ Es **chequeable comparando las dos columnas de identificadores**, igual que la b
 
 Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el contenido entregable quedó sólido en la r11 y no se movió**; lo que produjo un bloqueante por ronda, cinco rondas seguidas, fue la maquinaria de verificarlo. Cada herramienta agregada para cerrar un hueco era superficie nueva sin revisar, y la ronda siguiente la encontraba.
 
-**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `B1–B4`, `C1–C5` y `D1–D2` son el producto real de esas quince rondas: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
+**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `B1–B4`, `C1–C6` y `D1–D3` son el producto real de esas quince rondas: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
 
 **Lo que esto no es**: no es bajar la vara. Los criterios de cierre no se relajaron, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature.
 
@@ -768,8 +782,8 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: C1–C5** de §Enfoque, con su prueba de aceptación |
-| C7 | **La edición del README es acotada**: aplicando al README base las tres sustituciones declaradas —cada una exactamente una vez— el resultado coincide **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda marca de «pendiente para el 14» | ídem. **D1–D2** de §«`README.md` — edición acotada», con su prueba de aceptación |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: `C1–C6`** de §Enfoque, con su inventario cerrado `N0–N11` |
+| C7 | **La edición del README es acotada**: aplicando al README base las tres sustituciones declaradas —cada una exactamente una vez— el resultado coincide **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda marca de «pendiente para el 14» | ídem. **`D1`, `D2a`, `D2b` y `D3`** de §«`README.md` — edición acotada», con sus casos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
@@ -792,6 +806,18 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r17 (base `6ec4b48`, HEAD `47f02c0`) — CHANGES_REQUESTED · **6 bloqueantes, cero preferencias**
+
+**Uno de los seis no es de especificación, y es el más grave**: `docs/STATUS.md` **había quedado destruido** — el commit `47d5a7c` del padre le borró 33 de sus 36 líneas y dejó tres, sin unidad, paso, ronda, veredicto ni racha, con `Fase` y `Esperando` concatenados. Eso **rompe el token de reentrada** que el contrato exige. Reconstruido derivándolo del estado real (`.claude/state/` y el STATUS previo a la destrucción), no de memoria.
+
+1. **La biyección caso↔fila que publiqué era falsa.** `C1`, `C2` y `C3` tenían dos casos, `C4` tres y `D1` dos, así que borrar un caso dejaba a su fila con otro y **la comparación de conjuntos seguía pasando**: no detectaba ninguna ausencia, que era exactamente lo único que prometía. Reemplazada por **IDs estables de caso (`N0–N11`) y un inventario cerrado por fila**: cada fila declara qué casos la ejercitan, y borrar uno deja un requerido sin definir. Verificado, 12/12.
+2. **Los consumidores no incorporaron las filas nuevas** —`C6` seguía exigiendo `C1–C5` y `C7` exigía `D1–D2`—, así que el directorio con nombre de plantilla y el baseline incorrecto podían quedar fuera del cierre **aunque estuvieran en las tablas**. Es el barrido del síntoma, cuarta vez.
+3. **El lenguaje de referencias no era cerrado**: la prosa usa formas **compuestas** (`§Enfoque·«…»`, `§Enfoque·3`) y una numérica, ninguna admitida por `B2`. Enumeradas contra lo que la prosa efectivamente usa, y las cruzadas **materializadas con su destino**.
+4. **Seguían vivas afirmaciones de herramientas retiradas.** Cerrado con un barrido de frases prohibidas sobre el texto anterior al Review log.
+5. El `## Cierre` del ledger sigue enumerando lo que dice no enumerar — del padre.
+
+**Un defecto propio dentro de la corrección, otra vez**: al materializar las cruzadas declaré que `§2` apuntaba a `IMPLEMENTATION.md` **agrupándolo con `§14` sin verificarlo**. Es local — la segunda de las cinco preguntas de este doc. Lo corregí antes de commitear, y queda anotado en la propia fila porque es el defecto que esa fila prohíbe.
 
 ### r16 (base `6ec4b48`, HEAD `692588f`) — CHANGES_REQUESTED · **6 bloqueantes, cero preferencias**
 
