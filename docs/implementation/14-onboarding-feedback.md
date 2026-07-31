@@ -44,25 +44,27 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **Los desempates se identifican por su letra y su SHA, no por ordinal** (r12). Yo llamaba «tercer desempate» a **dos** eventos distintos —el «a)» del primer corte de esta unidad y el «c)» del segundo—, y el ledger ya tenía asignado ese ordinal al primero. Un ordinal es un contador que el proceso mueve: cada corte nuevo lo corre, y basta un evento no contado para que toda la numeración quede mal. La letra y el SHA no se mueven.
 
-**`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango, y ahora *derivada* y no recordada.** Tras el olvido de `ae28842`, el padre adoptó el método correcto: `git log --format=%H 2985447..HEAD -- <ledger>` y declarar **todo** lo que salga. El hijo lo re-derivó por su cuenta y **las dos derivaciones coinciden**, que es lo que vuelve creíble la lista. El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
+**`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango, *derivada* y con SHA completos.** Van completos porque **A4 prohíbe usar abreviaturas como identidad**, y una lista de siete caracteres obligaría al verificador a expandirlas — o sea a hacer justo lo que A4 prohíbe. La derivación es `git log --format=%H 2985447..HEAD -- <ledger>`, y el hijo la re-corre en cada incorporación en vez de confiar en lo declarado: **la r16 encontró que faltaban dos SHA y que STATUS afirmaba que uno de ellos ya estaba**. Tras el olvido de `ae28842`, el padre adoptó el método correcto: `git log --format=%H 2985447..HEAD -- <ledger>` y declarar **todo** lo que salga. El hijo lo re-derivó por su cuenta y **las dos derivaciones coinciden**, que es lo que vuelve creíble la lista. El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
 
-- `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
-- `71c78be` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
-- `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
-- `380eb74` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
-- `7c0aa7c` — **reescritura completa del `## Cierre`**, en vez de una sexta corrección puntual. El bloque deja de publicar cantidades, letras, cuantificadores y comandos que agreguen las interrupciones, y **separa los dos dominios que el comando anterior mezclaba** —deadlock contra indisponibilidad del reviewer—, porque un comando que los cuente juntos es falso por construcción. Toca **solo** el ledger.
+- `2fc4dd47e07db0064b99d6d658cfffecec31a792` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
+- `71c78bee5dd2db85daccc8de87543a5ea9d9e4da` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
+- `e5ee8f23f4e6891ecc12679147d7219bb15ce339` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
+- `380eb749b6a635c76d5093286c60557b8128855d` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
+- `b05359c2c1aa6372ce1287732ba9c8f6fe0af714` — **decisión humana «a)»**: la construcción de los verificadores se mueve al ciclo de implementación, con los criterios intactos. Toca `docs/STATUS.md` y el ledger.
+- `c0116580a4490cd9849434536cd61b72293a0c62` — **elevación al humano antes del tope**: registra el diagnóstico del hijo, la retirada de su pronóstico de cierre y la propuesta, más la sexta corrección del `## Cierre`. Toca `docs/STATUS.md` y el ledger. **Lo encontró la derivación, no la declaración**: el padre no lo pasó, y el hijo tampoco lo derivó antes de afirmar que la lista estaba completa.
+- `7c0aa7c455b85a6e4a540967566027f10751a8a9` — **reescritura completa del `## Cierre`**, en vez de una sexta corrección puntual. El bloque deja de publicar cantidades, letras, cuantificadores y comandos que agreguen las interrupciones, y **separa los dos dominios que el comando anterior mezclaba** —deadlock contra indisponibilidad del reviewer—, porque un comando que los cuente juntos es falso por construcción. Toca **solo** el ledger.
 
   > **El caso más denso del patrón que produjo el pipeline, y es del padre.** Cinco correcciones sucesivas al mismo párrafo, cada una introduciendo el defecto de la siguiente: contador → cuantificador universal → **segundo cuantificador sobrevivido dentro de la corrección del primero** → comando que se contaba a sí mismo → comando que mezclaba dominios. La salida no fue una sexta corrección puntual sino **reescribirlo entero**, que es la decisión que la tercera ya pedía.
 
-- `84002a0` — **retiro de una segunda universal del mismo párrafo del `## Cierre`**: al sacar «todos con a)» quedó viva «ninguno terminó la corrida», que vuelve a ampliar su universo con cada corte nuevo. Lo notable es la causa que el padre declaró: **su barrido anterior buscaba esos cuantificadores solo en negrita**, y ésta no la tenía — o sea que declaró «cero afirmaciones universales vivas» sobre un barrido que no podía verlas. Rehecho sin depender del formato y **revisando los matches caso por caso en vez de declarar cero**. Toca **solo** el ledger.
-- `341c957` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
-- `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
-- `ae28842` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
+- `84002a0009fcf00c550e2575ebb44f3cf0f8db55` — **retiro de una segunda universal del mismo párrafo del `## Cierre`**: al sacar «todos con a)» quedó viva «ninguno terminó la corrida», que vuelve a ampliar su universo con cada corte nuevo. Lo notable es la causa que el padre declaró: **su barrido anterior buscaba esos cuantificadores solo en negrita**, y ésta no la tenía — o sea que declaró «cero afirmaciones universales vivas» sobre un barrido que no podía verlas. Rehecho sin depender del formato y **revisando los matches caso por caso en vez de declarar cero**. Toca **solo** el ledger.
+- `341c9577afdd816e189171cdfc192682039ac7f0` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
+- `505325120381ba7e66c0471f1ad2489fee5f1166` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
+- `ae2884223eb103f73deaf4880e9ba22d6e4eeb0f` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
 
 > **Por qué se justifica `AUTORIZADOS`, y es por esta vez y no por las otras.** Hasta acá el mecanismo venía **registrando**; ésta es la vez que **detectó** — y detectó un error de quien lleva la lista, que es exactamente el caso para el que existe. Un criterio de este tipo no se justifica por las veces que pasa: se justifica por la vez que atrapa algo que ninguna lectura habría visto. Si no hubiera estado, el commit del corte habría quedado dentro del rango del hijo sin declarar y C12 habría fallado —o peor, habría pasado inadvertido.
-- `140ad61` — **reanudación tras la decisión humana**: créditos de Codex recargados. La racha **no se resetea** —sigue en 4— porque la r10 nunca produjo veredicto y por lo tanto no consumió ronda del tope. Toca `docs/STATUS.md` y el ledger.
-- `7f57494` — **tercera corrección del mismo bloque**: el comando de enumeración que dejó la segunda **matcheaba su propia línea** y devolvía un resultado de más. Anclado al encabezado de evento, y verificado **corriéndolo tal como queda publicado** —el anterior daba 4, el anclado da 3, que son los cortes reales—, no razonándolo. Toca **solo** el ledger.
-- `68a2fe5` — **segunda corrección del mismo bloque**, y la ironía es completa: al arreglar lo anterior el padre escribió «tres cortes», un **contador móvil en prosa**, en el mismo commit donde aplicaba la regla de contadores móviles a todo el resto del archivo. Con el pipeline abierto, otro deadlock la volvía falsa. Reemplazada por referencia a los eventos más un comando de enumeración. Toca **solo** el ledger. La detectó la r7, el hijo tampoco la tocó, y el padre barrió el archivo entero al corregirla.
+- `140ad61ef2aa553b8ba73f7db06d995accb5ec40` — **reanudación tras la decisión humana**: créditos de Codex recargados. La racha **no se resetea** —sigue en 4— porque la r10 nunca produjo veredicto y por lo tanto no consumió ronda del tope. Toca `docs/STATUS.md` y el ledger.
+- `7f5749495bc2ba4d15ce79ddea7d0dbe7f6b2b31` — **tercera corrección del mismo bloque**: el comando de enumeración que dejó la segunda **matcheaba su propia línea** y devolvía un resultado de más. Anclado al encabezado de evento, y verificado **corriéndolo tal como queda publicado** —el anterior daba 4, el anclado da 3, que son los cortes reales—, no razonándolo. Toca **solo** el ledger.
+- `68a2fe52f33cd604f8ee54ecd9558cfb3621bbc2` — **segunda corrección del mismo bloque**, y la ironía es completa: al arreglar lo anterior el padre escribió «tres cortes», un **contador móvil en prosa**, en el mismo commit donde aplicaba la regla de contadores móviles a todo el resto del archivo. Con el pipeline abierto, otro deadlock la volvía falsa. Reemplazada por referencia a los eventos más un comando de enumeración. Toca **solo** el ledger. La detectó la r7, el hijo tampoco la tocó, y el padre barrió el archivo entero al corregirla.
 
 `2985447` **no** es miembro: es la frontera del rango y `git rev-list 2985447..HEAD` no lo incluye. Se nombra acá solo para que no se lo busque en la lista.
 
@@ -77,17 +79,21 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | A1 | usar el **diff agregado** del rango: aplana commits de autores con permisos distintos y no distingue una violación de una excepción autorizada | r2 |
-| A2 | aprobar cuando **cualquier invocación de git falla** —`rev-list`, `rev-parse`, `show`, `ls-files`—: «cero elementos» no es «cero violaciones» | r12, r15 |
+| A2a | aprobar cuando falla **`git rev-list`**: sin commits, el recorrido no encuentra violaciones | r12 |
+| A2b | aprobar cuando falla **`git rev-parse`** | r12 |
+| A2c | aprobar cuando falla **`git show`**: sin paths, no hay nada que comparar | r12 |
+| A2d | aprobar cuando falla **`git ls-files`** | r15 |
 | A3 | perder el estado de error **en un pipe**: el `rc` de una tubería es el del último comando | r12, r15 |
 | A4 | usar **SHA abreviados** como identidad: dependen de `core.abbrev` y de colisiones de prefijo | r14 |
 | A5 | dejar la **detección de renames** activa: un rename desde un path prohibido a uno permitido muestra solo el destino | r13 |
 | A6 | omitir de la allowlist los paths que **crea la implementación**: con solo los docs internos, el primer commit del trabajo real falla | r13 |
 | A7 | aceptar **symlinks** como entregables: entran con modo `120000` y las lecturas los siguen | r14 |
-| A8 | tomar un **rango vacío** o un **commit sin paths** como éxito | r12 |
+| A8a | tomar un **rango vacío** como éxito | r12 |
+| A8b | tomar un **commit sin paths** como éxito | r12 |
 
-**Prueba de aceptación**: un negativo por fila, más el camino positivo.
+**Prueba de aceptación**: **un caso negativo por fila** —no por familia— más el camino positivo. Las filas están atomizadas justamente para que ninguna rama quede sin ejercitar: agrupar cuatro invocaciones de git en una sola fila permitía cubrir una y declarar la fila probada (r16).
 
-**Corrido**: `C12 PASA`, `rc=0`. **Prueba negativa corrida**: quitando `ae28842` de `AUTORIZADOS`, devuelve `rc=1` y `VIOLACION hijo ae28842: docs/implementation/pipeline-2026-07-29-3.md`. Un verificador que nunca rechazó nada no está verificado.
+*(Historia, anclada a la r12–r15: durante esas rondas existió un prototipo de este chequeo que llegó a pasar su positivo y sus negativos. **Ese prototipo ya no está en el doc** —la decisión humana lo movió a la implementación— y sus resultados no valen como evidencia de cierre: valen como el origen de las filas `A1–A8`, que es lo que quedó.)*
 
 **El chequeo anterior fallaba abierto, y es el peor modo posible.** Recorría los commits en un `for … done | head`, así que el flag moría en el subshell del pipe: imprimió `VIOLACION: ae28842` y **dos líneas después** `C12 pasa`. Ruidoso y aprobatorio a la vez — quien lee se queda con el veredicto. La forma de arriba no tiene pipeline y por eso el flag sobrevive.
 
@@ -177,13 +183,20 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | B1 | leer **su propio código** como prosa: los literales de sus comentarios y de sus regex aparecen como referencias huérfanas | r15 |
-| B2 | cubrir **una sola sintaxis** de referencia: las rotas de la otra pasan | r15 |
-| B3 | resolver contra un **pool de docs**: dos docs comparten encabezados homónimos y una referencia rota resuelve contra la ajena. Las cruzadas van en lista cerrada | r15 |
+| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado admitido**: `§«Nombre con espacios»` y `§Nombre` (una palabra, letras del español, dígitos y guiones). Cualquier otra forma no es referencia | r15 |
+| B3 | resolver contra un **pool de docs**: dos docs comparten encabezados homónimos y una referencia rota resuelve contra la ajena. **Lista cerrada de referencias cruzadas admitidas, materializada**: `El corte de métricas` (al doc del feature 13). Cualquier otra debe resolver **localmente** | r15 |
 | B4 | confundir **mención con uso**: una marca entre backticks cita la sintaxis, no referencia una sección — la distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo | r15 |
 
-**Prueba de aceptación**: un negativo por cada sintaxis admitida, rompiendo una referencia **efectivamente citada** — renombrar una sección que nadie cita no ejercita la rama.
+**Prueba de aceptación**, un caso por fila:
 
-Verifica lo que la r12 rompió —criterios citando secciones que ya no existían— y **corre en cada ronda**, no cuando alguien se acuerde. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
+| Fila | Caso negativo |
+|---|---|
+| B1 | el código del propio chequeo contiene las marcas que busca ⇒ no debe reportarlas |
+| B2 | una referencia rota **de cada** sintaxis del lenguaje cerrado, sobre una sección **efectivamente citada** — renombrar una que nadie cita no ejercita la rama |
+| B3 | una referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual |
+| B4 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar |
+
+Verifica lo que la r12 rompió —criterios citando secciones que ya no existían—. **Debe correr en cada ronda del ciclo de implementación**, no cuando alguien se acuerde: es el punto entero de haberlo sacado del terreno de las lecciones. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
 *(Su calibración vale como caso, y necesitó **tres** pasadas: la primera versión marcó dos huérfanas que eran **falsos positivos** —el énfasis markdown dentro de un encabezado, y una referencia cruzada legítima al doc del feature 13—, y mi primera prueba negativa renombraba una sección **que nadie referencia**, así que no probaba nada. Un chequeo que grita sin motivo es tan inútil como uno que nunca rechaza, y una prueba negativa que no ejercita la rama es la misma trampa una vez más. Y la tercera: **al publicar el script dentro del doc que revisa, sus propios literales de regex se leyeron como referencias huérfanas** — un chequeo que se rompe al ser publicado, que es la autorreferencia de esta unidad en su forma más literal. Cerrado excluyendo los bloques de código. Y en la r15 aparecieron **dos acotaciones más**, las dos de la misma familia: cubría **una sola sintaxis** de referencia —`§«…»` y no `§Nombre`—, y resolvía contra un **pool de docs hermanos**, así que una referencia rota resolvía contra la sección homónima de otro doc, porque `## Alcance` existe en dos. Acotado a resolución **local**, con las cruzadas declaradas en una lista cerrada.)*
 
@@ -616,7 +629,7 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 **Límite declarado, y ahora es honesto porque el chequeo ya no promete lo contrario**: el validador de GitHub es la autoridad final y no se lo puede correr sin pushear, cosa prohibida en esta unidad. Esta tabla registra **las reglas que la documentación publica y que conocemos**; que GitHub tenga otras no documentadas es posible y no se puede descartar desde acá. Lo que sí se garantiza es lo acotado: los archivos coinciden con una especificación cerrada, y esa especificación fue elegida contra las reglas de arriba.
 
-### El verificador de plantillas — ejecutable, corrido, con sus casos negativos
+### El verificador de plantillas — qué debe establecer
 
 La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Se reemplaza por un validador único, real, y **corrido**:
 
@@ -627,6 +640,7 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 | C1 | comparar **objetos parseados**: no ve claves duplicadas — `name: injected` seguido de `name: expected` da el mismo objeto | r9 |
 | C2 | seguir **symlinks**, ni en los archivos ni en **el directorio** | r12, r13 |
 | C3 | omitir el **inventario** del directorio: un cuarto archivo queda dentro del alcance permitido y ningún diff lo mira | r11 |
+| C6 | aceptar un **directorio con el nombre de una plantilla**: no es un archivo regular y git no lo versionaría como el YAML. *(Estaba reproducido desde la r12 y se perdió al convertir las tablas en la r16 — el mismo barrido de síntoma incompleto, ahora sobre la conversión misma.)* | r12 |
 | C4 | confiar en un **extractor no verificado**: si el bloque contiene una fence corta, un extractor ingenuo corta ahí y valida lo que el autor quería en vez de lo publicado | r13 |
 | C5 | correr sin comprobar antes que el bloque publicado **compila** | r13 |
 
@@ -640,25 +654,25 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 | Caso | Resultado |
 |---|---|
-| los tres archivos idénticos a sus bloques | `VERIFY: OK`, `rc=0` |
-| un byte cambiado (`blank_issues_enabled: true` → `false`) | `rc=1`, «difiere del bloque canonico» |
-| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | `rc=1`, «difiere del bloque canonico» |
-| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | `rc=1`, «no es un archivo regular (link)» |
-| **el directorio entero es symlink** a uno externo con los tres archivos (r13) | `rc=1`, «no es un directorio real (link)» |
-| directorio con el nombre de una plantilla | `rc=1`, «no es un archivo regular (directory)» |
-| archivo de más en el directorio | `rc=1`, «inventario != esperado» |
-| archivo ausente | `rc=1`, archivo ausente |
-| bloque ausente en la spec | `rc=1`, «se exige exactamente 1 bloque canonico, hay 0» |
-| bloque duplicado en la spec | `rc=1`, «…hay 2» |
-| spec ilegible | `rc=1`, aborta |
+| los tres archivos idénticos a sus bloques | **acepta** |
+| un byte cambiado (`blank_issues_enabled: true` → `false`) | **rechaza**: «difiere del bloque canonico» |
+| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | **rechaza**: «difiere del bloque canonico» |
+| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | **rechaza**: «no es un archivo regular (link)» |
+| **el directorio entero es symlink** a uno externo con los tres archivos (r13) | **rechaza**: «no es un directorio real (link)» |
+| directorio con el nombre de una plantilla | **rechaza**: «no es un archivo regular (directory)» |
+| archivo de más en el directorio | **rechaza**: «inventario != esperado» |
+| archivo ausente | **rechaza**: archivo ausente |
+| bloque ausente en la spec | **rechaza**: «se exige exactamente 1 bloque canonico, hay 0» |
+| bloque duplicado en la spec | **rechaza**: «…hay 2» |
+| spec ilegible | **rechaza**: aborta |
 | **el bloque publicado no compila** | el harness aborta antes de correrlo |
 
 
 **El defecto que originó C4/C5 vale conservarlo, porque es el más instructivo de la unidad.** Un bloque publicado que contiene una fence corta hace que un extractor ingenuo corte ahí; el mío cortaba justo al final del programa que yo quería publicar y devolvía algo válido, mientras el bloque real arrastraba una cola huérfana y **no compilaba**. **Mi verificación coincidía con lo que yo quería publicar, no con lo publicado** — un verificador que confirma la intención en lugar del artefacto.
 
-**Cómo se reproducen los negativos**: se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
+**Cómo se montan los negativos** (para quien construya la herramienta): se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
 
-**El validador aceptaba symlinks, y eso lo encontró la r12 reproduciéndolo**: `Dir.children`, `File.readable?` y `File.read` **siguen enlaces**, así que reemplazar `config.yml` por un symlink a un archivo externo con los bytes canónicos daba `VERIFY: OK`. Git versionaría el enlace y no el YAML que GitHub necesita — o sea que el verificador aprobaba un artefacto defectuoso. Cerrado con `File.lstat` y el rechazo explícito de todo lo que no sea archivo regular, con sus dos negativos corridos.
+**El prototipo aceptaba symlinks, y eso lo encontró la r12 reproduciéndolo**: `Dir.children`, `File.readable?` y `File.read` **siguen enlaces**, así que reemplazar `config.yml` por un symlink a un archivo externo con los bytes canónicos daba `VERIFY: OK`. Git versionaría el enlace y no el YAML que GitHub necesita — o sea que el verificador aprobaba un artefacto defectuoso. Cerrado con `File.lstat` y el rechazo explícito de todo lo que no sea archivo regular, con sus dos negativos corridos.
 
 **Dos defectos que encontró la corrida y ninguna lectura habría visto**: el Ruby de sistema lee en **US-ASCII** por defecto, así que `File.read` sin `encoding:` explotaba con `invalid byte sequence` sobre los guiones largos del doc; y la comparación tenía que ser de texto en la misma codificación, no `binread` contra un string UTF-8. Es la tercera vez en la unidad que correr encuentra lo que razonar no.
 
@@ -712,9 +726,11 @@ exact command behind each one.
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | D1 | comparar **secuencias de líneas** `+`/`-`: no ve reubicación ni blancos, así que mover las líneas nuevas al final o agregar una línea vacía terminal pasa | r15 |
-| D2 | aceptar una sustitución que matchee **cero o más de una** vez | r15 |
+| D2a | aceptar una sustitución que matchee **cero** veces | r15 |
+| D2b | aceptar una sustitución que matchee **más de una** vez | r15 |
+| D3 | tomar como base un commit **distinto de `2985447`**: con una base posterior que ya contenga una reescritura ajena, la reconstrucción la aprobaría. El baseline es `2985447:README.md` y va fijado, no parametrizable por default | r16 |
 
-**Prueba de aceptación**: positivo con la edición prevista, y un negativo por cada bypass de D1.
+**Prueba de aceptación**: positivo con la edición prevista, y **un caso por fila** — los dos bypasses de D1 (reubicación y línea vacía terminal), una sustitución que no matchea, una que matchea dos veces, y una base distinta de `2985447`.
 
 Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
 
@@ -765,6 +781,19 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r16 (base `6ec4b48`, HEAD `692588f`) — CHANGES_REQUESTED · **6 bloqueantes, cero preferencias**
+
+**La respuesta a la pregunta que decidía la ronda**: la decisión humana es **válida** —«no reporto como faltante ningún ejecutable»—, pero **las tablas todavía no alcanzan como especificación**. Eso es la bajada funcionando: lo que falta es exactamente lo que una bajada debe capturar.
+
+1. **`AUTORIZADOS` ya nacía incompleto**, y el defecto es mío en su forma más incómoda: faltaban **dos** SHA —`c011658`, que el padre no declaró, y `b05359c`, que **yo dije haber incorporado y no incorporé**—. Mi edición había quedado en un script que abortó antes de escribir, y lo reporté como hecho sin re-derivar. **Es «declarar de memoria en vez de derivar», del lado del hijo**, después de haberlo señalado del lado del padre. Corregido: la lista pasa a **SHA completos** —porque `A4` prohíbe usar abreviaturas como identidad, y una lista corta obligaría al verificador a expandirlas— y se reconcilia contra la derivación, **14/14**.
+2. **Las pruebas de aceptación volvían a agrupar ramas.** `A2` juntaba cuatro invocaciones de git y `A8` dos condiciones; `B` pedía negativos solo por sintaxis, dejando `B1`, `B3` y `B4` sin caso propio; `D` no pedía ninguno para `D2`. Atomizadas: `A2a–A2d`, `A8a–A8b`, `D2a–D2b`, y una matriz `fila → caso` para `B`.
+3. **`B` y `D` no determinaban qué implementar.** Ahora `B2` enumera el **lenguaje cerrado** de referencias admitidas, `B3` **materializa** la lista de cruzadas, y entra `D3`: el baseline es `2985447:README.md` y va **fijado**, porque con una base posterior que ya contenga una reescritura ajena la reconstrucción la aprobaría.
+4. **La decisión no se había propagado a sus hermanos textuales** — el doc seguía titulando «ejecutable, corrido», publicando `C12 PASA` y diciendo que el barrido «corre en cada ronda». **Tercera vez que hago el barrido de la clase y no el del síntoma**: convertí las secciones y no la prosa que las describía. Reescritas como especificación e historia anclada.
+5. **El reset de la racha no sigue el contrato versionado** — `review-contract.md` enumera los resets y ninguno cubre «sin corte». Es del padre y no se toca.
+6. **El `## Cierre` conserva otro agregado móvil.** Del padre.
+
+**Y una regresión que vale nombrar**: al convertir las tablas perdí el negativo del **directorio con nombre de plantilla**, que estaba reproducido desde la r12. Sobrevivía en la tabla histórica y no en `C1–C5`. Restaurado como `C6`. Es el barrido de síntoma incompleto **sobre la conversión misma**.
 
 ### r15 (base `6ec4b48`, HEAD `f679d72`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · **se cumple la condición que el hijo había puesto**
 
