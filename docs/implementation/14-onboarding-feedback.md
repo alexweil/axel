@@ -42,12 +42,14 @@ La generalización: **cuando un criterio no cierra después de dos intentos de r
 
 Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte rondas de la unidad `13` fueron exactamente esto — sus commits al ledger y los del hijo se mezclaban en un solo rango, así que cada corrección de uno movía la evidencia del otro, y el ciclo persiguió con redacciones un problema que era de instrumento.
 
+**Los desempates se identifican por su letra y su SHA, no por ordinal** (r12). Yo llamaba «tercer desempate» a **dos** eventos distintos —el «a)» del primer corte de esta unidad y el «c)» del segundo—, y el ledger ya tenía asignado ese ordinal al primero. Un ordinal es un contador que el proceso mueve: cada corte nuevo lo corre, y basta un evento no contado para que toda la numeración quede mal. La letra y el SHA no se mueven.
+
 **`AUTORIZADOS` — lista cerrada de commits del padre interiores al rango, y ahora *derivada* y no recordada.** Tras el olvido de `ae28842`, el padre adoptó el método correcto: `git log --format=%H 2985447..HEAD -- <ledger>` y declarar **todo** lo que salga. El hijo lo re-derivó por su cuenta y **las dos derivaciones coinciden**, que es lo que vuelve creíble la lista. El contrato le deja al padre una sola excepción durante el ciclo: corregir una falsedad vigente. Cuando la usa, su SHA entra acá **en la misma ronda** en que commitea.
 
 - `2fc4dd4` — registro del **corte por deadlock** del ciclo de bajada (r1–r5). Toca `docs/STATUS.md` y el ledger.
-- `71c78be` — registro del **tercer desempate humano («a»)** que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
+- `71c78be` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f2` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
-- `341c957` — **tercer desempate humano, «c)»**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
+- `341c957` — **desempate humano «c)» del segundo corte de esta unidad**: se reanuda la unidad con el **mismo alcance, sin recortes**, y la racha reseteada. Queda registrado que el padre había recomendado cerrar sin esta unidad y ofrecido como alternativa recortar la ambición del andamiaje de verificación —Codex declaró **sólido el contenido canónico de los YAML**, así que lo que no cerraba era la maquinaria alrededor—, y que el humano decidió seguir con el alcance intacto.
 - `5053251` — **segundo corte por deadlock** (racha 5, r6–r11). Toca `docs/STATUS.md` y el ledger.
 - `ae28842` — **corte de la unidad por indisponibilidad del reviewer**: la r10 salió `PROC_FAIL` en sus **dos** intentos, sin veredicto, porque Codex agotó su cuota de uso. Es `exit 2` persistente (condición 1), **no deadlock**. Toca `docs/STATUS.md` y el ledger. **Este SHA lo encontró la auditoría, no lo declaró el padre**: al reanudar pasó solo el de la reanudación. Se incorporó atribuido al padre **por evidencia y no por presunción** —formato de mensaje del padre, registra el corte que él mismo describió, y toca únicamente sus dos archivos— y se le pidió confirmación, que **dio**: es suyo. La causa que él identificó es la misma clase que esta unidad viene persiguiendo: **declaró de memoria en vez de derivar**, esta vez sobre sus propios commits; la forma correcta es `git log --format=%h <baseline>..HEAD -- <ledger>` y declarar todo lo que salga, no lo que se recuerda haber hecho.
 
@@ -64,23 +66,32 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 ```bash
 #!/bin/bash
-# C12 — alcance por commit, fail-closed. Sin pipeline: el flag debe sobrevivir.
+# C12 — alcance por commit, fail-closed de verdad: comprueba el rc de cada git.
 AUT="2fc4dd4 71c78be e5ee8f2 68a2fe5 7f57494 ae28842 140ad61 5053251 341c957"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
 HIJO='docs/STATUS.md docs/IMPLEMENTATION.md docs/implementation/14-onboarding-feedback.md'
+BASE="${1:-2985447}"
 viol=0
+if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then
+  echo "FALLA: git rev-list $BASE..HEAD no pudo ejecutarse"; exit 1
+fi
+[ -z "$commits" ] && { echo "FALLA: el rango no tiene commits; se esperaba al menos uno"; exit 1; }
 while read -r c; do
-  s=$(git rev-parse --short "$c")
+  s=$(git rev-parse --short "$c") || { echo "FALLA: rev-parse de $c"; exit 1; }
+  if ! paths=$(git show --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then
+    echo "FALLA: git show de $s no pudo ejecutarse"; exit 1
+  fi
+  [ -z "$paths" ] && { echo "FALLA: $s no declara paths; un commit vacio no es auditable"; exit 1; }
   if [[ " $AUT " == *" $s "* ]]; then
     while read -r p; do [ -z "$p" ] && continue
       case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre $s: $p"; viol=1;; esac
-    done <<< "$(git show --name-only --format= "$c")"
+    done <<< "$paths"
   else
     while read -r p; do [ -z "$p" ] && continue
       case " $HIJO " in *" $p "*) ;; *) echo "VIOLACION hijo $s: $p"; viol=1;; esac
-    done <<< "$(git show --name-only --format= "$c")"
+    done <<< "$paths"
   fi
-done < <(git rev-list 2985447..HEAD)
+done <<< "$commits"
 [ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
 ```
 
@@ -596,9 +607,8 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 ```ruby
 #!/usr/bin/env ruby
-# verify-templates.rb <spec.md> <dir>
-# Extrae los bloques canonicos de la bajada, exige exactamente uno por archivo,
-# compara byte a byte, parsea, y verifica el inventario exacto del directorio.
+# Extrae los bloques canonicos de la bajada, los compara byte a byte contra los
+# archivos reales y verifica el inventario exacto del directorio. Fail-closed.
 require 'yaml'
 spec_path, dir = ARGV[0], ARGV[1]
 NAMES = %w[config.yml friction-or-question.yml install-failed.yml].freeze
@@ -608,6 +618,7 @@ def bad(m) warn "FAIL: #{m}"; end
 abort("FAIL: spec no legible: #{spec_path}") unless File.readable?(spec_path)
 spec = File.read(spec_path, encoding: "UTF-8")
 
+# 1. inventario exacto del directorio
 actual = Dir.exist?(dir) ? Dir.children(dir).sort : nil
 if actual.nil?
   bad "directorio ausente: #{dir}"; failed = true
@@ -618,6 +629,33 @@ end
 NAMES.each do |n|
   marker = "`.github/ISSUE_TEMPLATE/#{n}`"
   re = /^#{Regexp.escape(marker)}\s*\n+```yaml\n(.*?)^```\s*$/m
+  blocks = spec.scan(re).map(&:first)
+  if blocks.size != 1
+    bad "#{n}: se exige exactamente 1 bloque canonico, hay #{blocks.size}"; failed = true; next
+  end
+  canon = blocks.first
+  path = File.join(dir, n)
+  begin
+    st = File.lstat(path)
+  rescue SystemCallError
+    bad "#{n}: archivo ausente"; failed = true; next
+  end
+  unless st.file?
+    bad "#{n}: no es un archivo regular (#{st.ftype}) — git versionaria eso y no el YAML"; failed = true; next
+  end
+  actual_bytes = File.read(path, encoding: "UTF-8")
+  if actual_bytes != canon
+    bad "#{n}: difiere del bloque canonico (#{actual_bytes.bytesize} vs #{canon.bytesize} bytes)"; failed = true; next
+  end
+  begin
+    YAML.load(canon)
+  rescue => e
+    bad "#{n}: el bloque canonico no parsea: #{e.class}"; failed = true
+  end
+end
+
+if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK (#{NAMES.size} archivos)"; exit 0 end
+```yaml\n(.*?)^```\s*$/m
   blocks = spec.scan(re).map(&:first)
   if blocks.size != 1
     bad "#{n}: se exige exactamente 1 bloque canonico, hay #{blocks.size}"; failed = true; next
@@ -649,11 +687,17 @@ if failed then warn "VERIFY: FAIL"; exit 1 else puts "VERIFY: OK"; exit 0 end
 | los tres archivos idénticos a sus bloques | `VERIFY: OK`, `rc=0` |
 | un byte cambiado (`blank_issues_enabled: true` → `false`) | `rc=1`, «difiere del bloque canonico» |
 | **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | `rc=1`, «difiere del bloque canonico» |
+| **symlink con los bytes canónicos** — git versionaría el enlace, no el YAML | `rc=1`, «no es un archivo regular (link)» |
+| **directorio con el nombre de una plantilla** | `rc=1`, «no es un archivo regular (directory)» |
 | archivo de más en el directorio | `rc=1`, «inventario != esperado» |
 | archivo ausente | `rc=1`, inventario **y** archivo ausente |
 | bloque ausente en la spec | `rc=1`, «se exige exactamente 1 bloque canonico, hay 0» |
 | bloque duplicado en la spec | `rc=1`, «…hay 2» |
 | spec ilegible | `rc=1`, aborta |
+
+**Cómo se reproducen**, porque «corrido» sin procedimiento es otra declaración sin ejecutar: se extraen los tres bloques de este doc a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado (editar un byte, anteponer una línea, reemplazar un archivo por un symlink o un directorio, agregar o quitar un archivo, o pasar una spec alterada por `sed`/`awk`). Ninguno toca el repo.
+
+**El validador aceptaba symlinks, y eso lo encontró la r12 reproduciéndolo**: `Dir.children`, `File.readable?` y `File.read` **siguen enlaces**, así que reemplazar `config.yml` por un symlink a un archivo externo con los bytes canónicos daba `VERIFY: OK`. Git versionaría el enlace y no el YAML que GitHub necesita — o sea que el verificador aprobaba un artefacto defectuoso. Cerrado con `File.lstat` y el rechazo explícito de todo lo que no sea archivo regular, con sus dos negativos corridos.
 
 **Dos defectos que encontró la corrida y ninguna lectura habría visto**: el Ruby de sistema lee en **US-ASCII** por defecto, así que `File.read` sin `encoding:` explotaba con `invalid byte sequence` sobre los guiones largos del doc; y la comparación tenía que ser de texto en la misma codificación, no `binread` contra un string UTF-8. Es la tercera vez en la unidad que correr encuentra lo que razonar no.
 
@@ -675,7 +719,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
-| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal» *y* **parsean**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro— y la r9 la **materializó**: sin los bloques literales, C6 no tenía contra qué comparar. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | `diff` byte a byte contra el bloque canónico —que detecta claves duplicadas, aliases y documentos múltiples sin necesidad de política escrita, porque todos son diferencias de bytes— **más** `/usr/bin/ruby -ryaml` como chequeo independiente de que el bloque es YAML válido. Los dos hacen falta y prueban cosas distintas. Mutaciones por sitio (clave faltante, extra, **duplicada**, tipo cambiado, valor cambiado) y camino positivo sobre los tres archivos |
+| C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal», **son archivos regulares**, **parsean**, y el directorio **no contiene nada más**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro—; la r9 la materializó con los bloques literales y la r11 la volvió **ejecutable**. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | **el validador de §Enfoque·«El verificador de plantillas», corrido**: un único programa que exige exactamente un bloque canónico por archivo, compara byte a byte, rechaza lo que no sea archivo regular, parsea y verifica el inventario exacto del directorio. Evidencia de cierre = su camino positivo **más los nueve casos negativos publicados en la tabla de esa sección**, cada uno reproducible con el procedimiento que la tabla declara |
 | C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
@@ -685,7 +729,7 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
-| **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con sus valores y con las **claves opcionales omitidas declaradas** — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por `diff`, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
+| **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
 
 ## Riesgos
 
@@ -700,7 +744,18 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 
 ## Review log
 
-### r11 (base `6ec4b48`, HEAD `8c941ad`) — CHANGES_REQUESTED · **5 puntos, cero preferencias** · **segundo corte por tope** → tercer desempate humano «c)»
+### r12 (base `6ec4b48`, HEAD `8d97931`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · **el ojo adversarial sobre los verificadores nuevos dio resultado**
+
+Le pedí explícitamente que atacara los dos verificadores recién publicados, por ser la superficie más fresca. **Encontró que los dos fallaban abierto**, cada uno por un camino que yo no había probado. La respuesta a «¿el andamiaje quedó cerrado?» es **no, seguía produciendo** — y por eso valía preguntarlo.
+
+1. **C12 fallaba abierto ante errores de git.** Si `git rev-list` falla, el loop procesa **cero** commits y termina en `C12 PASA`; si cada `git show` falla, las sustituciones quedan vacías y también aprueba. Codex lo reprodujo: rango inválido y `git show --bad-option` imprimen `fatal` y **devuelven `rc=0`**. Cerrado capturando y comprobando el rc de `git rev-list`, de cada `git rev-parse` y de cada `git show`, más el rechazo de un rango vacío y de un commit sin paths. **Dos negativos nuevos corridos**: `rev-list` roto y `git show` roto, los dos `rc=1`.
+2. **El validador aceptaba symlinks**, y éste sí permitía aprobar un artefacto defectuoso: `Dir.children`, `File.readable?` y `File.read` **siguen enlaces**, así que un `config.yml` que fuera symlink a un archivo externo con los bytes canónicos daba `VERIFY: OK`. Git versionaría el enlace, no el YAML. Cerrado con `File.lstat` y rechazo de todo lo que no sea archivo regular; **dos negativos nuevos corridos**: symlink y directorio.
+3. **C6 y C15 conservaban los mecanismos que la ronda anterior decía haber retirado** — C6 seguía prescribiendo el viejo `diff` y las «mutaciones por sitio», y C15 seguía exigiendo «las claves opcionales omitidas declaradas», contradiciendo la decisión de no enumerarlas tomada en la misma ronda. **Es el hermano que no barrí**: cambié las secciones y no los criterios que las citaban. Ambas filas actualizadas al mecanismo vigente, y la evidencia de cierre pasa a ser el positivo más los negativos publicados, con su procedimiento de reproducción.
+4. **El desempate nuevo dejó dos falsedades sincronizadas**: el ledger afirma que todos los cortes se resolvieron con «a)» cuando el último fue «c)» —esa mitad es del padre—, y STATUS y este doc llamaban «tercero» al desempate «c)» cuando el ledger ya tenía asignado ese ordinal al «a)» anterior. **Yo llamaba «tercer desempate» a dos eventos distintos.** Corregido dejando de numerarlos: se identifican por **letra y SHA**, porque un ordinal es un contador que el proceso mueve y basta un evento no contado para que toda la numeración quede mal.
+
+**Los dos scripts quedaron verificados corriéndolos tal como se publican** —extraídos del propio doc, no de mi copia de trabajo—, con su camino positivo y sus negativos. Es la disciplina que el padre usó para el comando del ledger, aplicada a código que yo publico.
+
+### r11 (base `6ec4b48`, HEAD `8c941ad`) — CHANGES_REQUESTED · **5 puntos, cero preferencias** · **segundo corte por tope** → desempate humano «c)»
 
 Codex declaró **sólido el contenido canónico de los YAML** frente a la documentación pública. Lo que no cerraba era **la maquinaria alrededor**, y los cinco puntos tienen un nombre que esta unidad ya había acuñado: **mecanismo declarado que no ejecuta**. El humano eligió «c)» — reanudar con el alcance intacto, sin recortes, habiendo el padre recomendado cerrar sin la unidad y ofrecido recortar el andamiaje.
 
@@ -771,7 +826,7 @@ La corrección de `checkboxes`, el retiro de `upload` y C12 quedaron bien. **El 
 
 **Barrido de premisas externas, hecho de una vez** (§«Barrido de premisas sobre sistemas externos»): a pedido del padre, en vez de esperar a que aparezcan de a una. Nueve premisas inventariadas — ocho verificadas contra su fuente, y una **retirada** por no ser verificable ni necesaria. De ahí salieron además los textos de error exactos que GitHub publica para siete de las invariantes, que ahora el validador puede usar como expectativa.
 
-### r5 (base `6ec4b48`, HEAD `fdd2f41`) — CHANGES_REQUESTED · **2 bloqueantes, cero preferencias** · **corte por tope** → tercer desempate humano «a)»
+### r5 (base `6ec4b48`, HEAD `fdd2f41`) — CHANGES_REQUESTED · **2 bloqueantes, cero preferencias** · **corte por tope** → desempate humano «a)»
 
 Codex contestó las dos distinciones que le pedí: **«no encontré mejoras meramente opcionales»**, y de los dos dijo explícitamente que **no** son bookkeeping diferible por la vía de «no revisados» del RECAP. La racha llegó a 5, la corrida se detuvo, y el humano desempató con **«a)»**: se autorizan los dos y la unidad se reanuda con la racha reseteada. *(Queda registrado, porque es parte de la historia de la decisión: el padre había recomendado cerrar el pipeline **sin** esta unidad, y el humano eligió completarla.)*
 
