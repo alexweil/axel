@@ -50,6 +50,8 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `71c78bee5dd2db85daccc8de87543a5ea9d9e4da` — registro del **desempate humano «a)» del primer corte de esta unidad**, que autoriza los dos bloqueantes y reanuda la unidad. Toca `docs/STATUS.md` y el ledger.
 - `e5ee8f23f4e6891ecc12679147d7219bb15ce339` — **corrección de una falsedad vigente en el `## Cierre` del ledger**, que es la única excepción que el contrato le deja al padre durante un ciclo: el bloque describía el primer corte como si fuera el único y decía que la corrida se reanuda en la unidad `13`. Toca **solo** el ledger. La detectó la r6 y el hijo **no la tocó**: se la pasó al padre, que commiteó y devolvió el SHA en el acto, que es el protocolo que la unidad `13` dejó probado.
 - `380eb749b6a635c76d5093286c60557b8128855d` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
+- `47d5a7c5cd677c45ecde96af3de0d8a1e2683c7f` — **desempate humano «a)» del deadlock contractual**: tras restaurar la racha a su valor real, la unidad quedó en deadlock y el humano desempató por la **vía contractual**, que es lo que habilita `reset-deadlock`. Toca `docs/STATUS.md` y el ledger.
+- `d45c7b25ffac54b110f281f30f1658b297abf80e` — **reversión del reset no contractual**, más el `## Cierre` sin enumerar sus propias correcciones. El padre volvió al contrato versionado y **descartó la distinción que había propuesto** («el humano decide sobre la sustancia» contra «se despeja un obstáculo»): no es regla, y si va a gobernar el estado del loop tiene que entrar al contrato por su propia vía. Toca `docs/STATUS.md` y el ledger.
 - `b05359c2c1aa6372ce1287732ba9c8f6fe0af714` — **decisión humana «a)»**: la construcción de los verificadores se mueve al ciclo de implementación, con los criterios intactos. Toca `docs/STATUS.md` y el ledger.
 - `c0116580a4490cd9849434536cd61b72293a0c62` — **elevación al humano antes del tope**: registra el diagnóstico del hijo, la retirada de su pronóstico de cierre y la propuesta, más la sexta corrección del `## Cierre`. Toca `docs/STATUS.md` y el ledger. **Lo encontró la derivación, no la declaración**: el padre no lo pasó, y el hijo tampoco lo derivó antes de afirmar que la lista estaba completa.
 - `7c0aa7c455b85a6e4a540967566027f10751a8a9` — **reescritura completa del `## Cierre`**, en vez de una sexta corrección puntual. El bloque deja de publicar cantidades, letras, cuantificadores y comandos que agreguen las interrupciones, y **separa los dos dominios que el comando anterior mezclaba** —deadlock contra indisponibilidad del reviewer—, porque un comando que los cuente juntos es falso por construcción. Toca **solo** el ledger.
@@ -652,23 +654,20 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 **Corrido, con su camino positivo y los casos negativos de la tabla de abajo** —sin publicar la cantidad, que crece cada vez que una ronda encuentra una vía nueva (ya pasó en la r12 y en la r13)—, y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
 
-| Caso | Resultado |
-|---|---|
-| los tres archivos idénticos a sus bloques | **acepta** |
-| un byte cambiado (`blank_issues_enabled: true` → `false`) | **rechaza**: «difiere del bloque canonico» |
-| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | **rechaza**: «difiere del bloque canonico» |
-| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | **rechaza**: «no es un archivo regular (link)» |
-| **el directorio entero es symlink** a uno externo con los tres archivos (r13) | **rechaza**: «no es un directorio real (link)» |
-| directorio con el nombre de una plantilla | **rechaza**: «no es un archivo regular (directory)» |
-| archivo de más en el directorio | **rechaza**: «inventario != esperado» |
-| archivo ausente | **rechaza**: archivo ausente |
-| bloque ausente en la spec | **rechaza**: «se exige exactamente 1 bloque canonico, hay 0» |
-| bloque duplicado en la spec | **rechaza**: «…hay 2» |
-| spec ilegible | **rechaza**: aborta |
-| **el bloque publicado no compila** | el harness aborta antes de correrlo |
-
-
-**El defecto que originó C4/C5 vale conservarlo, porque es el más instructivo de la unidad.** Un bloque publicado que contiene una fence corta hace que un extractor ingenuo corte ahí; el mío cortaba justo al final del programa que yo quería publicar y devolvía algo válido, mientras el bloque real arrastraba una cola huérfana y **no compilaba**. **Mi verificación coincidía con lo que yo quería publicar, no con lo publicado** — un verificador que confirma la intención en lugar del artefacto.
+| Caso | Ejercita | Resultado |
+|---|---|---|
+| los tres archivos idénticos a sus bloques | *(positivo)* | **acepta** |
+| un byte cambiado (`blank_issues_enabled: true` → `false`) | C1 | **rechaza** |
+| **clave duplicada** (`name: injected` antepuesto) — lo que un comparador estructural no ve | C1 | **rechaza** |
+| **un archivo es symlink** con los bytes canónicos — git versionaría el enlace | C2 | **rechaza** |
+| **el directorio entero es symlink** a uno externo con los tres archivos | C2 | **rechaza** |
+| **directorio con el nombre de una plantilla** | C6 | **rechaza** |
+| archivo de más en el directorio | C3 | **rechaza** |
+| archivo ausente | C3 | **rechaza** |
+| bloque ausente en la spec | C4 | **rechaza** |
+| bloque duplicado en la spec | C4 | **rechaza** |
+| spec ilegible | C4 | **rechaza** |
+| **el bloque publicado no compila** | C5 | **rechaza** antes de correrlo |
 
 **Cómo se montan los negativos** (para quien construya la herramienta): se extraen los tres bloques a un directorio temporal —el camino positivo—, y cada negativo es **una** alteración de ese estado. Ninguno toca el repo.
 
@@ -733,6 +732,18 @@ exact command behind each one.
 **Prueba de aceptación**: positivo con la edición prevista, y **un caso por fila** — los dos bypasses de D1 (reubicación y línea vacía terminal), una sustitución que no matchea, una que matchea dos veces, y una base distinta de `2985447`.
 
 Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
+
+### Cómo se detecta que una reestructuración perdió un caso
+
+El padre lo pidió como mecanismo y no como cuidado, y tiene razón en que el barrido de referencias **no cubre esta clase**: la r16 perdió el negativo del directorio con nombre de plantilla al convertir las tablas, y ninguna referencia quedó rota — el caso simplemente dejó de estar.
+
+**El invariante que sí lo detecta**: cada caso de una tabla de aceptación **declara qué fila de modos de falla ejercita**, y las dos tablas están en **biyección** — ninguna fila sin caso, ningún caso sin fila. Perder un caso al reestructurar deja su fila huérfana; agregar uno sin fila deja el caso sin justificación.
+
+Es **chequeable comparando las dos columnas de identificadores**, igual que la biyección condición→fixture que la r8 ya había usado, y por eso la columna «Ejercita» existe: sin ella el invariante no es verificable.
+
+**La generalización, que es lo que vale más allá de este feature**: cuando una reestructuración mueve contenido entre tablas, la garantía no puede ser recordar qué había — tiene que ser una **relación declarada entre las dos** que se rompa sola al perder una punta.
+
+*(Calibración, y es la misma de siempre: la primera corrida del chequeo marcó tres filas «sin caso» que eran `C7`, `C8` y `C9` **de la tabla de criterios de cierre** — un identificador homónimo en otra tabla del mismo doc. La extracción tiene que estar **acotada a la sección**, igual que el barrido de referencias tuvo que acotarse al doc local. Es la tercera vez que un chequeo mío falla por alcance más ancho de lo que su pregunta necesita, y por eso entra como requisito y no como anécdota.)*
 
 ## Las herramientas se construyen en la implementación
 
