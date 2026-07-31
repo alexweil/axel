@@ -187,18 +187,26 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
 | B1 | leer **su propio código** como prosa: los literales de sus comentarios y de sus regex aparecen como referencias huérfanas | r15 |
-| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado, enumerado contra lo que la prosa efectivamente usa** (r17): (i) `§«Nombre con espacios»`; (ii) `§Nombre` de una palabra, **o `§N` numérica** cuando la sección es una de las preguntas numeradas de este doc; (iii) **compuesta** `§Nombre·«Sub»` o `§Nombre·N`, donde **la parte anterior al `·` debe resolver** y lo que sigue es un puntero interno que no se chequea; (iv) **cruzada declarada**, solo las de `B3`. Cualquier otra forma **no es referencia** y el chequeo debe rechazar el doc si aparece una — no ignorarla en silencio | r15, r17 |
+| B2 | cubrir **una sola sintaxis** de referencia. **Lenguaje cerrado, enumerado contra lo que la prosa efectivamente usa** (r17): (i) `§«Nombre con espacios»`; (ii) `§Nombre` de una palabra, **o `§N` numérica** cuando la sección es una de las preguntas numeradas de este doc; (iii) **compuesta** `§Nombre·«Sub»`, donde **las dos partes deben resolver** a encabezados —dejar el sufijo sin comprobar hacía fallar abierto: renombrar la subsección pasaba (r18)—. **El sufijo numérico queda prohibido**, porque no resuelve a nada y su única ocurrencia se reescribió; (iv) **cruzada declarada**, solo las de `B3`. Cualquier otra forma **no es referencia** y el chequeo debe rechazar el doc si aparece una — no ignorarla en silencio | r15, r17 |
 | B3 | resolver contra un **pool de docs**. **Lista cerrada de cruzadas, con su destino materializado** (r17): `§«El corte de métricas»` → `docs/implementation/13-public-showcase.md`; `§14` → `docs/IMPLEMENTATION.md`. *(`§2` **no** es cruzada: apunta a la segunda de las cinco preguntas numeradas de este doc, y la primera versión de esta fila lo declaró mal por agruparlo con `§14` sin verificarlo — el mismo defecto que la fila de al lado prohíbe.)* Toda otra referencia debe resolver **localmente**, y una cruzada no declarada es un fallo | r15, r17 |
 | B4 | confundir **mención con uso**: una marca entre backticks cita la sintaxis, no referencia una sección — la distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo | r15 |
 
 **Prueba de aceptación**, un caso por fila:
 
-| Fila | Caso negativo |
-|---|---|
-| B1 | el código del propio chequeo contiene las marcas que busca ⇒ no debe reportarlas |
-| B2 | una referencia rota **de cada** forma del lenguaje cerrado —simple con comillas, simple de una palabra, y compuesta— sobre una sección **efectivamente citada**; más una forma **fuera** del lenguaje, que debe hacer fallar el doc |
-| B3 | una referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual; y una cruzada **no declarada** ⇒ debe fallar |
-| B4 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar |
+| ID | Caso | Ejercita |
+|---|---|---|
+| M0 | el doc tal como está | *(positivo)* |
+| M1 | el código del propio chequeo contiene las marcas que busca ⇒ no debe reportarlas | B1 |
+| M2 | referencia rota en forma `§«Nombre»` sobre una sección **efectivamente citada** | B2 |
+| M3 | referencia rota en forma `§Nombre` | B2 |
+| M4 | referencia compuesta con el **prefijo** roto | B2 |
+| M5 | referencia compuesta con el **sufijo** roto | B2 |
+| M6 | una forma **fuera** del lenguaje cerrado ⇒ debe hacer fallar el doc, no ignorarse | B2 |
+| M7 | referencia rota cuyo nombre **existe como encabezado en otro doc** ⇒ debe fallar igual | B3 |
+| M8 | una cruzada **no declarada** ⇒ debe fallar | B3 |
+| M9 | una marca entre backticks que nombra una sección inexistente ⇒ es mención, no debe fallar | B4 |
+
+**Inventario cerrado por fila**: `B1` → `M1`; `B2` → `M2, M3, M4, M5, M6`; `B3` → `M7, M8`; `B4` → `M9`; *(positivo)* → `M0`.
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían—. **Debe correr en cada ronda del ciclo de implementación**, no cuando alguien se acuerde: es el punto entero de haberlo sacado del terreno de las lecciones. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
@@ -636,7 +644,7 @@ Siguen importando: si el contenido que elegimos violara una, el formulario no ap
 
 ### El verificador de plantillas — qué debe establecer
 
-La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Se reemplaza por un validador único, real, y **corrido**:
+La r11 encontró que el comparador que yo había publicado **no era ejecutable**: invocaba un `extraer_bloque` que no existe, y además `diff <(extractor) archivo` **falla abierto respecto del extractor** —un extractor que imprime los bytes correctos y sale con `rc=1` deja a `diff` devolver `0`—. Era la tercera vez en la unidad que publicaba un **mecanismo declarado que no ejecuta**. Lo que debe reemplazarlo es un validador **único**:
 
 **Qué debe establecer**: los tres archivos de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene **exactamente** esos tres.
 
@@ -653,7 +661,7 @@ La r11 encontró que el comparador que yo había publicado **no era ejecutable**
 
 *(Forma que la implementación hereda: el fence del bloque canónico es de **cuatro** backticks porque su contenido incluye fences de tres — el feature 13 ya lo usaba por la misma razón.)*
 
-**Un solo programa hace las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
+**Un solo programa deberá hacer las cuatro cosas** que antes estaban repartidas entre comandos que no se comprobaban entre sí: exige **exactamente un** bloque canónico por archivo, compara **byte a byte**, **parsea**, y verifica el **inventario exacto del directorio** — que es el punto 3 de la r11: sin él, un cuarto `.github/ISSUE_TEMPLATE/extra.yml` quedaba dentro del alcance permitido y ningún `diff` lo miraba. El inventario vuelve mecánica además la unicidad de `name` **entre todas las plantillas**, porque no puede haber una plantilla que la spec no fije.
 
 **Casos de aceptación exigidos, en la tabla de abajo** —sin publicar la cantidad, que crece cada vez que una ronda encuentra una vía nueva (ya pasó en la r12 y en la r13)—, y esto reemplaza a la tabla de «familias de mutación» que era la tercera declaración sin ejecutar:
 
@@ -744,7 +752,18 @@ exact command behind each one.
 | D2b | aceptar una sustitución que matchee **más de una** vez | r15 |
 | D3 | tomar como base un commit **distinto de `2985447`**: con una base posterior que ya contenga una reescritura ajena, la reconstrucción la aprobaría. El baseline es `2985447:README.md` y va fijado, no parametrizable por default | r16 |
 
-**Prueba de aceptación**: positivo con la edición prevista, y **un caso por fila** — los dos bypasses de D1 (reubicación y línea vacía terminal), una sustitución que no matchea, una que matchea dos veces, y una base distinta de `2985447`.
+**Casos con ID e inventario cerrado por fila**:
+
+| ID | Caso | Ejercita |
+|---|---|---|
+| P0 | la edición prevista | *(positivo)* |
+| P1 | las tres líneas nuevas **movidas al final** del README | D1 |
+| P2 | una **línea vacía terminal** agregada | D1 |
+| P3 | una sustitución que **no matchea** | D2a |
+| P4 | una sustitución que matchea **dos veces** | D2b |
+| P5 | una **base distinta** de `2985447` que ya contenga una reescritura ajena | D3 |
+
+`D1` → `P1, P2`; `D2a` → `P3`; `D2b` → `P4`; `D3` → `P5`; *(positivo)* → `P0`.
 
 Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
 
@@ -752,9 +771,11 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 
 El padre lo pidió como mecanismo y no como cuidado, y tiene razón en que el barrido de referencias **no cubre esta clase**: la r16 perdió el negativo del directorio con nombre de plantilla al convertir las tablas, y ninguna referencia quedó rota — el caso simplemente dejó de estar.
 
-**El invariante que sí lo detecta**: cada caso de una tabla de aceptación **declara qué fila de modos de falla ejercita**, y las dos tablas están en **biyección** — ninguna fila sin caso, ningún caso sin fila. Perder un caso al reestructurar deja su fila huérfana; agregar uno sin fila deja el caso sin justificación.
+**El invariante que sí lo detecta** —y la primera versión **no lo cumplía**, que es el hallazgo de la r17—: cada caso lleva un **ID estable** y cada fila declara **el inventario exacto de los casos que la ejercitan**. Borrar un caso deja un ID **requerido y sin definir**; agregar uno sin declararlo deja un ID **definido y sin requerir**.
 
-Es **chequeable comparando las dos columnas de identificadores**, igual que la biyección condición→fixture que la r8 ya había usado, y por eso la columna «Ejercita» existe: sin ella el invariante no es verificable.
+**Lo que no alcanza, y por qué**: comparar los *conjuntos* de identificadores —lo que yo había llamado «biyección»— falla cuando una fila exige **varios** casos: al borrar uno queda el otro, la fila sigue apareciendo y nada se rompe. Era una **sobreyección disfrazada**, y no detectaba ninguna ausencia, que era lo único que prometía.
+
+Es **chequeable comparando el conjunto de IDs definidos contra la unión de los declarados por las filas**, en las dos direcciones. Por eso existen la columna «Ejercita» y el inventario por fila: sin ellos el invariante no es verificable.
 
 **La generalización, que es lo que vale más allá de este feature**: cuando una reestructuración mueve contenido entre tablas, la garantía no puede ser recordar qué había — tiene que ser una **relación declarada entre las dos** que se rompa sola al perder una punta.
 
@@ -782,7 +803,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 |---|---|---|
 | C1 | El snapshot es la **reconstrucción exacta** del corte `b0bdf4d` que declaró el 13: `rc=0`, **88** filas, última fila con ese SHA | corrida de `cut.awk` con sus tres postcondiciones |
 | C2 | El snapshot es **prefijo literal** del `rounds-log` vivo — ni una línea editada | comparación mecánica contra las primeras 88 líneas del archivo vivo |
-| C3 | `docs/metrics.md` publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §Enfoque·3 y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
+| C3 | El informe publica sus cifras como matriz **exhaustiva por cifra** —`cifra → fuente(s) → corte → comando → límite de auditabilidad`—, cuyo universo es el de §«La especificación literal» y que **no deja ninguna cifra publicada sin fila**. Toda cifra auditable desde un clon de axel **se re-deriva y coincide**; las **compuestas** declaran sus sumandos y el comando de cada uno, sin presentar el total como derivación única; las de la instalación externa quedan **rotuladas como verificables solo contra `alexweil/inquirylab`**, nunca prometidas como re-derivables desde acá | re-corrida fila por fila, más la **prueba de cobertura**: cada cifra publicada en la superficie pública y en el propio informe tiene su fila; una cifra sin fila falla el criterio |
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
 | C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §«La especificación literal», parsean, y el directorio contiene exactamente esos tres. Las reglas documentadas de GitHub se satisfacen **por construcción**, con cada elección registrada contra su fuente | la herramienta se construye en la implementación contra los archivos reales (§«Las herramientas se construyen en la implementación»). **Qué debe establecer y qué modos de falla tiene prohibidos: `C1–C6`** de §Enfoque, con su inventario cerrado `N0–N11` |
@@ -794,6 +815,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
 | C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §Procedencia, con su prueba de aceptación — la lista de modos de falla prohibidos es lo que quince rondas de review produjeron, y cada fila fue un defecto reproducido |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
+| **C16** | **El barrido de referencias existe, corre y pasa** sobre el doc del feature al cerrar. Sin este criterio `B` no tenía consumidor: `A` lo consume C12, `C` lo consume C6 y `D` lo consume C7, pero **el feature podía cerrar sin el barrido** aunque sus filas estuvieran escritas (r18) | la herramienta se construye en la implementación. **`B1–B4`** de §«El barrido del síntoma, mecanizado», con su inventario cerrado **`M0–M9`** |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
 
@@ -810,13 +832,24 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r18 (base `6ec4b48`, HEAD `7486a5a`) — CHANGES_REQUESTED · **7 bloqueantes, cero preferencias**
+
+**Seis son absorbibles como filas o correcciones de especificación. Uno no**, y va con esas palabras: `docs/STATUS.md` **seguía contradiciéndose consigo mismo** —declaraba la ronda en curso arriba y «esperando OK con racha 5» abajo, conservaba un pendiente ya resuelto y enumeraba tablas viejas—. La causa es mía y es la misma forma de siempre: **mi reconstrucción de la r17 parcheó líneas sueltas en vez de auditar el archivo entero**, o sea que la reparación de un estado roto quedó ella misma inconsistente. Reconstruido auditando cada línea, y con el vocabulario contractual en «Esperando».
+
+1. **`N0–N11` cerró `C` pero no llegó a `B` ni a `D`**: sus filas seguían agrupando varios negativos sin IDs, así que borrar «la forma fuera del lenguaje» o el bypass de la línea vacía **no dejaba ninguna fila huérfana**. Agregados `M0–M9` y `P0–P5` con su inventario cerrado; los tres verifican en las dos direcciones.
+2. **La explicación conservaba el invariante refutado** — seguía diciendo «biyección» y «perder un caso deja una fila huérfana», falso cuando una fila exige varios. Reescrita en términos del inventario literal, con el porqué del fallo anterior escrito al lado.
+3. **La especificación de `B` fallaba abierto**: en una referencia compuesta el sufijo **no se comprobaba**, así que renombrar la subsección pasaba. Ahora **las dos partes deben resolver**, y el sufijo numérico queda **prohibido** —su única ocurrencia se reescribió a una forma resoluble—.
+4. **`B` no tenía consumidor de cierre.** `A` lo consume C12, `C` lo consume C6, `D` lo consume C7, y **ningún criterio exigía el barrido**: el feature podía cerrar sin él aunque sus filas estuvieran escritas. Entra **C16**.
+5. **Seguía viva prosa que afirma un validador «real y corrido»** — quinta vez. Cerrado con el barrido de frases prohibidas, que ahora corro antes de commitear en vez de leer.
+6. **El `## Cierre`** sigue diciendo que no enumera y enumerando. Del padre.
+
 ### r17 (base `6ec4b48`, HEAD `47f02c0`) — CHANGES_REQUESTED · **6 bloqueantes, cero preferencias**
 
 **Uno de los seis no es de especificación, y es el más grave**: `docs/STATUS.md` **había quedado destruido** — el commit `47d5a7c` del padre le borró 33 de sus 36 líneas y dejó tres, sin unidad, paso, ronda, veredicto ni racha, con `Fase` y `Esperando` concatenados. Eso **rompe el token de reentrada** que el contrato exige. Reconstruido derivándolo del estado real (`.claude/state/` y el STATUS previo a la destrucción), no de memoria.
 
 1. **La biyección caso↔fila que publiqué era falsa.** `C1`, `C2` y `C3` tenían dos casos, `C4` tres y `D1` dos, así que borrar un caso dejaba a su fila con otro y **la comparación de conjuntos seguía pasando**: no detectaba ninguna ausencia, que era exactamente lo único que prometía. Reemplazada por **IDs estables de caso (`N0–N11`) y un inventario cerrado por fila**: cada fila declara qué casos la ejercitan, y borrar uno deja un requerido sin definir. Verificado, 12/12.
 2. **Los consumidores no incorporaron las filas nuevas** —`C6` seguía exigiendo `C1–C5` y `C7` exigía `D1–D2`—, así que el directorio con nombre de plantilla y el baseline incorrecto podían quedar fuera del cierre **aunque estuvieran en las tablas**. Es el barrido del síntoma, cuarta vez.
-3. **El lenguaje de referencias no era cerrado**: la prosa usa formas **compuestas** (`§Enfoque·«…»`, `§Enfoque·3`) y una numérica, ninguna admitida por `B2`. Enumeradas contra lo que la prosa efectivamente usa, y las cruzadas **materializadas con su destino**.
+3. **El lenguaje de referencias no era cerrado**: la prosa usa formas **compuestas** (`§Enfoque·«…»`, `§«La especificación literal»`) y una numérica, ninguna admitida por `B2`. Enumeradas contra lo que la prosa efectivamente usa, y las cruzadas **materializadas con su destino**.
 4. **Seguían vivas afirmaciones de herramientas retiradas.** Cerrado con un barrido de frases prohibidas sobre el texto anterior al Review log.
 5. El `## Cierre` del ledger sigue enumerando lo que dice no enumerar — del padre.
 
