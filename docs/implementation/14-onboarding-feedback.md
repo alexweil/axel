@@ -112,11 +112,15 @@ done <<< "$commits"
 # Todo entregable versionado debe ser archivo REGULAR: un symlink entra con modo
 # 120000 y las lecturas lo siguen, asi que el chequeo de contenido no lo ve.
 while read -r p; do [ -z "$p" ] && continue
-  m=$(git ls-files -s -- "$p" | awk '{print $1}')
-  [ -z "$m" ] && continue
+  if ! entry=$(git ls-files -s -- "$p" 2>/dev/null); then
+    echo "FALLA: git ls-files de $p no pudo ejecutarse"; exit 1
+  fi
+  [ -z "$entry" ] && continue
+  m=$(awk '{print $1}' <<< "$entry")
   [ "$m" = "100644" ] || { echo "VIOLACION modo: $p es $m y no un archivo regular"; viol=1; }
 done <<< "$HIJO"
 [ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
+
 ```
 
 **Corrido**: `C12 PASA`, `rc=0`. **Prueba negativa corrida**: quitando `ae28842` de `AUTORIZADOS`, devuelve `rc=1` y `VIOLACION hijo ae28842: docs/implementation/pipeline-2026-07-29-3.md`. Un verificador que nunca rechazó nada no está verificado.
@@ -206,31 +210,45 @@ El padre formuló la distinción clase/síntoma como **aprendizaje**, y en la r1
 
 ```bash
 #!/bin/bash
-# Barrido de HERMANOS DEL SINTOMA, mecanizado: toda referencia §«...» de la PROSA
-# debe resolver a un encabezado existente. Es el defecto de la r12 —criterios
-# citando secciones que ya no existian— convertido en chequeo en vez de leccion.
-# Excluye los bloques de codigo: si no, el propio script publicado se lee a si
-# mismo y sus literales de regex aparecen como referencias huerfanas.
+# Barrido de HERMANOS DEL SINTOMA, mecanizado: toda referencia de seccion de la
+# PROSA debe resolver a un encabezado del PROPIO doc. Es el defecto de la r12
+# —criterios citando secciones que ya no existian— vuelto chequeo, no leccion.
+# Tres acotaciones que costaron una ronda cada una:
+#  - se excluyen los bloques de codigo: el propio script publicado se leia a si
+#    mismo y sus literales de regex aparecian como referencias huerfanas (r15);
+#  - se admiten las DOS sintaxis de referencia, la de comillas angulares y la
+#    de palabra suelta: cubrir una sola dejaba pasar las rotas de la otra (r15);
+#  - se resuelve contra el doc LOCAL, no contra un pool de docs hermanos: dos
+#    docs comparten encabezados homonimos y una referencia rota resolvia
+#    contra la seccion homonima ajena (r15). Las cruzadas van declaradas abajo.
 DOC="${1:-docs/implementation/14-onboarding-feedback.md}"
+CRUZADAS='El corte de métricas'
 [ -r "$DOC" ] || { echo "FALLA: doc no legible"; exit 1; }
 norm() { sed -E 's/[*`]+//g'; }
-sin_codigo() { awk '/^`{3,4}/{f=!f; next} !f'; }
-encabezados=$(cat "$DOC" docs/implementation/13-public-showcase.md docs/design/public-surface.md 2>/dev/null \
-              | grep -E '^#{2,4} ' | sed -E 's/^#+ //' | norm)
+# Excluye bloques de codigo Y spans en linea: una marca entre backticks es una
+# MENCION de la sintaxis, no una referencia a una seccion — la misma distincion
+# que AGENTS.md hace entre invocar un comando y nombrarlo (r15).
+sin_codigo() { awk '/^`{3,5}/{f=!f; next} !f' | sed -E 's/`[^`]*`//g'; }
+encabezados=$(grep -E '^#{2,4} ' "$DOC" | sed -E 's/^#+ //' | norm)
 [ -z "$encabezados" ] && { echo "FALLA: cero encabezados; el patron no puede estar bien"; exit 1; }
-refs=$(sin_codigo < "$DOC" | grep -oE '§«[^»]+»' | sed -E 's/^§«//; s/»$//' | norm | sort -u)
+refs=$(sin_codigo < "$DOC" \
+  | grep -oE '§«[^»]+»|§[A-Za-zÁÉÍÓÚÑáéíóúñ][A-Za-zÁÉÍÓÚÑáéíóúñ0-9-]*' \
+  | sed -E 's/^§«//; s/»$//; s/^§//' | norm | sort -u)
 [ -z "$refs" ] && { echo "FALLA: cero referencias; el patron no puede estar bien"; exit 1; }
 viol=0
 while read -r r; do
   [ -z "$r" ] && continue
-  grep -qF "$r" <<< "$encabezados" || { echo "HUERFANA: §«$r» no resuelve a ningun encabezado"; viol=1; }
+  grep -qxF "$r" <<< "$CRUZADAS" && continue
+  grep -qF "$r" <<< "$encabezados" || { echo "HUERFANA: [$r] no resuelve a ningun encabezado local"; viol=1; }
 done <<< "$refs"
 [ "$viol" -eq 0 ] && { echo "HERMANOS OK"; exit 0; } || { echo "HERMANOS FALLA"; exit 1; }
+
+
 ```
 
 Verifica lo que la r12 rompió —criterios citando secciones que ya no existían— y **corre en cada ronda**, no cuando alguien se acuerde. Probado en los dos sentidos: pasa sobre el doc actual y falla al renombrar una sección efectivamente citada.
 
-*(Su calibración vale como caso, y necesitó **tres** pasadas: la primera versión marcó dos huérfanas que eran **falsos positivos** —el énfasis markdown dentro de un encabezado, y una referencia cruzada legítima al doc del feature 13—, y mi primera prueba negativa renombraba una sección **que nadie referencia**, así que no probaba nada. Un chequeo que grita sin motivo es tan inútil como uno que nunca rechaza, y una prueba negativa que no ejercita la rama es la misma trampa una vez más. Y la tercera: **al publicar el script dentro del doc que revisa, sus propios literales de regex se leyeron como referencias huérfanas** — un chequeo que se rompe al ser publicado, que es la autorreferencia de esta unidad en su forma más literal. Cerrado excluyendo los bloques de código.)*
+*(Su calibración vale como caso, y necesitó **tres** pasadas: la primera versión marcó dos huérfanas que eran **falsos positivos** —el énfasis markdown dentro de un encabezado, y una referencia cruzada legítima al doc del feature 13—, y mi primera prueba negativa renombraba una sección **que nadie referencia**, así que no probaba nada. Un chequeo que grita sin motivo es tan inútil como uno que nunca rechaza, y una prueba negativa que no ejercita la rama es la misma trampa una vez más. Y la tercera: **al publicar el script dentro del doc que revisa, sus propios literales de regex se leyeron como referencias huérfanas** — un chequeo que se rompe al ser publicado, que es la autorreferencia de esta unidad en su forma más literal. Cerrado excluyendo los bloques de código. Y en la r15 aparecieron **dos acotaciones más**, las dos de la misma familia: cubría **una sola sintaxis** de referencia —`§«…»` y no `§Nombre`—, y resolvía contra un **pool de docs hermanos**, así que una referencia rota resolvía contra la sección homónima de otro doc, porque `## Alcance` existe en dos. Acotado a resolución **local**, con las cruzadas declaradas en una lista cerrada.)*
 
 De ahí la única salida que funciona: **mover la garantía del autor al mecanismo**. Que la propiedad no dependa de que alguien recuerde aplicarla, sino de que su violación sea detectable —o imposible— por construcción. Las formas que esta unidad terminó usando son ejemplos de lo mismo:
 
@@ -767,52 +785,72 @@ awk '/^````ruby$/{f=1;next} f&&/^````$/{exit} f' "$DOC" > "$TMP/v.rb"
 
 Dos referencias que el 13 dejó **a propósito** sin linkear y marcadas como pendientes, que este feature activa. La r14 encontró que «acotada» **no estaba verificado por nada**: `README.md` está en la allowlist de C12, así que una reescritura arbitraria devolvía `C12 PASA` —lo reprodujo—, y C7 solo exigía los dos links y la desaparición de la marca. Una implementación podía conservar los links y cambiar toda la prosa alrededor, incumpliendo §Alcance.
 
-**La edición se fija como literal, igual que los YAML**, y C7 la verifica como **diff cerrado**: el conjunto de líneas quitadas y el de agregadas deben ser **exactamente** los declarados.
+**La edición se fija como literal, igual que los YAML**, y C7 la verifica por **reconstrucción**: se aplica al README base cada sustitución declarada —cada una debe matchear **exactamente una vez**— y el resultado se compara **byte a byte** con el archivo final.
 
-Líneas que se quitan:
+**Por qué no alcanzaba comparar el diff** (r15): mi versión anterior comparaba las **secuencias** de líneas quitadas y agregadas, y Codex la rompió dos veces sin tocar esas secuencias — moviendo las tres líneas nuevas al final del README, y agregando una línea vacía terminal que la sustitución de comando se comía. Una edición divergente pasaba. La reconstrucción preserva **ubicación, blancos y contenido**, porque compara el archivo entero y no un resumen de él.
 
-````readme-quita
+Las tres sustituciones, cada una con su texto exacto:
+
+`````c7-antes`````
 with the earlier 35 recovered from a separate source. *Coming in feature 14: the metrics document
 that publishes the snapshot and the exact command behind every figure — not yet published, so for
 now these numbers are only as good as this repo's git history, which you can read.*
+`````
+
+`````c7-despues`````
+with the earlier 35 recovered from a separate source. Every figure on this page is derived in
+[docs/metrics.md](docs/metrics.md), which publishes the versioned snapshot, the cut commit and the
+exact command behind each one.
+`````
+
+`````c7-antes`````
+
 > **Coming in feature 14, and deliberately not linked yet:** the **reviewer metrics document** — the
 > versioned round-log snapshot, the cut commit, and the exact command behind every figure on this
 > page — and **how to give feedback**, a `CONTRIBUTING.md` plus issue templates. Both are named here
 > in prose on purpose: this page ships with zero broken links, and these two become links when the
 > artefacts exist.
-````
+`````
 
-Líneas que se agregan:
+`````c7-despues`````
 
-````readme-pone
-with the earlier 35 recovered from a separate source. Every figure on this page is derived in
-[docs/metrics.md](docs/metrics.md), which publishes the versioned snapshot, the cut commit and the
-exact command behind each one.
+`````
+
+`````c7-antes`````
+- [LICENSE](LICENSE) — MIT
+`````
+
+`````c7-despues`````
 - [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the command behind each
 - [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round is looking for
-````
+- [LICENSE](LICENSE) — MIT
+`````
 
-Los conjuntos salieron de **simular la edición en un worktree descartable** y capturar el diff real, no de escribirlos a mano — que es la misma disciplina de los bloques canónicos: el literal se deriva del artefacto, no al revés.
-
-```bash
-#!/bin/bash
-# C7 — la edicion del README es ACOTADA, verificada como diff cerrado.
-# El conjunto de lineas quitadas y agregadas debe ser EXACTAMENTE el declarado.
-BASE="${1:-2985447}"; DOC="${2:-docs/implementation/14-onboarding-feedback.md}"
-esperado_quita=$(awk '/^````readme-quita$/{f=1;next} f&&/^````$/{exit} f' "$DOC")
-esperado_pone=$(awk '/^````readme-pone$/{f=1;next} f&&/^````$/{exit} f' "$DOC")
-[ -z "$esperado_quita" ] && { echo "FALLA: no se pudo extraer el bloque readme-quita"; exit 1; }
-[ -z "$esperado_pone" ]  && { echo "FALLA: no se pudo extraer el bloque readme-pone"; exit 1; }
-if ! d=$(git diff "$BASE..HEAD" -- README.md 2>/dev/null); then
-  echo "FALLA: git diff no pudo ejecutarse"; exit 1
-fi
-real_quita=$(printf '%s\n' "$d" | grep '^-' | grep -v '^---' | sed 's/^-//')
-real_pone=$(printf '%s\n' "$d"  | grep '^+' | grep -v '^+++' | sed 's/^+//')
-rc=0
-diff <(printf '%s\n' "$esperado_quita") <(printf '%s\n' "$real_quita") >/dev/null || { echo "FALLA: las lineas QUITADAS no son las declaradas"; rc=1; }
-diff <(printf '%s\n' "$esperado_pone")  <(printf '%s\n' "$real_pone")  >/dev/null || { echo "FALLA: las lineas AGREGADAS no son las declaradas"; rc=1; }
-[ "$rc" -eq 0 ] && echo "C7 PASA" || echo "C7 FALLA"
-exit $rc
+```ruby
+#!/usr/bin/env ruby
+# C7 — la edicion del README es ACOTADA, verificada por RECONSTRUCCION:
+# se aplica al README base cada sustitucion declarada (cada una debe matchear
+# EXACTAMENTE UNA VEZ) y el resultado se compara BYTE A BYTE con el final.
+# Comparar secuencias de lineas +/- no alcanzaba: no ve reubicacion ni blancos.
+doc, base = ARGV[0], ARGV[1]
+spec = File.read(doc, encoding: "UTF-8")
+pares = spec.scan(/^`````c7-antes`````\n(.*?)^`````\n+`````c7-despues`````\n(.*?)^`````/m)
+abort("FALLA: se esperaban 3 pares de sustitucion, hay #{pares.size}") unless pares.size == 3
+esperado = `git show #{base}:README.md`
+abort("FALLA: no se pudo leer #{base}:README.md") unless $?.success?
+esperado = esperado.dup.force_encoding("UTF-8")
+pares.each_with_index do |(antes, despues), i|
+  n = esperado.scan(antes).size
+  abort("FALLA: la sustitucion #{i + 1} matchea #{n} veces; se exige exactamente 1") unless n == 1
+  esperado = esperado.sub(antes, despues)
+end
+real = File.read("README.md", encoding: "UTF-8")
+if real == esperado
+  puts "C7 PASA"
+else
+  warn "FALLA: README.md no coincide byte a byte con la reconstruccion declarada"
+  exit 1
+end
 ```
 
 Nada más de la prosa del README se reabre. Si al implementar apareciera una tercera cosa que activar, no se activa por cuenta propia: se registra y se pregunta, y el diff cerrado la haría fallar de todos modos.
@@ -827,13 +865,13 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 | C4 | Los `awk` publicados en inglés producen salida **idéntica** a los del 13 sobre el mismo snapshot | diff de las dos salidas; debe ser vacío |
 | C5 | **Fuente única, acotada a la superficie pública**: en `README.md`, `docs/install.md`, `CONTRIBUTING.md` y `.github/`, toda cifra sujeta (definición de §«Fuente única») aparece en `docs/metrics.md` con el mismo valor, y ningún comando de derivación de una cifra sujeta vive fuera de `docs/metrics.md`. Los docs del método quedan fuera de la regla, por definición y no por excepción | inventario de cifras del **conjunto público completo** —los cuatro, no solo el README—, una por una |
 | C6 | Los tres YAML de `.github/ISSUE_TEMPLATE/` son **byte a byte idénticos** a los bloques canónicos de §Enfoque·«La especificación literal», **son archivos regulares**, **parsean**, y el directorio **no contiene nada más**. La r8 invirtió la carga —de «¿viola alguna regla de GitHub?», conjunto abierto y ajeno, a «¿coincide con lo que la bajada fija?», cerrado y nuestro—; la r9 la materializó con los bloques literales y la r11 la volvió **ejecutable**. Las reglas documentadas se satisfacen **por construcción**, verificadas sobre los bloques y registradas con su fuente | **el validador de §Enfoque·«El verificador de plantillas», corrido**: un único programa que exige exactamente un bloque canónico por archivo, compara byte a byte, rechaza lo que no sea archivo regular, parsea y verifica el inventario exacto del directorio. Evidencia de cierre = su camino positivo **más los casos negativos publicados en la tabla de esa sección**, cada uno reproducible con el procedimiento que la tabla declara |
-| C7 | **Las dos referencias del 13 son links que resuelven**, y no queda ninguna marca de «pendiente para el 14» en el README | inspección de los dos puntos + chequeo de destinos |
+| C7 | **La edición del README es acotada**, y se verifica por **reconstrucción**: se aplica al README base cada sustitución declarada —cada una debe matchear **exactamente una vez**— y el resultado se compara **byte a byte** con el archivo final. Las dos referencias del 13 quedan como links que resuelven y no queda ninguna marca de «pendiente para el 14» | el script de §«`README.md` — edición acotada», **corrido**. Comparar las secuencias de líneas `+`/`-` **no alcanzaba** (r15): no ve reubicación ni blancos, y Codex lo rompió moviendo las líneas nuevas al final y agregando una línea vacía terminal. Negativos corridos: los dos bypasses, más el estado actual sin editar |
 | C8 | **Cero link roto** en el conjunto completo — `README.md`, `CONTRIBUTING.md`, `docs/metrics.md`, `docs/install.md` | chequeo mecánico de todo destino relativo y de toda ancla interna contra los encabezados reales |
 | C9 | **Cero afirmación no verificable**: toda oración de `CONTRIBUTING.md` y `docs/metrics.md` cae en una de las tres clases del contrato editorial (hecho derivable con su comando · limitación declarada · opinión marcada) | pasada por oración, registrada en el Review log |
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit y no por diff agregado** (§«El alcance se audita por commit»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo la lista cerrada de §Alcance, que **no** incluye el ledger. Cero cambios en método, skills, instalador, scripts, tests o remoto | recorrido de `git rev-list 2985447..HEAD`, y por cada SHA `git show --name-only --format= <sha>` contra la lista que le corresponde según esté o no en `AUTORIZADOS`. Un solo commit fuera de su lista falla el criterio. **El diff agregado no se usa**: aplanar dos autores con permisos distintos es lo que volvía el criterio autocontradictorio |
+| C12 | **Alcance, auditado por commit y no por diff agregado**: para cada commit de `2985447..HEAD`, si su **SHA completo** está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §Alcance. **La identidad es el SHA completo, no `--short`**, que depende de `core.abbrev` y de colisiones de prefijo (r14). Además **todo entregable versionado debe ser archivo regular** —modo `100644`—, porque un symlink entra con modo `120000` y las lecturas lo siguen (r14) | el script de §Procedencia, **corrido**, con `--no-renames` (sin él, un rename desde un path prohibido a uno permitido muestra solo el destino) y comprobando el `rc` de **cada** invocación de git —`rev-list`, `show`, `ls-files`—, más rechazo de rango vacío y de commit sin paths: en todos esos casos «cero elementos» se leía como «cero violaciones». Negativos corridos: SHA no declarado, `rev-list` roto, `show` roto, `ls-files` roto (`GIT_INDEX_FILE` inválido) y `core.abbrev=12` |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §Enfoque·«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §Enfoque·`docs/metrics.md`; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
@@ -850,6 +888,18 @@ Nada más de la prosa del README se reabre. Si al implementar apareciera una ter
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r15 (base `6ec4b48`, HEAD `f679d72`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias** · **se cumple la condición que el hijo había puesto**
+
+**La evidencia positiva se mantiene** y Codex la lista: C12 pasa con `core.abbrev=12`, `AUTORIZADOS` coincide exactamente con el ledger, la edición prevista del README pasa C7, el barrido detecta una sección citada, y el harness devuelve `VERIFY: OK`. **El contenido entregable sigue sólido desde la r11.**
+
+Los tres puntos míos son **alcance incompleto en tres criterios a la vez**, y uno de ellos repite dentro del mismo script un defecto que yo ya había cerrado dos veces:
+
+1. **El chequeo de modos de C12 fallaba abierto ante errores de `git ls-files`** — el pipe devolvía el estado de `awk`. Con `GIT_INDEX_FILE=/tmp` cada `ls-files` devuelve 128 e imprime `fatal`, y C12 terminaba `C12 PASA`. **Yo había cerrado exactamente esto para `rev-list` y para `show` en la r12, y agregué una tercera invocación de git sin comprobar su `rc`.** Cerrado y con su negativo corrido.
+2. **C7 no era un diff cerrado.** Comparaba las **secuencias** de líneas quitadas y agregadas, y Codex lo rompió dos veces sin alterarlas: moviendo las tres líneas nuevas al final del README, y agregando una línea vacía terminal que la sustitución de comando se comía. Reemplazado por **reconstrucción**: se aplican al README base las tres sustituciones declaradas —cada una debe matchear exactamente una vez— y se compara **byte a byte**. Los dos bypasses ahora fallan.
+3. **El barrido de referencias cubría una sola sintaxis** y resolvía contra un **pool de docs hermanos**. Renombrar `## Alcance` dejaba `HERMANOS OK` por dos causas independientes: la referencia `§Alcance` no la veía el extractor, y el encabezado homónimo del doc del 13 la habría resuelto igual. Acotado a resolución **local** con cruzadas declaradas, ampliado a las dos sintaxis, y —tercera acotación— distinguiendo **mención de uso**: una marca entre backticks es una cita de la sintaxis, no una referencia, que es la misma distinción que `AGENTS.md` hace entre invocar un comando y nombrarlo.
+
+**Se cumple la condición que yo mismo puse antes de la r15**, y queda registrada acá con esas palabras: *volvió a aparecer alcance incompleto en criterios distintos*, y por lo tanto **el andamiaje de verificación es más grande de lo que cierra una bajada**. El diagnóstico y la salida propuesta viajan al padre para que los lleve al humano; no son una decisión de esta ronda ni de este hijo.
 
 ### r14 (base `6ec4b48`, HEAD `511c803`) — CHANGES_REQUESTED · **4 bloqueantes, cero preferencias**
 
