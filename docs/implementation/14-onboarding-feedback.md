@@ -81,7 +81,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **El chequeo tiene que ser fail-closed de verdad, y el mío no lo era.** Al re-correrlo tras el corte por cuota, mi versión anterior recorría los commits en un `for … done | head`, así que el flag de violación quedaba en el subshell del pipe y **el chequeo imprimía «pasa» mientras había impreso una violación dos líneas arriba**. Reescrito sin pipeline y con **prueba negativa**: quitando un SHA de `AUTORIZADOS`, el chequeo devuelve `rc=1` y nombra la violación. Un verificador que nunca rechazó nada no está verificado — es el mismo criterio que la unidad aplicó a los fixtures, aplicado ahora a su propia auditoría.
 
-**Origen de las filas `A1–A8`.** La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
+**Origen de las filas `A1–A8`** —`A0`, `A9` y `A10` nacieron después, en las rondas r27 y r28, y están en la misma tabla—. La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
 **Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance». Y todo entregable versionado es un **archivo regular**.
 
@@ -89,6 +89,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 | # | El chequeo **no** debe… | Ronda |
 |---|---|---|
+| **A0** | usar una **derivación** como autoridad de quién está autorizado: derivar la lista de «quién tocó el ledger» vuelve el criterio **circular** —tocar el archivo protegido autoriza al infractor— y falla abierto. La autoridad es la **lista cerrada publicada**; `git log` produce el conjunto **observado** para contrastarlo | r27 |
 | A1 | usar el **diff agregado** del rango: aplana commits de autores con permisos distintos y no distingue una violación de una excepción autorizada | r2 |
 | A2a | aprobar cuando falla **`git rev-list`**: sin commits, el recorrido no encuentra violaciones | r12 |
 | A2c | aprobar cuando falla **`git show`**: sin paths, no hay nada que comparar | r12 |
@@ -105,7 +106,6 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 | Fila | Condición producida | `rc` |
 |---|---|---|
-| **A0** | **la autoridad es la lista cerrada publicada**, no una derivación de `git log -- <ledger>`: derivarla vuelve el criterio **circular** y falla abierto (r27). `git log` sirve para producir el conjunto **observado** y contrastarlo, no para definir quién está autorizado | **requisito de forma** |
 | A1 | **requisito estático**, evidencia sobre la fuente publicada: el recorrido es `while read -r c … done <<< "$commits"` con `commits=$(git rev-list …)`; **no aparece `git diff` en ninguna línea** | **cumple** |
 | A2a | `git rev-list` con un rango inválido | **1** |
 | A2c | `git show` con una opción inválida | **1** |
@@ -117,8 +117,8 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A7 | entregable creado como symlink ⇒ git lo registra con modo `120000` | **1** |
 | A8a | rango vacío | **1** |
 | A8b | commit sin paths | **1** |
-| **A9** | **commit no declarado que toca *solo* el ledger** — el caso que la r27 reprodujo: derivar la lista de «quién tocó el ledger» hacía que **tocar el archivo protegido autorizara al infractor** | **1** |
-| **A10** | **el extractor de la lista emite bien pero sale con `rc≠0`** — un pipe devuelve el estado del **último** comando, así que `awk \| grep \| tr` oculta un fallo del `awk`. Es `A3`, y el arreglo de `A0` la había reintroducido | **1** |
+| A0 | **commit no declarado que toca *solo* el ledger** — el caso que la r27 reprodujo | **1** |
+| A3 *(segundo caso)* | **el extractor de la lista emite bien pero sale con `rc≠0`**: un pipe devuelve el estado del **último** comando, así que `awk \| grep \| tr` oculta un fallo del `awk`. El arreglo de `A0` había reintroducido esta fila, la más vieja de la matriz (r28) | **1** |
 | — | positivo sobre el rango real | **0** |
 
 **`A1` y `A3` no se retiran** —el reviewer lo pidió expresamente y tiene razón: protegen contra dos fallas reales que ya ocurrieron en esta unidad—. Se **reclasifican** como **requisitos estáticos**: propiedades de la forma del verificador, cuya evidencia es la **fuente publicada abajo** y no una corrida. Un caso negativo para ellas tendría que mutar el propio verificador, y entonces probaría la mutación, no el verificador. Declararlo es lo que permite que la regla «un negativo por modo de falla» siga siendo verdadera: rige para los modos **dinámicos**, y los estáticos llevan su evidencia por inspección de una fuente que ahora **es inspeccionable**.
@@ -859,7 +859,7 @@ Es **chequeable comparando el conjunto de IDs definidos contra la unión de los 
 
 Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el contenido entregable quedó sólido en la r11 y no se movió**; lo que produjo un bloqueante por ronda, cinco rondas seguidas, fue la maquinaria de verificarlo. Cada herramienta agregada para cerrar un hueco era superficie nueva sin revisar, y la ronda siguiente la encontraba.
 
-**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas `A1–A8`, `C1–C6` y `D1–D3` son el producto real de las rondas de bajada —cada fila anclada a la ronda que la descubrió, en su propia columna—: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
+**Lo que la bajada deja, entonces, no son herramientas sino su especificación** — y las tablas de modos de falla de alcance, plantillas y edición del README son el producto real de las rondas de bajada —cada fila anclada a la ronda que la descubrió, en su propia columna—: cada fila fue un defecto **reproducido**, no una precaución imaginada. Construir los verificadores contra artefactos reales hace que esos defectos aparezcan al primer uso, en vez de uno por ronda de review.
 
 **Lo que la decisión del 2026-07-30 no fue**: no fue bajar la vara. Ningún criterio se relajó ese día, y la prueba de aceptación de cada chequeo —un negativo por modo de falla, más el positivo— sigue siendo condición para cerrar el feature. **El alcance vigente son `A`, `C` y `D`**, tras el retiro de `B` y `C16` el 2026-07-31.
 
@@ -879,7 +879,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | ídem. **A1–A8** de §«Procedencia», con su prueba de aceptación — cada fila fue un defecto reproducido, con la ronda que lo encontró en su propia columna |
+| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | la herramienta se construye contra los artefactos reales. **Qué debe establecer y qué modos de falla tiene prohibidos: la tabla completa y vigente de §«Procedencia»**, sin rango fijo — **cualquier fila que se agregue queda automáticamente exigida**. La versión anterior citaba `A1–A8`, un rango fijo, y dejaba **fuera del criterio de cierre** el modo `A0`, que nació del fallo abierto de la r27: documentado en la matriz pero no exigido, que es la forma exacta de tener una especificación que ningún criterio consume |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §«`docs/metrics.md` — el informe»; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
@@ -896,6 +896,17 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r29 (base `b0fa345`, HEAD `e02d256`) — CHANGES_REQUESTED · **1 bloqueante**
+
+**El arreglo funcionaba y el contrato no lo exigía.** Codex confirmó que `C12` positivo da `rc=0`, que los dos negativos rechazan y que `AUTORIZADOS` coincide **25/25** con lo observado — y encontró que **el criterio de cierre seguía citando `A1–A8`**, un rango fijo, así que **el modo `A0` quedaba documentado en la matriz pero fuera de lo exigido**. Los dos fallos abiertos de las últimas rondas estaban descritos y no reclamados.
+
+Es la misma forma que la r18 había encontrado con `B`: **una especificación que ningún criterio consume no existe**. Corregido en dos movimientos:
+
+- **`C12` deja de citar un rango fijo** y consume «la tabla completa y vigente», de modo que **cualquier fila que se agregue queda automáticamente exigida**. Un rango escrito a mano es un contador móvil disfrazado de referencia.
+- **`A0` pasa a la tabla de modos**, donde corresponde —es un modo de falla, no un caso—, y **`A9` y `A10` se disuelven como filas**: eran los **casos negativos** de `A0` y de `A3`, no modos nuevos. Con eso modos y casos vuelven a coincidir exactamente, sin huérfanos de ningún lado.
+
+*(La confusión modo/caso venía de que los agregué en caliente al cerrar los dos fallos abiertos, numerándolos al final de la matriz en vez de ubicarlos en su tabla. Ordenarlos es lo que dejó ver que `A10` era `A3` otra vez — la ironía de la r28, ahora visible en la estructura y no solo en la prosa.)*
 
 ### r28 (base `b0fa345`, HEAD `9d07a60`) — CHANGES_REQUESTED · **1 bloqueante** · corte por tope → desempate humano «a)»
 
