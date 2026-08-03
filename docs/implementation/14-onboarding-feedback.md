@@ -103,11 +103,11 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 | Fila | Condición producida | `rc` |
 |---|---|---|
-| A1 | *(estructural)* el recorrido es por commit sobre `rev-list`; el diff agregado no se usa en ningún punto | — |
+| A1 | **requisito estático**, evidencia sobre la fuente publicada: el recorrido es `while read -r c … done <<< "$commits"` con `commits=$(git rev-list …)`; **no aparece `git diff` en ninguna línea** | **cumple** |
 | A2a | `git rev-list` con un rango inválido | **1** |
 | A2c | `git show` con una opción inválida | **1** |
 | A2d | `GIT_INDEX_FILE` inválido ⇒ `git ls-files` falla | **1** |
-| A3 | *(estructural)* ninguna comprobación toma su estado de un pipe | — |
+| A3 | **requisito estático**, ídem: cada invocación de git se captura con `if ! x=$(…)` y su `rc` se comprueba; **ninguna comprobación toma su estado de un pipe** | **cumple** |
 | A4 | `core.abbrev=12` ⇒ **debe pasar**, porque la identidad es el SHA completo | **0** |
 | A5 | rename de `scripts/awake.sh` a un path permitido: sin `--no-renames` git muestra **solo el destino**; con él, ambos | **1** |
 | A6 | un path fuera de la lista del hijo | **1** |
@@ -116,9 +116,54 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A8b | commit sin paths | **1** |
 | — | positivo sobre el rango real | **0** |
 
+**`A1` y `A3` no se retiran** —el reviewer lo pidió expresamente y tiene razón: protegen contra dos fallas reales que ya ocurrieron en esta unidad—. Se **reclasifican** como **requisitos estáticos**: propiedades de la forma del verificador, cuya evidencia es la **fuente publicada abajo** y no una corrida. Un caso negativo para ellas tendría que mutar el propio verificador, y entonces probaría la mutación, no el verificador. Declararlo es lo que permite que la regla «un negativo por modo de falla» siga siendo verdadera: rige para los modos **dinámicos**, y los estáticos llevan su evidencia por inspección de una fuente que ahora **es inspeccionable**.
+
+**El verificador de alcance, publicado para que `A1` y `A3` sean comprobables:**
+
+```bash
+#!/bin/bash
+LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
+HIJO='docs/STATUS.md
+docs/IMPLEMENTATION.md
+docs/implementation/14-onboarding-feedback.md
+CONTRIBUTING.md
+README.md
+docs/metrics.md
+docs/metrics/rounds-log-b0bdf4d.tsv
+docs/metrics/cut.awk
+docs/metrics/normalize.awk
+.github/ISSUE_TEMPLATE/config.yml
+.github/ISSUE_TEMPLATE/install-failed.yml
+.github/ISSUE_TEMPLATE/friction-or-question.yml'
+BASE="${BASE:-2985447}"
+if ! AUT=$(git log --format=%H "$BASE..HEAD" -- "$LEDGER" 2>/dev/null); then echo "FALLA: git log"; exit 1; fi
+if ! commits=$(git rev-list ${REVLIST_OPTS:-} "$BASE..HEAD" 2>/dev/null); then echo "FALLA: git rev-list"; exit 1; fi
+[ -z "$commits" ] && { echo "FALLA: rango vacio"; exit 1; }
+viol=0
+while read -r c; do
+  if ! paths=$(git show --no-renames --name-only --format= ${GITSHOW_OPTS:-} "$c" 2>/dev/null); then echo "FALLA: git show de ${c:0:7}"; exit 1; fi
+  [ -z "$paths" ] && { echo "FALLA: ${c:0:7} sin paths"; exit 1; }
+  if grep -qxF "$c" <<< "$AUT"; then
+    while read -r p; do [ -z "$p" ] && continue
+      case "$p" in "$LEDGER"|docs/STATUS.md) ;; *) echo "VIOLACION padre ${c:0:7}: $p"; viol=1;; esac
+    done <<< "$paths"
+  else
+    while read -r p; do [ -z "$p" ] && continue
+      grep -qxF "$p" <<< "$HIJO" || { echo "VIOLACION hijo ${c:0:7}: $p"; viol=1; }
+    done <<< "$paths"
+  fi
+done <<< "$commits"
+while read -r p; do [ -z "$p" ] && continue
+  if ! e=$(git ls-files -s -- "$p" 2>/dev/null); then echo "FALLA: git ls-files de $p"; exit 1; fi
+  [ -z "$e" ] && continue
+  [ "$(awk '{print $1}' <<< "$e")" = "100644" ] || { echo "VIOLACION modo: $p"; viol=1; }
+done <<< "$HIJO"
+[ "$viol" -eq 0 ] && { echo "C12 PASA"; exit 0; } || { echo "C12 FALLA"; exit 1; }
+```
+
 *(`A2b` —«aprobar cuando falla `git rev-parse`»— **se retira**: el chequeo dejó de invocar `rev-parse` cuando la identidad pasó al SHA completo de `rev-list`, así que la fila describía una rama que ya no existe. Retirarla es más honesto que inventarle un caso.)*
 
-**Las dos filas estructurales no tienen caso negativo y eso se declara**, en vez de fabricarles uno: `A1` y `A3` son propiedades de la **forma** del chequeo —recorrer por commit, no depender del `rc` de un pipe—, y se verifican leyendo el script, no ejecutándolo. Un caso que "probara" A1 estaría probando otra cosa. Las filas están atomizadas justamente para que ninguna rama quede sin ejercitar: agrupar cuatro invocaciones de git en una sola fila permitía cubrir una y declarar la fila probada (r16).
+ Las filas están atomizadas justamente para que ninguna rama quede sin ejercitar: agrupar cuatro invocaciones de git en una sola fila permitía cubrir una y declarar la fila probada (r16).
 
 *(Historia, anclada a la r12–r15: durante esas rondas existió un prototipo de este chequeo que llegó a pasar su positivo y sus negativos. **Ese prototipo ya no está en el doc** —la decisión humana lo movió a la implementación— y sus resultados no valen como evidencia de cierre: valen como el origen de las filas `A1–A8`, que es lo que quedó.)*
 
@@ -832,6 +877,21 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r26 (base `b0fa345`, HEAD `57b05be`) — CHANGES_REQUESTED · **2 bloqueantes** · **la vara del feature quedó comprobada**
+
+**Lo primero, porque es lo que el gate autorizó y era lo único sin verificar**: le pedí la lectura **desde el sombrero de lector**, numerada y con instrucción de contestar aunque fuera «no». **Contestó las tres, y las tres son sí**:
+
+1. *«En dos minutos se entiende qué es axel y qué lo distingue: autor y reviewer separados, modelos de proveedores distintos, memoria versionada y checkpoints humanos.»*
+2. *«Se puede instalar sin volver a preguntar. Los requisitos, el comando y el caso conflictivo de `build/` aparecen antes de instalar; el manual cubre variantes y recuperación.»*
+3. *«`CONTRIBUTING.md` explica qué feedback se busca, dónde enviarlo, qué datos incluir y por qué todavía no se aceptan PRs.»*
+
+Esa era la **medida concreta** del gate —un colega abre el repo, entiende en dos minutos qué es y por qué es distinto, y puede instalarlo sin volver a preguntar— y está comprobada por el reviewer, no afirmada por mí.
+
+Los dos bloqueantes:
+
+1. **`C12` no tenía evidencia inspeccionable.** La matriz decía que `A1` y `A3` se verificaban «leyendo el script», y **el script no estaba publicado en ningún lado** — o sea que la evidencia remitía a algo que el lector no podía ver. Publicado en esta sección. Y el reviewer pidió expresamente **no retirar `A1` ni `A3`**, con razón: protegen contra dos fallas reales que ya ocurrieron acá. Reclasificadas como **requisitos estáticos** con evidencia sobre la fuente publicada, lo que además reconcilia la regla «un negativo por modo de falla»: rige para los modos **dinámicos**, y los estáticos llevan inspección. Un caso negativo para ellos tendría que mutar el propio verificador, y probaría la mutación.
+2. **`C3` seguía sin materializar la matriz prometida**: la tabla de `docs/metrics.md` tenía solo `Source` y `Command`, sin `Cut` ni el límite de auditabilidad, y **los párrafos globales no reemplazan esos campos** —especialmente para el ciclo de plan y las cifras externas, que tienen cortes propios—. Las dos columnas agregadas **por fila**: el ciclo de plan queda anclado a `3ab6794` y las tres filas externas a sus SHA de `inquirylab`, marcadas «no» en auditabilidad.
 
 ### r25 (base `b0fa345`, HEAD `bdb20b1`) — CHANGES_REQUESTED · **4 bloqueantes**
 

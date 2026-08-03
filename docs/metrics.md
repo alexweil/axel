@@ -47,29 +47,31 @@ Each row names its source, its cut, and the command. Where a figure is
 **composite** it has no single command: its parts are listed instead, because
 presenting a sum as a derivation would be the same sloppiness in another form.
 
-| Figure | Value | Source | Command |
-|---|---|---|---|
-| logged rounds | **88** | snapshot | `wc -l < rounds.tsv` |
-| rejections | **59** | snapshot | `awk -F'\t' '$3=="CHANGES_REQUESTED"{n++} END{print n}' rounds.tsv` |
-| approvals (milestones) | **29** | snapshot | `awk -F'\t' '$3=="APPROVED"{n++} END{print n}' rounds.tsv` |
-| complete cycles | **18** | snapshot | `awk -F'\t' '$1>=1{c[$1]=1} END{print length(c)}' rounds.tsv` |
-| …and all of them closed | **18** | snapshot | `awk -F'\t' '$1>=1{l[$1]=$3} END{n=0; for(k in l) if(l[k]=="APPROVED") n++; print n}' rounds.tsv` |
-| verdict of each cycle's round 1 | **18 of 18 rejected** | snapshot | `awk -F'\t' '$1>=1 && $2==1{print $3}' rounds.tsv \| sort \| uniq -c` |
-| median rounds per cycle | **4** | snapshot | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
-| median rounds per milestone | **3** | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` |
-| worst case per cycle | **11** | snapshot | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| tail -1` |
-| worst case per milestone | **5** | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| tail -1` |
-| milestones approved with no rejection | **1** (`2dbbdfc`) | snapshot | `awk -F'\t' '{n++} $3=="APPROVED"{if(n==1) print $4; n=0}' rounds.tsv` |
-| rounds of features 00, 01, 02 | **25** | the plan at the cut, via each feature's closing round | `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -E '^\| 0[0-2] \|' \| sed -E 's/.*\(r([0-9]+).*/\1/' \| awk '{s+=$1} END{print s}'` |
-| rounds of feature 03 before the log | **5** | `implementation/03-loop-hardening.md`; cross-checked against the snapshot | `awk -F'\t' 'NR==1{print $3-1}' docs/metrics/rounds-log-b0bdf4d.tsv` |
-| rounds of the initial plan cycle | **5** | commits and historical STATUS — **second source** | `echo $(( $(git log --oneline 6afb57d..3ab6794 \| grep -cE ' plan r[0-9]+:') + 1 ))` |
-| rounds before instrumentation | **35** — *composite* | the three rows above | 25 + 5 + 5 |
-| full history | **123** — *composite* | logged rounds + the row above | 88 + 35 |
-| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 predating the log | 18 + 5; the five earlier ones are checked one by one, below |
-| external install: commits at `4908bfb` | **185** | **`alexweil/inquirylab`** — *not derivable from a clone of axel* | `git rev-list --count 4908bfb`, run **in that repository** |
-| external install: files installed | **20** | same repository, commit `846308f` | `git show --stat 846308f`, run **in that repository** |
-| external install: files mapped by `/adopt` | **8** | same repository, commit `4908bfb` | `git show --stat 4908bfb`, run **in that repository** |
-| commits, days, closed features | **212**, **3**, **13** | this repo's git history at the cut | `git rev-list --count b0bdf4d` · `git log b0bdf4d --format='%ad' --date=short \| sort -u \| wc -l` · `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -cE '^\| [0-9]+ \|.*\*\*Cerrado\*\*'` |
+| Figure | Value | Source | Cut | Command | Auditable from a clone of axel? |
+|---|---|---|---|---|---|
+| logged rounds | **88** | snapshot | `b0bdf4d` | `wc -l < rounds.tsv` | yes |
+| rejections | **59** | snapshot | `b0bdf4d` | `awk -F'\t' '$3=="CHANGES_REQUESTED"{n++} END{print n}' rounds.tsv` | yes |
+| approvals (milestones) | **29** | snapshot | `b0bdf4d` | `awk -F'\t' '$3=="APPROVED"{n++} END{print n}' rounds.tsv` | yes |
+| complete cycles | **18** | snapshot | `b0bdf4d` | `awk -F'\t' '$1>=1{c[$1]=1} END{print length(c)}' rounds.tsv` | yes |
+| …and all of them closed | **18** | snapshot | `b0bdf4d` | `awk -F'\t' '$1>=1{l[$1]=$3} END{n=0; for(k in l) if(l[k]=="APPROVED") n++; print n}' rounds.tsv` | yes |
+| verdict of each cycle's round 1 | **18 of 18 rejected** | snapshot | `b0bdf4d` | `awk -F'\t' '$1>=1 && $2==1{print $3}' rounds.tsv \| sort \| uniq -c` | yes |
+| median rounds per cycle | **4** | snapshot | `b0bdf4d` | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` | yes |
+| median rounds per milestone | **3** | snapshot | `b0bdf4d` | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| awk '{a[NR]=$1} END{if(NR%2) print a[(NR+1)/2]; else print (a[NR/2]+a[NR/2+1])/2}'` | yes |
+| worst case per cycle | **11** | snapshot | `b0bdf4d` | `awk -F'\t' '$1>=1{n[$1]++} END{for(k in n) print n[k]}' rounds.tsv \| sort -n \| tail -1` | yes |
+| worst case per milestone | **5** | snapshot | `b0bdf4d` | `awk -F'\t' '{n++} $3=="APPROVED"{print n; n=0}' rounds.tsv \| tail -n +2 \| sort -n \| tail -1` | yes |
+| milestones approved with no rejection | **1** (`2dbbdfc`) | snapshot | `b0bdf4d` | `awk -F'\t' '{n++} $3=="APPROVED"{if(n==1) print $4; n=0}' rounds.tsv` | yes |
+| rounds of features 00, 01, 02 | **25** | the plan, via each feature's closing round | `b0bdf4d` | `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -E '^\| 0[0-2] \|' \| sed -E 's/.*\(r([0-9]+).*/\1/' \| awk '{s+=$1} END{print s}'` | yes |
+| rounds of feature 03 before the log | **5** | `implementation/03-loop-hardening.md`; cross-checked against the snapshot | `b0bdf4d` | `awk -F'\t' 'NR==1{print $3-1}' docs/metrics/rounds-log-b0bdf4d.tsv` | yes |
+| rounds of the initial plan cycle | **5** | commits and historical STATUS — **second source** | **`3ab6794`**, the cycle's close | `echo $(( $(git log --oneline 6afb57d..3ab6794 \| grep -cE ' plan r[0-9]+:') + 1 ))` | yes |
+| rounds before instrumentation | **35** — *composite* | the three rows above | their own cuts | 25 + 5 + 5 | yes |
+| full history | **123** — *composite* | logged rounds + the row above | `b0bdf4d` and `3ab6794` | 88 + 35 | yes |
+| cycles with no first-round approval | **23** — *composite* | 18 logged + 5 predating the log | `b0bdf4d`, plus each earlier cycle's own document | 18 + 5; the five earlier ones are checked one by one, below | yes |
+| commits at the cut | **212** | this repository's git history | `b0bdf4d` | `git rev-list --count b0bdf4d` | yes |
+| days | **3** | same | `b0bdf4d` | `git log b0bdf4d --format='%ad' --date=short \| sort -u \| wc -l` | yes |
+| closed features | **13** | the plan **at the cut** | `b0bdf4d` | `git show b0bdf4d:docs/IMPLEMENTATION.md \| grep -cE '^\| [0-9]+ \|.*\*\*Cerrado\*\*'` | yes |
+| external install: commits | **185** | **`alexweil/inquirylab`** | **`4908bfb`** | `git rev-list --count 4908bfb`, run **in that repository** | **no** |
+| external install: files installed | **20** | same repository | **`846308f`** | `git show --stat 846308f`, run **in that repository** | **no** |
+| external install: files mapped by `/adopt` | **8** | same repository | **`4908bfb`** | `git show --stat 4908bfb`, run **in that repository** | **no** |
 
 Closed features is counted against the plan **as it was at the cut**, not against
 the working tree: the live file moves, and would return a different number the
