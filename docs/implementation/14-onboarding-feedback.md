@@ -103,6 +103,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 | Fila | Condición producida | `rc` |
 |---|---|---|
+| **A0** | **la autoridad es la lista cerrada publicada**, no una derivación de `git log -- <ledger>`: derivarla vuelve el criterio **circular** y falla abierto (r27). `git log` sirve para producir el conjunto **observado** y contrastarlo, no para definir quién está autorizado | **requisito de forma** |
 | A1 | **requisito estático**, evidencia sobre la fuente publicada: el recorrido es `while read -r c … done <<< "$commits"` con `commits=$(git rev-list …)`; **no aparece `git diff` en ninguna línea** | **cumple** |
 | A2a | `git rev-list` con un rango inválido | **1** |
 | A2c | `git show` con una opción inválida | **1** |
@@ -114,6 +115,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A7 | entregable creado como symlink ⇒ git lo registra con modo `120000` | **1** |
 | A8a | rango vacío | **1** |
 | A8b | commit sin paths | **1** |
+| **A9** | **commit no declarado que toca *solo* el ledger** — el caso que la r27 reprodujo: derivar la lista de «quién tocó el ledger» hacía que **tocar el archivo protegido autorizara al infractor** | **1** |
 | — | positivo sobre el rango real | **0** |
 
 **`A1` y `A3` no se retiran** —el reviewer lo pidió expresamente y tiene razón: protegen contra dos fallas reales que ya ocurrieron en esta unidad—. Se **reclasifican** como **requisitos estáticos**: propiedades de la forma del verificador, cuya evidencia es la **fuente publicada abajo** y no una corrida. Un caso negativo para ellas tendría que mutar el propio verificador, y entonces probaría la mutación, no el verificador. Declararlo es lo que permite que la regla «un negativo por modo de falla» siga siendo verdadera: rige para los modos **dinámicos**, y los estáticos llevan su evidencia por inspección de una fuente que ahora **es inspeccionable**.
@@ -122,6 +124,13 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 ```bash
 #!/bin/bash
+# C12 — alcance por commit, fail-closed.
+# La AUTORIDAD es la lista cerrada de SHA publicada en §«Procedencia» del doc del
+# feature. NO se deriva de `git log -- <ledger>`: eso hacía que tocar el archivo
+# protegido autorizara al infractor, y el chequeo fallaba abierto (r27).
+# `git log` sirve para producir el conjunto OBSERVADO y contrastarlo, no para
+# definir quién está autorizado.
+DOC="${DOC:-docs/implementation/14-onboarding-feedback.md}"
 LEDGER='docs/implementation/pipeline-2026-07-29-3.md'
 HIJO='docs/STATUS.md
 docs/IMPLEMENTATION.md
@@ -136,8 +145,10 @@ docs/metrics/normalize.awk
 .github/ISSUE_TEMPLATE/install-failed.yml
 .github/ISSUE_TEMPLATE/friction-or-question.yml'
 BASE="${BASE:-2985447}"
-if ! AUT=$(git log --format=%H "$BASE..HEAD" -- "$LEDGER" 2>/dev/null); then echo "FALLA: git log"; exit 1; fi
-if ! commits=$(git rev-list ${REVLIST_OPTS:-} "$BASE..HEAD" 2>/dev/null); then echo "FALLA: git rev-list"; exit 1; fi
+[ -r "$DOC" ] || { echo "FALLA: doc no legible"; exit 1; }
+AUT=$(awk '/^\*\*`AUTORIZADOS`/{f=1} f&&/^`2985447`/{exit} f' "$DOC" | grep -oE '^- `[0-9a-f]{40}`' | tr -d '`- ')
+[ -z "$AUT" ] && { echo "FALLA: la lista publicada esta vacia o no se pudo extraer"; exit 1; }
+if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then echo "FALLA: git rev-list"; exit 1; fi
 [ -z "$commits" ] && { echo "FALLA: rango vacio"; exit 1; }
 viol=0
 while read -r c; do
@@ -877,6 +888,16 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r27 (base `b0fa345`, HEAD `da4d6c7`) — CHANGES_REQUESTED · **1 bloqueante**
+
+**`C3` quedó cerrado** —la matriz materializa fuente, corte, comando y auditabilidad por fila, y los valores locales se re-derivan— y la **reclasificación estática de `A1`/`A3` quedó aceptada**. El único punto es un **error lógico mío en `C12`**, y es de los buenos:
+
+**El chequeo fallaba abierto por circularidad.** Yo construía la lista de autorizados con `git log … -- <ledger>`, o sea **«quién tocó el ledger»** — de modo que **tocar el archivo protegido autorizaba automáticamente al infractor**. El reviewer lo reprodujo en un clon descartable: un commit sintético no declarado que modifica solo el ledger devolvía `C12 PASA`. Contradecía de frente la regla que el propio doc publica —«un commit no declarado que toque el ledger falla»—, y la contradecía **desde el mecanismo**, no desde la redacción.
+
+Corregido: **la autoridad es la lista cerrada publicada** en §«Procedencia», y `git log` queda para producir el conjunto **observado** y contrastarlo, no para definir quién está autorizado. Entra **`A0`** como requisito de forma y **`A9`** como negativo con el caso exacto: commit no listado que toca solo el ledger ⇒ `rc=1`, verificado.
+
+*(Vale nombrar la forma: la versión anterior era «derivada y no recordada», que yo había presentado como una mejora sobre declarar de memoria. Y lo era para el conjunto **observado** — pero la usé también para el conjunto **autorizado**, que es una decisión y no una observación. Derivar está bien para lo que se constata; no para lo que se permite.)*
 
 ### r26 (base `b0fa345`, HEAD `57b05be`) — CHANGES_REQUESTED · **2 bloqueantes** · **la vara del feature quedó comprobada**
 
