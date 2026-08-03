@@ -899,6 +899,16 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 ## Review log
 
+### r31 (base `b0fa345`, HEAD `02ed38e`) — **APPROVED de cierre**
+
+Cierra el ciclo de implementación y la unidad. **`02ed38e` era HEAD al aprobarse y el árbol estaba limpio**, así que el veredicto cubre todo el ciclo: **cero commits posteriores, cero no-revisados**.
+
+**Entregado** — `CONTRIBUTING.md` (93 líneas, 4 813 bytes), las tres plantillas de `.github/ISSUE_TEMPLATE/` (53 + 36 + 5 líneas, byte a byte desde los bloques canónicos), `docs/metrics.md` (184 líneas, 11 839 bytes), el snapshot `docs/metrics/rounds-log-b0bdf4d.tsv` (88 filas) con `cut.awk` y `normalize.awk`, y las tres sustituciones del `README.md` verificadas por reconstrucción byte a byte contra `2985447:README.md`.
+
+**La vara del gate, comprobada por el reviewer y no afirmada por el generador** (r26): un colega entiende en dos minutos qué es axel y qué lo distingue, puede instalarlo sin volver a preguntar, y sabe qué feedback se busca y por qué no se aceptan PRs.
+
+**Los tres comandos de GitHub quedan escritos y sin ejecutar**, como manda el ajuste (b) del gate. Prueba negativa del lado del estado: `main` sigue **158 commits por delante de `origin/main`** — el push no se corrió. Las únicas invocaciones de `gh` en toda la unidad fueron `--help` y `--version`.
+
 ### r30 (base `b0fa345`, HEAD `c3b9c61`) — CHANGES_REQUESTED · **1 bloqueante**
 
 **La biyección de `A` volvió a ser falsa, y por la razón exacta que ya conocíamos.** Había **12 modos y 13 casos** porque `A3` aparecía dos veces —su fila de inspección y el caso del extractor con `rc≠0`—, así que **borrar el caso nuevo dejaba a `A3` con el otro y no producía huérfano**. Codex lo verificó eliminándolo conceptualmente: los conjuntos seguían coincidiendo.
