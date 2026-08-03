@@ -52,6 +52,8 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 - `380eb749b6a635c76d5093286c60557b8128855d` — **retiro de una afirmación universal del `## Cierre`**: el bloque decía que **todos** los cortes se resolvieron con «a)», y el último fue «c)». El padre lo nombró mejor de lo que yo lo había marcado: no era «una letra mal» sino **una afirmación universal sobre un conjunto que la corrida sigue ampliando** — el defecto del contador móvil con otra forma. Retirada: la letra ya no se publica ahí y cada corte la lleva en su propio evento, con comando de derivación verificado corriéndolo y chequeado explícitamente contra el auto-matcheo. Toca **solo** el ledger.
 - `47d5a7c5cd677c45ecde96af3de0d8a1e2683c7f` — **desempate humano «a)» del deadlock contractual**: tras restaurar la racha a su valor real, la unidad quedó en deadlock y el humano desempató por la **vía contractual**, que es lo que habilita `reset-deadlock`. Toca `docs/STATUS.md` y el ledger.
 - `d45c7b25ffac54b110f281f30f1658b297abf80e` — **reversión del reset no contractual**, más el `## Cierre` sin enumerar sus propias correcciones. El padre volvió al contrato versionado y **descartó la distinción que había propuesto** («el humano decide sobre la sustancia» contra «se despeja un obstáculo»): no es regla, y si va a gobernar el estado del loop tiene que entrar al contrato por su propia vía. Toca `docs/STATUS.md` y el ledger.
+- `8de1f24fd9900f2bf03607f77feb812eee670284` — **desempate humano «a)» del corte de la r28**: seguir, con la racha reseteada por la vía contractual. Toca `docs/STATUS.md` y el ledger.
+- `69bd6a477eb651e07a2d0a8aada37547d10990de` — **registro del corte de la r28** por tope de racha. Toca `docs/STATUS.md` y el ledger.
 - `33886310f959869a2e9cde147ac3834853827821` — **actualización de la fila viva de la unidad `14`**, que seguía describiendo el estado de la bajada con la implementación ya lanzada. El padre la aplicó **con la aserción de match** —la guarda que salió de su `replace` silencioso—, así que sabe que se aplicó en vez de suponerlo. Toca solo el ledger.
 - `33adccbb78b8a86fe0468eb5e8c0f1aeac6e1446` — **corte entre el ciclo de bajada y el de implementación**, con la ventana de `awake` renovada. El padre verificó la cobertura del `APPROVED` en vez de aceptarla de palabra: `b0fa345..HEAD` devuelve exactamente el commit de bookkeeping y nada más. Toca `docs/STATUS.md` y el ledger.
 - `e6f07c41198dd93c7544696513b6a274cfb08471` — **corrección de la fila viva de la unidad `14`** en la tabla de Estado del ledger, que conservaba un **ordinal móvil** («segundo corte») con eventos posteriores ya registrados. Al corregirla el padre encontró algo peor: **sus dos ediciones anteriores a esa fila nunca se habían aplicado** — usaba `replace` con el texto viejo hardcodeado y **sin verificar que matcheara**, y `replace` que no matchea **no falla**. Toca solo el ledger.
@@ -116,6 +118,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A8a | rango vacío | **1** |
 | A8b | commit sin paths | **1** |
 | **A9** | **commit no declarado que toca *solo* el ledger** — el caso que la r27 reprodujo: derivar la lista de «quién tocó el ledger» hacía que **tocar el archivo protegido autorizara al infractor** | **1** |
+| **A10** | **el extractor de la lista emite bien pero sale con `rc≠0`** — un pipe devuelve el estado del **último** comando, así que `awk \| grep \| tr` oculta un fallo del `awk`. Es `A3`, y el arreglo de `A0` la había reintroducido | **1** |
 | — | positivo sobre el rango real | **0** |
 
 **`A1` y `A3` no se retiran** —el reviewer lo pidió expresamente y tiene razón: protegen contra dos fallas reales que ya ocurrieron en esta unidad—. Se **reclasifican** como **requisitos estáticos**: propiedades de la forma del verificador, cuya evidencia es la **fuente publicada abajo** y no una corrida. Un caso negativo para ellas tendría que mutar el propio verificador, y entonces probaría la mutación, no el verificador. Declararlo es lo que permite que la regla «un negativo por modo de falla» siga siendo verdadera: rige para los modos **dinámicos**, y los estáticos llevan su evidencia por inspección de una fuente que ahora **es inspeccionable**.
@@ -146,8 +149,13 @@ docs/metrics/normalize.awk
 .github/ISSUE_TEMPLATE/friction-or-question.yml'
 BASE="${BASE:-2985447}"
 [ -r "$DOC" ] || { echo "FALLA: doc no legible"; exit 1; }
-AUT=$(awk '/^\*\*`AUTORIZADOS`/{f=1} f&&/^`2985447`/{exit} f' "$DOC" | grep -oE '^- `[0-9a-f]{40}`' | tr -d '`- ')
-[ -z "$AUT" ] && { echo "FALLA: la lista publicada esta vacia o no se pudo extraer"; exit 1; }
+# Un solo programa, con su estado comprobado: un pipe devuelve el rc del ULTIMO
+# comando, asi que `awk | grep | tr` oculta un fallo del awk. Es A3, y el arreglo
+# de A0 la habia reintroducido (r28).
+if ! AUT=$(awk '/^\*\*`AUTORIZADOS`/{f=1} f&&/^`2985447`/{exit} f&&/^- `[0-9a-f]{40}`/{match($0,/[0-9a-f]{40}/); print substr($0,RSTART,RLENGTH)}' "$DOC"); then
+  echo "FALLA: no se pudo extraer la lista publicada"; exit 1
+fi
+[ -z "$AUT" ] && { echo "FALLA: la lista publicada esta vacia"; exit 1; }
 if ! commits=$(git rev-list "$BASE..HEAD" 2>/dev/null); then echo "FALLA: git rev-list"; exit 1; fi
 [ -z "$commits" ] && { echo "FALLA: rango vacio"; exit 1; }
 viol=0
@@ -888,6 +896,16 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r28 (base `b0fa345`, HEAD `9d07a60`) — CHANGES_REQUESTED · **1 bloqueante** · corte por tope → desempate humano «a)»
+
+**La ironía final de la unidad, y cierra el ciclo sobre sí misma**: el arreglo de `A0` —el fallo abierto por circularidad— **reintrodujo `A3`**, que es la fila **más vieja** de la matriz. Mi extracción nueva era `awk … | grep … | tr …`, y un pipe devuelve el estado del **último** comando: si el `awk` emitía la lista correcta y salía con `rc≠0`, el fallo quedaba oculto. El reviewer lo reprodujo con un extractor que emite bien y sale con `rc=42`.
+
+Es §«El defecto dentro del acto de corregirlo» en su forma más cerrada: **el remedio de un fallo abierto trajo de vuelta el primer fallo abierto que la propia matriz había documentado**, y lo trajo porque yo escribí la extracción nueva mirando *qué* extraer y no *cómo* comprobar que se extrajo.
+
+Corregido con **un solo programa cuyo estado se comprueba** (`if ! AUT=$(awk …)`), y entra **`A10`** con el caso exacto. **Barrido de síntoma corrido antes de lanzar**, que es lo que el padre pidió para que no aparezca el gemelo: era la **única** extracción con pipe en todo el doc.
+
+*(Y un detalle que vale: al arreglarlo rompí primero la extracción —un `gsub` que arrasaba la línea entera en vez del SHA—, y el chequeo **falló** en vez de aprobar con una lista vacía. La guarda de «lista vacía ⇒ falla» se ganó su lugar ahí mismo.)*
 
 ### r27 (base `b0fa345`, HEAD `da4d6c7`) — CHANGES_REQUESTED · **1 bloqueante**
 
