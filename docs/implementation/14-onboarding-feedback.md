@@ -81,7 +81,7 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 
 **El chequeo tiene que ser fail-closed de verdad, y el mío no lo era.** Al re-correrlo tras el corte por cuota, mi versión anterior recorría los commits en un `for … done | head`, así que el flag de violación quedaba en el subshell del pipe y **el chequeo imprimía «pasa» mientras había impreso una violación dos líneas arriba**. Reescrito sin pipeline y con **prueba negativa**: quitando un SHA de `AUTORIZADOS`, el chequeo devuelve `rc=1` y nombra la violación. Un verificador que nunca rechazó nada no está verificado — es el mismo criterio que la unidad aplicó a los fixtures, aplicado ahora a su propia auditoría.
 
-**Origen de las filas `A1–A8`** —`A0`, `A9` y `A10` nacieron después, en las rondas r27 y r28, y están en la misma tabla—. La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
+**Origen de las filas `A1–A8`** — el modo `A0` nació después, en la r27; los dos casos que lo acompañaron resultaron ser **casos** de `A3` y de `A0`, no modos nuevos, y así quedaron ordenados (r30). La r11 marcó que yo declaraba el arreglo fail-closed mientras el procedimiento publicado **solo corría `git show`**: no comparaba contra `AUTORIZADOS`, no validaba allowlists, no mantenía flag y terminaba siempre en `0`. Era el segundo «mecanismo declarado que no ejecuta» de la misma ronda. El real:
 
 **Qué debe establecer** — la herramienta se construye en la implementación (§«Las herramientas se construyen en la implementación»): para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance». Y todo entregable versionado es un **archivo regular**.
 
@@ -102,24 +102,26 @@ Tiene además valor retrospectivo, y el padre lo señaló: parte de las veinte r
 | A8a | tomar un **rango vacío** como éxito | r12 |
 | A8b | tomar un **commit sin paths** como éxito | r12 |
 
-**Matriz de aceptación, corrida** (r25). Cada fila con su condición, cómo se produce y el `rc` observado:
+**Matriz de aceptación, con IDs estables e inventario cerrado por modo.** La versión anterior comparaba **conjuntos** de identificadores, y eso falla apenas un modo tiene **más de un caso**: `A3` aparecía dos veces —su fila de inspección y el caso del extractor con `rc≠0`—, así que **borrar el caso nuevo dejaba a `A3` con el otro y no producía ningún huérfano**. Es exactamente el defecto que la r17 encontró en `N`/`M`/`P`, arreglado allá y **no aplicado acá** (r30).
 
-| Fila | Condición producida | `rc` |
-|---|---|---|
-| A1 | **requisito estático**, evidencia sobre la fuente publicada: el recorrido es `while read -r c … done <<< "$commits"` con `commits=$(git rev-list …)`; **no aparece `git diff` en ninguna línea** | **cumple** |
-| A2a | `git rev-list` con un rango inválido | **1** |
-| A2c | `git show` con una opción inválida | **1** |
-| A2d | `GIT_INDEX_FILE` inválido ⇒ `git ls-files` falla | **1** |
-| A3 | **requisito estático**, ídem: cada invocación de git se captura con `if ! x=$(…)` y su `rc` se comprueba; **ninguna comprobación toma su estado de un pipe** | **cumple** |
-| A4 | `core.abbrev=12` ⇒ **debe pasar**, porque la identidad es el SHA completo | **0** |
-| A5 | rename de `scripts/awake.sh` a un path permitido: sin `--no-renames` git muestra **solo el destino**; con él, ambos | **1** |
-| A6 | un path fuera de la lista del hijo | **1** |
-| A7 | entregable creado como symlink ⇒ git lo registra con modo `120000` | **1** |
-| A8a | rango vacío | **1** |
-| A8b | commit sin paths | **1** |
-| A0 | **commit no declarado que toca *solo* el ledger** — el caso que la r27 reprodujo | **1** |
-| A3 *(segundo caso)* | **el extractor de la lista emite bien pero sale con `rc≠0`**: un pipe devuelve el estado del **último** comando, así que `awk \| grep \| tr` oculta un fallo del `awk`. El arreglo de `A0` había reintroducido esta fila, la más vieja de la matriz (r28) | **1** |
-| — | positivo sobre el rango real | **0** |
+| ID | Condición producida | Ejercita | `rc` |
+|---|---|---|---|
+| Q0 | positivo sobre el rango real | *(positivo)* | **0** |
+| Q1 | *(inspección)* el recorrido es `while read -r c … done <<< "$commits"`; **no aparece `git diff`** en ninguna línea | A1 | — |
+| Q2 | *(inspección)* cada invocación de git se captura con `if ! x=$(…)` y su `rc` se comprueba; **ninguna toma su estado de un pipe** | A3 | — |
+| Q3 | el **extractor** de la lista emite bien pero sale con `rc≠0` | A3 | **1** |
+| Q4 | commit **no declarado** que toca *solo* el ledger | A0 | **1** |
+| Q5 | `git rev-list` con un rango inválido | A2a | **1** |
+| Q6 | `git show` con una opción inválida | A2c | **1** |
+| Q7 | `GIT_INDEX_FILE` inválido ⇒ `git ls-files` falla | A2d | **1** |
+| Q8 | `core.abbrev=12` ⇒ **debe pasar**: la identidad es el SHA completo | A4 | **0** |
+| Q9 | rename de `scripts/awake.sh` a un path permitido: sin `--no-renames` git muestra **solo el destino** | A5 | **1** |
+| Q10 | un path fuera de la lista del hijo | A6 | **1** |
+| Q11 | entregable creado como symlink ⇒ git lo registra con modo `120000` | A7 | **1** |
+| Q12 | rango vacío | A8a | **1** |
+| Q13 | commit sin paths | A8b | **1** |
+
+**Inventario cerrado por modo** — es esto, y no la comparación de conjuntos, lo que detecta una ausencia: `A0` → `Q4`; `A1` → `Q1`; `A2a` → `Q5`; `A2c` → `Q6`; `A2d` → `Q7`; **`A3` → `Q2, Q3`**; `A4` → `Q8`; `A5` → `Q9`; `A6` → `Q10`; `A7` → `Q11`; `A8a` → `Q12`; `A8b` → `Q13`; *(positivo)* → `Q0`. Borrar `Q3` deja a `A3` reclamando un ID **que no existe**.
 
 **`A1` y `A3` no se retiran** —el reviewer lo pidió expresamente y tiene razón: protegen contra dos fallas reales que ya ocurrieron en esta unidad—. Se **reclasifican** como **requisitos estáticos**: propiedades de la forma del verificador, cuya evidencia es la **fuente publicada abajo** y no una corrida. Un caso negativo para ellas tendría que mutar el propio verificador, y entonces probaría la mutación, no el verificador. Declararlo es lo que permite que la regla «un negativo por modo de falla» siga siendo verdadera: rige para los modos **dinámicos**, y los estáticos llevan su evidencia por inspección de una fuente que ahora **es inspeccionable**.
 
@@ -879,7 +881,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 | C10 | `CONTRIBUTING.md` declara **qué está fuera de alcance hoy** incluyendo el aviso MIT como **incumplimiento pendiente**, no como cumplimiento parcial | lectura literal |
 | C11 | Los **tres comandos de GitHub** están escritos pegables sin editar, con herramienta, sintaxis y precondiciones declaradas y cero huecos. Sintaxis y completitud se verifican **offline**: cada flag existe en `gh repo edit --help`, cada valor está presente, ningún hueco | inspección contra la salida de `--help`, sin red |
 | **C11b** | **No-ejecución**: ninguno de los tres se corrió contra el remoto | **Invariante operativa del pipeline, no evidencia derivable del commit** — y rotularla como prueba mecánica era una afirmación más ancha que su evidencia (hallazgo de la r1): un push no deja «commits de push», `origin/main..main` no tiene baseline versionado y no dice nada de topics ni homepage, y el repo no registra qué invocaciones de `gh` ocurrieron. Lo que sí se puede asentar, y es lo que se asienta: el registro explícito de que la unidad no las ejecutó, con las únicas invocaciones de `gh` declaradas (`--help`), verificable por el padre contra el ledger y por el humano contra el estado del repo remoto cuando vaya a correrlos |
-| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | la herramienta se construye contra los artefactos reales. **Qué debe establecer y qué modos de falla tiene prohibidos: la tabla completa y vigente de §«Procedencia»**, sin rango fijo — **cualquier fila que se agregue queda automáticamente exigida**. La versión anterior citaba `A1–A8`, un rango fijo, y dejaba **fuera del criterio de cierre** el modo `A0`, que nació del fallo abierto de la r27: documentado en la matriz pero no exigido, que es la forma exacta de tener una especificación que ningún criterio consume |
+| C12 | **Alcance, auditado por commit**: para cada commit de `2985447..HEAD`, si su SHA está en `AUTORIZADOS` toca solo el ledger y/o `docs/STATUS.md`; si no está, toca solo los paths de §«Alcance»; y todo entregable versionado es un archivo regular | la herramienta se construye contra los artefactos reales. **Qué debe establecer y qué modos de falla tiene prohibidos: la tabla de modos completa y vigente de §«Procedencia» *y* su inventario cerrado `modo → casos`**, ambos sin rango fijo — **cualquier fila que se agregue queda automáticamente exigida**. La versión anterior citaba `A1–A8`, un rango fijo, y dejaba **fuera del criterio de cierre** el modo `A0`, que nació del fallo abierto de la r27: documentado en la matriz pero no exigido, que es la forma exacta de tener una especificación que ningún criterio consume |
 | C13 | **La inconsistencia del corte quedó resuelta por escrito**, con la razón contractual y no por preferencia | §«La inconsistencia entre docs», presente y citada desde el informe si corresponde |
 | C14 | No-regresión: `tests/lint.sh`, `tests/loop.sh` y `tests/install.sh` limpios | corrida de las tres suites |
 | **C15** | **Especificación literal completa, y completitud contra los artefactos.** (i) §«La especificación literal» **contiene los tres archivos enteros**, con todos sus valores — es la referencia de C6, y la r9 encontró que yo la prometía sin haberla escrito, que es el defecto que C15 existe para atrapar ocurriendo dentro de C15. **No se enumeran las claves omitidas**: los bloques son la autoridad y lo que no está en ellos no está; se conserva una sola omisión declarada —`labels`— porque necesita justificación local (r11). (ii) Existen **y entregan lo diseñado**: los **ocho** componentes del informe de §«`docs/metrics.md` — el informe»; los **cuatro** bloques de `CONTRIBUTING.md`; los campos `F1–F7` y `G1–G5` contrastados en su **tupla completa** contra los bloques canónicos; y **el idioma**: `docs/metrics.md`, `CONTRIBUTING.md` y `.github/` en **inglés** | recorrido de las listas cerradas **localizando cada elemento en el archivo final** y comparando la tupla entera. Para los YAML el contraste lo hace C6 por byte, que es más fuerte que cualquier recorrido. Se registra el locator de cada fila. *Que la lista esté escrita en esta bajada no verifica que esté implementada* |
@@ -896,6 +898,18 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 8. **«Todo lo publicado es correcto» no es «está entregado lo diseñado».** Riesgo que la r4 encontró y que no estaba en esta lista: catorce criterios de correctitud dejaban pasar artefactos semánticamente incompletos, porque ninguno miraba la ausencia. Es **el mismo riesgo 7 de la unidad `13`**, que ahí costó agregar cuatro criterios en su r1. Mitigación: C15, contra cuatro listas cerradas y con locator en el artefacto final — no contra el criterio de quien revisa, y no contra la lista escrita en esta bajada.
 
 ## Review log
+
+### r30 (base `b0fa345`, HEAD `c3b9c61`) — CHANGES_REQUESTED · **1 bloqueante**
+
+**La biyección de `A` volvió a ser falsa, y por la razón exacta que ya conocíamos.** Había **12 modos y 13 casos** porque `A3` aparecía dos veces —su fila de inspección y el caso del extractor con `rc≠0`—, así que **borrar el caso nuevo dejaba a `A3` con el otro y no producía huérfano**. Codex lo verificó eliminándolo conceptualmente: los conjuntos seguían coincidiendo.
+
+**Es literalmente el defecto que la r17 encontró en `N`/`M`/`P` y que arreglé allá con IDs estables e inventario cerrado por fila.** No lo apliqué a `A` — la matriz de alcance quedó con la versión vieja del invariante mientras las otras tres tenían la nueva. Aplicado ahora: casos con **IDs estables `Q0–Q13`** e **inventario cerrado por modo**, donde `A3 → Q2, Q3`. Borrar `Q3` deja a `A3` reclamando un ID que no existe.
+
+Y `C12` pasa a consumir **las dos tablas** —modos e inventario—, no solo la de modos.
+
+Las dos afirmaciones falsas que venían de arrastre, sincronizadas: la línea de origen decía que `A9`/`A10` seguían en la tabla cuando ya se habían disuelto como casos, y el encabezado de la matriz atribuía a la r25 casos nacidos en la r27 y la r28.
+
+*(La lección que me llevo, y es de método: cuando un arreglo se generaliza a varias tablas, **la que no estaba en el lote queda con la versión vieja del invariante** — y nadie lo nota, porque cada tabla se lee sola. El barrido de la clase tiene que enumerar los sitios, no confiar en que se recuerdan todos.)*
 
 ### r29 (base `b0fa345`, HEAD `e02d256`) — CHANGES_REQUESTED · **1 bloqueante**
 
