@@ -2,8 +2,8 @@
 
 - **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
 - **Feature en curso**: **15 — README simple**, unidad `feature` del pipeline **en curso**, token reclamado por el hijo (`0F7F8469…`, SHA inicio `87ee282`); **bajada fina escrita** ([implementation/15-readme-simple.md](implementation/15-readme-simple.md)) y lanzada a review; unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a`)
-- **Ronda de review**: 4 · lanzada
-- **Último veredicto**: CHANGES_REQUESTED · ronda 3 · head `2ed7112` (unidad `feature` 15, pipeline 2026-08-05) — cuatro puntos, los cuatro aceptados sin argumentar; C5a/C5b, C15 (15 líneas contra 18) y C14b quedaron cerrados
+- **Ronda de review**: 5 · lanzada
+- **Último veredicto**: CHANGES_REQUESTED · ronda 4 · head `1cc7a3b` (unidad `feature` 15, pipeline 2026-08-05) — dos bloqueantes y una preferencia, los tres aceptados sin argumentar; racha 4: si la ronda 5 no converge se dispara la regla de deadlock
 - **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-06
 
