@@ -233,9 +233,9 @@ The core phase chain — `/design` → `/plan` → `/feature` — and where a ru
 ### What a run does, and where it stops
 
 Four of them are phase commands — `/design`, `/plan`, `/feature` and `/build` — and all four run
-the same loop underneath. The other three change state too, in their own way: `/adopt` closes an
-adoption, and `/recap` writes a versioned checkpoint — it sets "waiting for OK", commits, and ends
-the turn. `/status` is the only one that reads and writes nothing.
+the same loop underneath. Of the other three, two change state: `/adopt` closes an adoption, and
+`/recap` writes a versioned checkpoint — it sets "waiting for OK", commits, and ends the turn.
+`/status` is the only pure read: it reads the state and writes nothing.
 
 **The loop.** The generator makes a change and commits it. `scripts/review.sh` hands the reviewer
 that range of commits together with a written request saying what to check and what evidence was

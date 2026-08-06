@@ -2,8 +2,8 @@
 
 - **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
 - **Feature en curso**: **15 — README simple**, unidad `feature` del pipeline **en curso**, token reclamado por el hijo (`0F7F8469…`, SHA inicio `87ee282`); **bajada fina APROBADA** en la r5 ([implementation/15-readme-simple.md](implementation/15-readme-simple.md)); implementación **completa** — las dos mudanzas, los dos placeholders y el `README.md` reescrito (179 → 156 líneas), con el inventario de 40 rangos y los 20 criterios verificados; unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a`)
-- **Ronda de review**: 9 · lanzada
-- **Último veredicto**: CHANGES_REQUESTED · ronda 8 · head `cf7f574` — cuatro bloqueantes, los cuatro aceptados sin argumentar (locators y conteos de C7, dos afirmaciones falsas sobre los comandos y el deadlock, C12 sobre toda la prosa nueva, y los docs de estado atrasados)
+- **Ronda de review**: 10 · lanzada
+- **Último veredicto**: CHANGES_REQUESTED · ronda 9 · head `e6249b2` — **un solo bloqueante** (contradicción del manual sobre `/status`), aceptado sin argumentar; Codex dio por verificados los 40 rangos, los locators, C8, C12, C15, links y bookkeeping. Racha 4: si la ronda 10 no converge se dispara la regla de deadlock
 - **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-06
 
