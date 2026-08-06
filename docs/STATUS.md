@@ -1,10 +1,10 @@
 # STATUS
 
-- **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
-- **Feature en curso**: **15 — README simple**, unidad `feature` del pipeline **cerrada por el hijo** (token `0F7F8469…` retirado, SHA inicio `87ee282`); **APPROVED — pendiente OK de pipeline** (r10, head `12bd6ff`; bajada aprobada en la r5) — [implementation/15-readme-simple.md](implementation/15-readme-simple.md). Entregado: `README.md` reescrito (179 → 156 líneas), `docs/session.md` nuevo y `docs/install.md` ampliado, con el inventario de 40 rangos y los 20 criterios verificados; unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a`)
-- **Ronda de review**: 10 · consumida
-- **Último veredicto**: APPROVED · ronda 10 · head `12bd6ff` (unidad `feature` 15, pipeline 2026-08-05) — **la unidad queda aprobada**, sin bloqueantes. Ciclo completo: 10 rondas, 33 pedidos, los 33 aceptados sin argumentar
-- **Esperando**: **esperando OK** — RECAP consolidado del pipeline 2026-08-05 presentado: las tres unidades (design-delta, plan-delta, feature 15) en «APPROVED — pendiente OK de pipeline»; el OK del humano cierra todo (ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md))
+- **Fase**: ninguna en curso — **pipeline `/build` 2026-08-05 cerrado** (design-delta + plan-delta + feature 15) con OK humano el 2026-08-06 · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
+- **Feature en curso**: ninguno — backlog vacío: los dieciséis features del plan (00–15) están cerrados
+- **Ronda de review**: —
+- **Último veredicto**: APPROVED de cierre · ronda 10 · head `12bd6ff` (unidad 15, pipeline 2026-08-05)
+- **Esperando**: nada — el paso siguiente lo elige el humano. **Pendiente inmediato del humano**: los tres comandos de GitHub (nota de abajo) — el push ahora publica el README nuevo. Después: `/plan` para extender el backlog, o `/build` para un pedido que cruce fases
 - **Actualizado**: 2026-08-06
 
 > **Pendiente inmediato del humano** (ajuste (b) del gate del pipeline 2026-07-29 (3)): correr los tres comandos de GitHub —push, topics, homepage— escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub».
