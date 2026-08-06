@@ -1,11 +1,13 @@
 # STATUS
 
-- **Fase**: ninguna en curso — **pipeline `/build` cerrado** (design-delta + plan-delta + features 13 y 14) con OK humano el 2026-08-02 · ledger: [implementation/pipeline-2026-07-29-3.md](implementation/pipeline-2026-07-29-3.md)
-- **Feature en curso**: ninguno — backlog vacío: los catorce features del plan están cerrados
+- **Fase**: pipeline `/build` 2026-08-05 — gate presentado, sin autorizar · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
+- **Feature en curso**: ninguno — la ruta propuesta agrega el feature 15 (README simple), pendiente de autorización
 - **Ronda de review**: —
-- **Último veredicto**: APPROVED de cierre · ronda 31 · head `02ed38e` (unidad 14)
-- **Esperando**: nada — el paso siguiente lo elige el humano. **Pendiente inmediato del humano** (ajuste (b) del gate): correr los tres comandos de GitHub —push, topics, homepage— escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub». Después: `/plan` para extender el backlog, o `/build` para un pedido que cruce fases
-- **Actualizado**: 2026-08-02
+- **Último veredicto**: APPROVED de cierre · ronda 31 · head `02ed38e` (unidad 14, pipeline 2026-07-29 (3))
+- **Esperando**: **esperando autorización de pipeline** — ruta propuesta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README). El pedido literal y los resúmenes por unidad están en el ledger
+- **Actualizado**: 2026-08-05
+
+> **Pendiente inmediato del humano** (ajuste (b) del gate del pipeline 2026-07-29 (3)): correr los tres comandos de GitHub —push, topics, homepage— escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub».
 
 > **Dos pendientes anotados, sin registrar en el backlog**: (1) la **deuda normativa declarada** — `AGENTS.md` §Convenciones dice «docs, commits y comunicación en español» y la política de idioma de [design/public-surface.md](design/public-surface.md) la volvió parcialmente falsa; su cierre exige una unidad autorizada aparte (más el espejo en `templates/AGENTS.md`), nunca un commit mecánico; (2) el **fix de la colisión `build/`** del instalador (decisión humana del pipeline 2026-07-29 (2): sin registrar).
 
@@ -13,4 +15,4 @@
 
 > Vigente desde el feature 12: el cierre de `/adopt` reporta el **inventario derivado de git** de los archivos que tocó. Contrato reusable en `.claude/skills/adopt/SKILL.md` §«Reporte de cierre (contrato)».
 
-> Vigente desde el feature 11: el modelo de los **hijos** lo fija la maquinaria por tipo de unidad —`fable` para `design`/`plan`, `opus` para `feature`—; tabla canónica en la skill `build` §«Modelos por unidad». **Nota operativa de esta corrida**: las dos unidades de delta degradaron a `opus` (Fable sin créditos en la cuenta), anunciado en el ledger.
+> Vigente desde el feature 11: el modelo de los **hijos** lo fija la maquinaria por tipo de unidad —`fable` para `design`/`plan`, `opus` para `feature`—; tabla canónica en la skill `build` §«Modelos por unidad».
