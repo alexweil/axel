@@ -1,9 +1,9 @@
 # STATUS
 
 - **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
-- **Feature en curso**: ninguno — unidad `design` **APPROVED — pendiente OK de pipeline** (r3, head `4a60531`); unidad `plan` (plan-delta) **en curso**: delta del plan escrito — feature 15 (README simple, único ítem del backlog nuevo, criterio 1) en IMPLEMENTATION con su extensión de procedencia — y loop de review abierto
-- **Ronda de review**: 2 · lanzada
-- **Último veredicto**: APPROVED · ronda 3 · head `4a60531` (unidad `design`, pipeline 2026-08-05) — sin observaciones accionables; ciclo de 3 rondas, 5 pedidos, todos aceptados sin argumentar
+- **Feature en curso**: ninguno — unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a` — feature 15 en el backlog); sigue la unidad `feature` (15), que lanza el padre
+- **Ronda de review**: —
+- **Último veredicto**: APPROVED · ronda 2 · head `75e192a` (unidad `plan`, pipeline 2026-08-05) — sin observaciones accionables; ciclo de 2 rondas, 1 pedido (fechas de dos eventos del ledger), aceptado sin argumentar
 - **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-05
 
