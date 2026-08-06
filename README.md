@@ -96,12 +96,13 @@ without hitting a confirmation point first.
 | `/status` | Say where things stand. Pure read, changes nothing. |
 | `/recap` | Checkpoint on demand: what happened since the last OK, and what comes next. |
 
-The four that produce work — `/design`, `/plan`, `/feature` and `/build` — run
-the same loop underneath; `/adopt` closes an install, and `/status` and `/recap`
-only report. In that loop the first agent writes and commits; the reviewer takes
-that range of commits, checks it against the design and the plan, and either
-asks for changes or approves; the first one fixes what it accepts and argues
-back where it disagrees. That repeats until they agree.
+The four phase commands — `/design`, `/plan`, `/feature` and `/build` — run the
+same loop underneath. `/adopt` closes an adoption, `/recap` writes a checkpoint
+into the repo, and `/status` is the only one that just reports. In that loop the
+first agent writes and commits; the reviewer takes that range of commits, checks
+it against the design and the plan, and either asks for changes or approves; the
+first one fixes what it accepts and argues back where it disagrees. That repeats
+until they agree.
 
 It stops for you in two places. If five rounds pass without converging, it stops
 and hands you both positions so you can break the tie. And at the end of the run

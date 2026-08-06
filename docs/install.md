@@ -232,8 +232,10 @@ The core phase chain — `/design` → `/plan` → `/feature` — and where a ru
 
 ### What a run does, and where it stops
 
-Four of the commands produce work — `/design`, `/plan`, `/feature` and `/build` — and all four run
-the same loop underneath. `/adopt` closes an install; `/status` and `/recap` only report.
+Four of them are phase commands — `/design`, `/plan`, `/feature` and `/build` — and all four run
+the same loop underneath. The other three change state too, in their own way: `/adopt` closes an
+adoption, and `/recap` writes a versioned checkpoint — it sets "waiting for OK", commits, and ends
+the turn. `/status` is the only one that reads and writes nothing.
 
 **The loop.** The generator makes a change and commits it. `scripts/review.sh` hands the reviewer
 that range of commits together with a written request saying what to check and what evidence was
@@ -245,11 +247,12 @@ same reviewer session, and the round ends in a commit either way. That repeats u
 
 **The two places it stops for you.**
 
-- **No convergence.** Five consecutive rounds without an approval and the loop refuses to start
-  another one: `review.sh` exits `2` with `DEADLOCK`, and the generator has to bring you both
-  positions so you break the tie. After you decide, `scripts/review.sh reset-deadlock` rearms it.
-  This is a hard stop, not a suggestion — it exists so that two agents cannot spend your money
-  disagreeing.
+- **No convergence.** Five consecutive rounds that come back `CHANGES_REQUESTED` — process
+  failures and invalid verdicts do not count toward the streak — and the loop refuses to start
+  another one: `review.sh` exits `2` with `DEADLOCK` before invoking the reviewer, and the generator
+  has to bring you both positions so you break the tie. After you decide,
+  `scripts/review.sh reset-deadlock` rearms it. It is a hard stop rather than a warning: the round
+  does not run.
 - **The end of an authorised run.** A single feature ends at its own RECAP; a batch or a pipeline
   ends at one consolidated RECAP covering every unit it was authorised for. In both cases the turn
   ends and nothing continues until you answer. Units approved inside an authorised run wait in
