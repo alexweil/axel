@@ -210,6 +210,26 @@ language and the right one is chosen — but a pending state always wins over a 
 | `/status` | reads STATUS, the plan and the git log, and tells you where things stand | any question about state or progress | none — pure read, changes nothing |
 | `/recap` | checkpoint on demand: what was done since the last OK, decisions, loop state, what comes next | you want a checkpoint now | **not** a query: it sets "waiting for OK" and commits |
 
+### How the commands chain
+
+The phases in one picture — where each command hands off, and where the run stops for you:
+
+```
+/design ─► DESIGN.md ─review─► RECAP ─► OK ─► /plan ─► IMPLEMENTATION.md ─review─► RECAP ─► OK
+                                                              │
+                 ┌────────────────────────────────────────────┘
+                 ▼
+        /feature (fresh session)
+        start gate: summary ─► human confirmation
+        detailed spec ─review─► implement ─commit─► review ─► … ─► APPROVED
+                 │
+                 ▼
+              RECAP ─► human OK ─► next /feature (fresh session)
+```
+
+`/build` collapses that chain behind a single gate when a request needs more than one phase, and
+`/feature all` runs several planned features back to back. Both still end at one human OK.
+
 ## For agents (Claude Code)
 
 If you were told "install axel following this URL", this is the complete procedure.

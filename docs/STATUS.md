@@ -1,8 +1,8 @@
 # STATUS
 
 - **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
-- **Feature en curso**: **15 — README simple**, unidad `feature` del pipeline **en curso**, token reclamado por el hijo (`0F7F8469…`, SHA inicio `87ee282`); **bajada fina APROBADA** en la r5 ([implementation/15-readme-simple.md](implementation/15-readme-simple.md)); en implementación; unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a`)
-- **Ronda de review**: 5 · consumida
+- **Feature en curso**: **15 — README simple**, unidad `feature` del pipeline **en curso**, token reclamado por el hijo (`0F7F8469…`, SHA inicio `87ee282`); **bajada fina APROBADA** en la r5 ([implementation/15-readme-simple.md](implementation/15-readme-simple.md)); implementación paso 1 hecho — las dos mudanzas (`docs/session.md` nuevo, diagrama a `docs/install.md`) y los dos placeholders de path; unidades `design` y `plan` **APPROVED — pendiente OK de pipeline** (design: r3, head `4a60531`; plan: r2, head `75e192a`)
+- **Ronda de review**: 6 · lanzada
 - **Último veredicto**: APPROVED · ronda 5 · head `a7164f3` (unidad `feature` 15, pipeline 2026-08-05) — **la bajada queda aprobada** («no quedan bloqueantes: podés empezar a escribir»); dos precisiones no bloqueantes, aplicadas igual. Ciclo de la bajada: 5 rondas, 21 pedidos, los 21 aceptados sin argumentar
 - **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-06

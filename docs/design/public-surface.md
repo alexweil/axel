@@ -14,7 +14,7 @@ El criterio no es una lista de archivos sino un test: **el idioma lo decide la a
 
 | Plano | Audiencia | Idioma | Artefactos |
 |---|---|---|---|
-| **Vidriera** | quien descubre axel desde afuera | **inglés** | `README.md`, `CONTRIBUTING.md`, `.github/`, `docs/install.md`, el **informe** de métricas y — desde el delta 2026-08-05 — el doc del render de la sesión (path: bajada del feature 15) |
+| **Vidriera** | quien descubre axel desde afuera | **inglés** | `README.md`, `CONTRIBUTING.md`, `.github/`, `docs/install.md`, el **informe** de métricas y — desde el delta 2026-08-05 — el doc del render de la sesión ([../session.md](../session.md), path elegido por la bajada del feature 15) |
 | **Método** | los dos agentes y el humano que operan *este* repo | **español** | `AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`, los subdirectorios de `docs/`, los mensajes de commit |
 | **Prosa instalada en el destino** | el proyecto ajeno donde corre el instalador | **español hoy** — limitación declarada | las skills, el contrato de review, los mensajes de los scripts, y las cuatro plantillas documentales (`AGENTS.md`, `DESIGN.md`, `IMPLEMENTATION.md`, `STATUS.md`) |
 
