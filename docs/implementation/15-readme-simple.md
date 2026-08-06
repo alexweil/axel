@@ -392,3 +392,27 @@ Cuatro bloqueantes, **los cuatro aceptados sin argumentar**. Codex confirmó la 
 1. **El manual se contradecía en dos líneas seguidas**: «The other three change state too» incluye a `/status`, y el renglón siguiente decía que `/status` «reads and writes nothing» — falso, `/status` **sí lee**; lo distintivo es que no escribe. Es un defecto que introduje yo en la r9 al arreglar el punto anterior. Corregido con su formulación: «Of the other three, two change state… `/status` is the only pure read: it reads the state and writes nothing». Mientras estuviera así, C12 clasificaba como hecho derivable una afirmación falsa.
 
 **Y un hallazgo propio al verificar ese punto**, que Codex no pidió porque no lo vio: mi entrada de la r8 afirmaba que la distinción entre comandos «quedó sincronizada en README, guion y manual», y **el guion nunca se había tocado** — seguía diciendo «los cuatro que producen trabajo» y «`/status` y `/recap` solo informan», exactamente la frase que la r8 había tumbado. Sincronizado ahora, y la afirmación de más **corregida en su lugar en vez de borrada**: dar por hecha una sincronización que no ocurrió es el mismo defecto que ese punto denunciaba, y borrar el rastro lo escondería. El review log es la fuente que el ciclo siguiente lee; una entrada que se atribuye trabajo no hecho envenena esa fuente.
+
+### r10 — `APPROVED` (base `87ee282`, head `12bd6ff`) — **la unidad queda aprobada**
+
+«No quedan bloqueantes.» Codex confirmó que la formulación nueva es correcta —`/status` lee y no escribe, `/adopt` y `/recap` mutan estado, los cuatro comandos de fase ejecutan el loop—, que **README, guion y manual quedaron sincronizados**, y que corregir la afirmación histórica **dentro** del review log preserva adecuadamente la trazabilidad. Verificó además las 156 líneas, C15 = 14, links limpios, `git diff --check`, lint, ledger, paths y `origin/main`.
+
+## Cierre de la unidad
+
+**Diez rondas, 33 pedidos de Codex, los 33 aceptados sin argumentar ninguno** — 20 en el ciclo de la bajada (r1–r5) y 13 en el de la implementación (r6–r10). Una sola desviación declarada en todo el feature: la cola de la formulación que propuso en la r4 para la cuarta oración del párrafo, omitida por duplicar la tercera, y que él mismo ratificó en la r5.
+
+**Entregado**:
+
+- `README.md` reescrito, 179 → 156 líneas: un párrafo de apertura sin título que dice qué es axel, para qué sirve y por qué importa —sin una cifra, sin un SHA y sin una palabra del vocabulario interno— y cuatro bloques que contestan las preguntas del lector en su orden. Las métricas dejaron la apertura y aparecen **una vez**, con su unidad y su corte.
+- `docs/session.md`, nuevo: el render de la sesión, mudado entero y **generado por script** para que la comparación literal fuera una prueba y no una promesa.
+- `docs/install.md`: el diagrama del flujo, y §«What a run does, and where it stops» — el comportamiento del loop, las dos paradas y la redirección, que el criterio de cero pérdida operativa obligó a escribir.
+- Los dos placeholders de path, cerrados en `docs/DESIGN.md` y `docs/design/public-surface.md`.
+
+**Lo que la review cambió, y lo que no.** Ninguna decisión de fondo se movió: las ocho decisiones de la bajada (D1–D8) llegaron enteras al final, y las tres que puse a discusión en la r1 —el SHA inline, la frontera de la mención única, y tocar dos filas de inventario de un doc de diseño— quedaron dadas por buenas en esa misma ronda. Lo que cambió, ronda tras ronda, fue **la capacidad de la evidencia de atrapar un defecto**. El patrón vale registrarlo porque se repitió con una regularidad incómoda:
+
+- **Cuatro de los cinco bloqueantes de la r7 y los cuatro de la r8 atacaron la evidencia, no el artefacto**: criterios que yo había marcado en verde y no lo estaban. C7 —el inventario que prueba «cero pérdida»— necesitó **cinco** versiones, y las cinco cayeron por la misma clase de falla: una etiqueta, un rango o un locator que satisfacía la **forma** del criterio sin demostrar nada.
+- **Lo verificado a mano se rompió; lo verificado por máquina, no.** Mis clasificaciones de literalidad estaban mal en cinco filas y mis locators corridos en varias más, y las dos cosas se arreglaron igual: derivándolas mecánicamente. La reversión de la mudanza, en cambio, no falló nunca — porque desde el principio fue un script.
+- **Tres defectos los introduje arreglando otra cosa** (la contradicción sobre `/status`, «four commands produce work», la línea de contexto de tres renglones), lo que dice algo sobre corregir bajo la presión de cerrar.
+- **Dos hallazgos fueron míos, verificando lo que él había pedido**: el `ahead` de `origin` que yo publicaba como evidencia y era un contador móvil prohibido por mi propio criterio, y la sincronización del guion que mi review log daba por hecha y no había ocurrido. Los dos quedaron corregidos **en su lugar**, con el rastro visible.
+
+**Fuera de alcance, sin tocar**: GitHub —los tres comandos siguen siendo del humano—, el método y su espejo en `templates/`, las skills, el instalador, los scripts, las suites y `docs/metrics.md`, que este feature cita y no reescribe. La deuda normativa de idioma sigue declarada y abierta.
