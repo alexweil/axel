@@ -23,7 +23,7 @@ Reescribir `README.md` de punta a punta —en inglés, por la política de idiom
 | `docs/DESIGN.md` | se sustituye el placeholder de path del doc del render por el path real (decisión D7) |
 | `docs/design/public-surface.md` | ídem, **solo** en la fila de inventario de la tabla de idioma (decisión D7) |
 
-Más el bookkeeping obligatorio: este doc, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` y el ledger del pipeline.
+Más el bookkeeping obligatorio del hijo: este doc, `docs/IMPLEMENTATION.md` y `docs/STATUS.md`. **El ledger del pipeline no es del hijo**: lo escribe el padre —arranque, veredicto y cierre de cada unidad— y ningún commit de esta unidad puede tocarlo. La frontera se verifica en C14a/C14b, no se declara y ya.
 
 **Fuera del alcance, explícito**: GitHub (push, topics, homepage); el método (`AGENTS.md` y su espejo en `templates/`) — la deuda normativa de idioma sigue declarada y sin resolver, y cerrarla acá sería ampliar en silencio un scope que el humano fijó; las skills, el instalador, los scripts y las suites; `docs/metrics.md` (fuente única que este feature **cita**, no reescribe: si una cifra publicada no cierra contra el doc, se corrige la cita, no la fuente); `CONTRIBUTING.md`, `LICENSE` y `.github/`.
 
@@ -71,20 +71,20 @@ Criterio del nombre: la vidriera bajo `docs/` ya tiene una convención observabl
 «The essentials» queda con tres partes, en este orden:
 
 1. **Qué es materialmente**, una o dos líneas: markdown y dos scripts de shell, sin dependencias ni nada que importar.
-2. **`### What it is not`** — lista de **seis** ítems, **una línea cada uno**, uno por limitación declarada del README saliente: no es un framework · no es barato · no es autónomo · no está probado a escala · por debajo está en español · el reviewer no es un sello de goma. Compresión, no recorte: hoy son seis bullets de ~3 líneas, pasan a seis de una. El contrato editorial **no permite despublicar una limitación**, así que cada ítem tiene que conservar su sustancia, no su extensión — la verificación es la tabla V4 de abajo, limitación por limitación.
+2. **`### What it is not`** — lista de **seis** ítems, **una línea cada uno**. Seis ítems, pero **siete sustancias**: el diseño obliga a conservar costo, **lentitud**, no autónomo, no probado a escala, español por debajo y no framework, y el README saliente agrega la séptima (no es un sello de goma). La que se agrupa es «no es barato», que tiene que decir **las dos cosas en su línea** —dos suscripciones pagas *y* rondas medidas en decenas de minutos—: son costos de naturaleza distinta, el segundo es el que más gente descarta, y dejarlo implícito en «caro» lo despublica de hecho. Compresión, no recorte: hoy son seis bullets de ~3 líneas y pasan a seis de una; el contrato editorial **no permite despublicar una limitación**, así que cada ítem conserva su sustancia y no su extensión. La verificación es C10, que se recorre por **sustancia** y no por bullet.
 3. **Links** — la lista de punteros, que cierra el bloque y el doc.
 
 El sexto ítem («no es un sello de goma») se conserva como limitación **sin repetir cifras**: su versión de hoy las repite, y la mención única vive en «¿por qué lo usaría?». La línea dice qué garantiza el reviewer y qué no, y remite.
 
 ### D5 — La forma de verificar «cero pérdida»
 
-**Inventario caso por caso**, heredado de la vara del 13 y acotado a lo que este feature realmente mueve. El baseline es `README.md` al SHA de arranque `87ee282`. Tres niveles:
+**Inventario cerrado por pieza semántica**, derivado del baseline —`README.md` al SHA de arranque `87ee282`— y no de las secciones. «Una fila por sección» no sirve: una sección puede conservar una pieza y perder otras tres y la fila igual diría «conservada». Tres niveles:
 
-- **Nivel A — piezas mudadas, íntegras**: el render de la sesión y el diagrama ASCII se verifican **contra el texto**, no contra la intención: cada bloque citado, cada procedencia, cada SHA y cada link del render existen en `docs/session.md`; el diagrama entra en `docs/install.md` **carácter por carácter idéntico** al del baseline.
-- **Nivel B — piezas conservadas o comprimidas**: tabla que enumera **cada sección del baseline** con su destino y con la evidencia de dónde sobrevive su sustancia. Una sección sin fila es un hueco; una fila sin evidencia localizable, también.
+- **Nivel A — la enumeración cerrada**. Se recorre el baseline de arriba abajo y se le da un id (`B01`, `B02`, …) a **cada pieza semántica**, con esta regla de corte declarada para que la enumeración sea reproducible y no un juicio: es pieza cada encabezado, cada afirmación de nivel oración en prosa, cada ítem de lista, cada fila de tabla, cada bloque citado, cada bloque de código y cada link. La cobertura se demuestra: la enumeración va **completa** en este doc, cada id lleva **disposición** —conservada · comprimida · mudada a X · dada de baja— y **locator** en el artefacto final (archivo + encabezado + fragmento citado que permita encontrarla). Un id sin locator es una pérdida; una disposición «dada de baja» solo es legal donde la tabla de destinos del diseño la autoriza, y va con su razón nombrada.
+- **Nivel B — las dos mudanzas, con transformaciones declaradas**. Para el render, comparación literal contra el baseline **salvo** cuatro transformaciones, que son la lista completa de lo permitido: (1) el desplazamiento de nivel de los encabezados —`##` pasa a `#` como título del doc y los `###` a `##`—; (2) el rebase de los links relativos, que dejan de salir de la raíz y salen de `docs/` (`docs/implementation/…` → `implementation/…`, y los de la raíz ganan `../`); (3) el agregado de una línea de contexto al abrir, porque el doc queda solo y ya no lo precede el README; (4) el agregado del propio título. **Todo lo demás se compara carácter por carácter**: cada bloque citado, cada traducción al inglés en cursiva, cada SHA, cada fila de la tabla de hitos. Para el diagrama, comparación **idéntica** sin ninguna transformación permitida. Cualquier diferencia fuera de esas cuatro es un defecto, no una mejora — reescribir de paso lo que se está mudando es exactamente cómo se pierde contenido sin que nadie lo note.
 - **Nivel C — la regla operativa**: nada del **dominio operativo** queda documentado solo en el README. Se verifica en la dirección que importa: para cada afirmación operativa del README nuevo —instalación, uso, casos, problemas conocidos— existe su desarrollo en `docs/install.md`. El manual ya era el completo operativo y esta reescritura no le quita nada; el único agregado es el diagrama.
 
-No se reconstruye el extractor de tokens del feature 13: aquel README **inauguraba** el manual y podía perder contenido que no existía en ningún otro lado. Acá el manual está entero y no se toca (salvo el agregado), así que el riesgo real es de las dos mudanzas y de las compresiones, que es exactamente lo que cubren A, B y C. Queda declarado como decisión, no como olvido.
+No se reconstruye el extractor de tokens del feature 13, y la razón es la asimetría de riesgo: aquel README **inauguraba** el manual, así que podía perder contenido que no existía en ningún otro lado y hacía falta un barrido mecánico para descubrir qué. Acá el manual está entero, no se toca salvo el agregado, y el conjunto de lo que se mueve es **cerrado y chico** — dos mudanzas y un puñado de compresiones—, así que la enumeración exhaustiva del nivel A cubre el mismo hueco sin el intermediario. Lo que **no** cambia es la vara: la del 13 exigía que ninguna pieza desapareciera sin que alguien lo dijera, y eso lo sigue exigiendo el nivel A.
 
 ### D6 — Dónde aterriza el diagrama en `docs/install.md`
 
@@ -103,6 +103,51 @@ El diseño dejó el path del doc del render como decisión de esta bajada, y **d
 
 El camino «instalá axel siguiendo \<url\>» (feature 02) tiene hoy su procedimiento completo en `docs/install.md` §«For agents (Claude Code)», y el README lo nombra al cerrar §Install. En la estructura nueva **sigue nombrado**, dentro de «¿cómo lo instalo?», en la línea que apunta al manual: es un **puntero**, no un caso, así que respeta el corte vidriera/manual. Sin destino, el camino que diseñó el feature 02 quedaría sin entrada visible desde la vidriera, que es la pérdida que el nivel C busca impedir.
 
+## La prosa: el guion cerrado
+
+El plan le asigna a esta bajada **la prosa concreta del README nuevo**, y decidir títulos y paths sin decidir el texto dejaría la asignación central pendiente. Entonces: el párrafo de apertura va acá **textual**, y cada bloque va como una lista **cerrada y ordenada** de las afirmaciones que su prosa tiene que hacer. La redacción final puede elegir cómo encadena las oraciones; **no** puede agregar una afirmación que no esté en su lista ni omitir una que sí — eso es lo que verifica C5, y lo que impide que «escribir el README» sea una hoja en blanco a la hora de implementarlo.
+
+### El párrafo de apertura, textual
+
+> **axel is a way of building a project with two AI agents instead of one.** One of them writes — code, documentation, whatever the project is made of — and a second, from a different vendor, reviews every change and runs your tests to check for itself instead of taking the first one's word. Everything they decide is written into your repository as they go, so a fresh session picks up from the repo rather than from an empty chat. You approve at the points that matter, and no change is ever signed off by the agent that wrote it. This repository was built that way, by itself.
+
+Contra el test del diseño, oración por oración: **vocabulario** — «agent», «review», «tests», «repository», «session» son del oficio del lector y están permitidos; no aparece ninguno de los seis términos internos prohibidos (round, milestone, cycle, gate, RECAP, ledger). **Cifras y SHAs** — ninguno; «two agents» y «a second» son la descripción del mecanismo, no una métrica del loop. **Autosuficiencia** — la primera oración dice **qué es**, la segunda **para qué sirve** y las tres últimas **por qué importa** (no se auto-aprueba, la memoria es el repo, el humano decide), sin delegar en ningún link. **Anti-genérico** — la prueba que me impongo es que ninguna de estas oraciones sobreviviría intacta en el README de otra herramienta: proveedor distinto para el reviewer, el reviewer ejecuta tus tests, y el repo construido por sí mismo son afirmaciones que casi nadie más puede hacer.
+
+### Bloque 1 — «Why would I use it?»
+
+1. Un agente solo es autor y juez de su propio trabajo, y se corrige con generosidad.
+2. Y además olvida: cerrada la sesión, el razonamiento detrás de cada decisión se va con ella, y la siguiente re-litiga lo ya resuelto o lo contradice sin enterarse.
+3. axel contesta las dos con estructura, no con un prompt mejor: revisa **el modelo de otro proveedor**, y revisa **ejecutando** — trabaja sobre una copia del repo clavada al commit bajo review, donde corre los tests en vez de solo leer el diff.
+4. **La mención única de métricas** (D3): rondas registradas, rechazos, ningún ciclo aprobado en su primera ronda, la cláusula de que los aprobados son hitos y no features, el corte inline y `docs/metrics.md` como fuente.
+5. Una línea al doc del render: cómo se ve una corrida de verdad, reconstruida desde el repo → `docs/session.md`.
+6. El dato externo, comprimido y sin cifras derivadas: se instaló en un repo ajeno y activo; alcance honesto —un repo, del mismo autor, y una adopción y no el loop completo—, y no pretende contestar más que «¿funciona fuera de axel?».
+7. La memoria es el repo: una sesión nueva se reconstruye leyendo unos pocos archivos, y por eso el contexto que se pierde no cuesta nada.
+
+### Bloque 2 — «How do I install it?»
+
+1. **Los requisitos, antes del comando** (regla que no se toca): Claude Code y Codex CLI — dos suscripciones de dos proveedores distintos, que es el costo de la review cruzada y es deliberado, porque un modelo revisándose a sí mismo no es un reviewer.
+2. macOS: `awake.sh` y el envoltorio de cada review usan `caffeinate`; ambos degradan limpio sin él, y lo verificado corrió siempre en macOS — así que fuera de macOS es **no probado**, no «no soportado».
+3. git, `python3`, `curl`, y el destino es un repo git con el árbol limpio.
+4. Las reviews son lentas: con esfuerzo alto una ronda pasa de diez minutos.
+5. La línea de honestidad: es caro y sin apuro a propósito; mejor saberlo ahora que después de instalar.
+6. El comando de instalación, parado dentro del repo destino.
+7. El known issue de `build/`: si tu `.gitignore` ignora `build/` la instalación se rechaza, y la trampa —que `!.claude/` **no** es la línea que lo arregla— nombrada como trampa, con puntero a «Known issues» del manual. Es el **único** problema con puntero desde el README, porque es el único que bloquea.
+8. El puntero al manual (D8), nombrando el camino **para agentes** a los que les dijeron «instalá axel siguiendo esta URL».
+
+### Bloque 3 — «How do I use it?»
+
+1. Abrís Claude Code en el repo y usás los comandos — o no: un pedido en lenguaje llano se rutea por contexto, y nunca arranca trabajo sin pasar antes por un punto de confirmación.
+2. La tabla de los siete comandos, una línea cada uno (la del baseline, conservada).
+3. El ciclo en prosa llana: el generador escribe y commitea, el reviewer revisa ese rango y pide cambios o aprueba, el generador corrige **o argumenta**, y así hasta que hay acuerdo.
+4. Dónde frena a esperarte: si no convergen en cinco vueltas, se detiene y te entrega las dos posturas para que desempates; y al cerrar un tramo, te presenta el resumen y no sigue hasta tu OK.
+5. Punteros: la referencia completa de los comandos y el diagrama del flujo en `docs/install.md`; el contrato entre los dos agentes en `docs/design/review-contract.md`.
+
+### Bloque 4 — «The essentials»
+
+1. Qué es materialmente: markdown y dos scripts de shell; no agrega dependencias a tu proyecto y no hay nada que importar.
+2. `### What it is not` — seis ítems de una línea, con las **siete sustancias** de C10.
+3. La lista de links, que cierra el bloque y el doc.
+
 ## Enfoque: en qué orden se hace
 
 Pasos chicos, cada uno con su commit y su ronda de review cuando corresponda:
@@ -111,7 +156,7 @@ Pasos chicos, cada uno con su commit y su ronda de review cuando corresponda:
 2. **`docs/session.md`** — el render mudado íntegro, más el encabezado y la línea de contexto que necesita al quedar solo. Es la mudanza de mayor superficie y la que el nivel A verifica más duro.
 3. **`docs/install.md`** — el diagrama en su subsección nueva.
 4. **`README.md`** — la reescritura completa, que es el corazón del feature.
-5. **Los dos placeholders de path** (D7) + el inventario de verificación (V1–V10) escrito en este doc con su evidencia.
+5. **Los dos placeholders de path** (D7) + la enumeración cerrada del nivel A y la evidencia de los dieciocho criterios de cierre, escritas en este doc.
 
 Los pasos 2 y 3 van antes del 4 a propósito: cuando se escriba el README nuevo, los destinos de las mudanzas ya existen y sus links se pueden chequear de verdad en vez de prometerse.
 
@@ -127,15 +172,17 @@ Ninguno es «lo leí y me gustó»: cada uno dice con qué se comprueba. No hay 
 | **C4** | **Cifras correctas**: cada valor publicado coincide con `docs/metrics.md` §«The figures» al corte `b0bdf4d` | comparación fila por fila contra el doc de métricas |
 | **C5** | **Cada pregunta se contesta dentro de su bloque**: el lector no necesita salir del README para saber si esto es para él | inspección declarada, bloque por bloque, nombrando qué contesta cada uno |
 | **C6** | **Las seis objeciones** contestadas en el bloque que el diseño les asignó (costo y macOS → requisitos; sello de goma → mención única + «el reviewer ejecuta»; montón de markdown y todo en español → «lo esencial»; ¿funciona fuera de axel? → línea de inquirylab) | tabla objeción → bloque → línea |
-| **C7** | **Nivel A**: el render está íntegro en `docs/session.md` (cada bloque citado, procedencia, SHA y link) y el diagrama está en `docs/install.md` **idéntico** al baseline | comparación de texto contra el baseline `87ee282` |
-| **C8** | **Nivel B**: toda sección del baseline tiene fila en el inventario con destino y evidencia | tabla completa en este doc; cero secciones sin fila |
+| **C7** | **Nivel A — cobertura demostrada**: la enumeración cerrada del baseline `87ee282` está completa según la regla de corte de D5, y **cada** id tiene disposición y locator en un artefacto final | tabla en este doc; cero ids sin locator; toda baja con su autorización del diseño citada |
+| **C8** | **Nivel B — las dos mudanzas**: el render coincide con el baseline salvo las **cuatro** transformaciones declaradas, y el diagrama es idéntico sin ninguna | comparación de texto contra `87ee282`, reportando cada diferencia y a cuál de las cuatro corresponde |
 | **C9** | **Nivel C**: ninguna afirmación operativa del README nuevo carece de desarrollo en `docs/install.md` | recorrido de las afirmaciones operativas con su sección destino |
-| **C10** | **Las seis limitaciones declaradas sobreviven en sustancia** dentro de «lo esencial» | tabla limitación → línea nueva → sustancia conservada |
+| **C10** | **Las siete sustancias sobreviven** dentro de «lo esencial» — framework · costo · **lentitud** · autonomía · escala · idioma · sello de goma —, aunque queden agrupadas en seis ítems | tabla **sustancia** por sustancia (no bullet por bullet) → línea del README nuevo → qué conserva; una sustancia sin línea es una limitación despublicada |
 | **C11** | **Cero link roto**: todo destino relativo y toda ancla interna de `README.md`, `docs/session.md` y `docs/install.md` resuelve | chequeo mecánico de destinos + derivación del slug de cada ancla contra los encabezados reales |
 | **C12** | **Contrato editorial**: cada oración de la prosa nueva es hecho derivable, limitación declarada u opinión marcada | clasificación declarada; se reporta el conteo por clase y se nombran las opiniones marcadas |
 | **C13** | **Idioma**: `README.md` y `docs/session.md` en inglés; este doc, el plan, STATUS y el ledger en español | inspección |
-| **C14** | **Alcance**: el diff del feature toca solo los cinco archivos de la tabla de alcance más el bookkeeping (este doc, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`, el ledger) — cero cambios en método, skills, instalador, scripts, tests, `docs/metrics.md` o remoto | `git diff --stat` contra `87ee282`, con la lista de paths cerrada |
-| **C15** | **Vara de tamaño**: el párrafo de apertura solo contesta «¿es esto para mí?», y llegar al final de «¿por qué lo usaría?» no exige más de una pantalla | declarado, con el tamaño resultante reportado como dato — **no** como criterio de líneas |
+| **C14a** | **Paths del hijo**: la unión de paths de los commits **que no tocan el ledger** está contenida en la lista cerrada de ocho — `README.md`, `docs/session.md`, `docs/install.md`, `docs/DESIGN.md`, `docs/design/public-surface.md`, `docs/implementation/15-readme-simple.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md` — o sea cero cambios en método, skills, instalador, scripts, tests o `docs/metrics.md` | `git log --name-only` sobre `87ee282..HEAD`, particionando por path; se reporta la unión observada contra la lista, **sin publicar un conteo de commits** (un contador envejece con la ronda siguiente) |
+| **C14b** | **Frontera de autoría**: todo commit que toca el ledger toca **solo** el ledger y `docs/STATUS.md` — es decir, ningún commit del padre transporta trabajo del hijo y ningún commit del hijo toca el ledger. `docs/STATUS.md` es el **único** path compartido, y lo es por protocolo | la misma partición por path, fail-closed: un commit que toque el ledger y algo fuera de ese par rompe la partición y es defecto, sin importar qué diga su mensaje |
+| **C14c** | **GitHub intacto** — invariancia externa **declarada**, no conclusión del diff: `origin/main` sigue en `88e1971`, el valor con que arrancó el pipeline, y esta unidad no corrió ningún comando que escriba en el remoto ni en sus settings | `git rev-parse origin/main` y `git rev-list --count origin/main..main` como prueba **del lado del estado** (precedente: el ajuste (b) del pipeline 2026-07-29 (3)); el diff local no puede probar nada sobre GitHub y no se lo invoca para eso |
+| **C15** | **Vara de tamaño, falsable**: el título más el párrafo de apertura entran en **≤ 18 líneas plegadas a 80 columnas**, y el párrafo dice **qué es, para qué sirve y por qué importa** — el enunciado del contrato, más preciso que «¿es esto para mí?» | `sed -n '1,/^## /p' README.md \| fold -s -w 80 \| wc -l`, reportando el número obtenido contra el umbral. El umbral es un **proxy declarado** —80 columnas × 24 líneas es la pantalla clásica de terminal, y el render de GitHub es más ancho, así que el proxy es conservador—: sin renderer, viewport y zoom fijos, «una pantalla» no es medible, y una condición reproducible y algo estricta es preferible a una declaración de buena voluntad |
 | **C16** | **Higiene**: `git diff --check` limpio y `tests/lint.sh` sigue en verde | comandos, con su salida |
 
 ## Riesgos
@@ -149,4 +196,12 @@ Ninguno es «lo leí y me gustó»: cada uno dice con qué se comprueba. No hay 
 
 ## Review log
 
-(vacío — se completa ronda por ronda)
+### r1 — `CHANGES_REQUESTED` (base `87ee282`, head `cbe9e20`)
+
+Cinco puntos, **los cinco aceptados sin argumentar**. Le había pedido explícitamente que atacara tres decisiones, y las tres las dio por buenas: **D3** (el SHA inline satisface mejor «ninguna cifra sin su corte», y la queja del humano se resuelve moviendo la métrica y dándole contexto, no ocultando el corte), **la frontera de mención única** para cifras del loop, y **D7** (completar dos inventarios que delegan explícitamente el path no cambia sustancia de diseño). Verificó además el bookkeeping —fechas locales, estado del plan, token, ronda, propiedad del ledger— y reprodujo por su cuenta `88/59/29` y los `18/18` ciclos rechazados en r1, con `git diff --check` y `tests/lint.sh` limpios. Lo corregido:
+
+1. **La bajada no decidía la prosa concreta, que es lo que el plan le asignaba.** Cierto y era el hueco central: D1–D8 fijaban títulos, paths, métricas, compresión y controles —incluidas dos decisiones derivadas como D6 y D7— mientras la asignación principal quedaba para «el paso 4». Corregido con §«La prosa: el guion cerrado»: el **párrafo de apertura va textual** —con su verificación contra el test del diseño oración por oración, incluida la prueba anti-genérico— y cada bloque va como **lista cerrada y ordenada de afirmaciones**, donde la redacción elige el encadenado pero no puede agregar ni omitir una afirmación.
+2. **Los niveles de D5 podían aprobar una pérdida.** Dos defectos reales: «una fila por sección» permite que una sección conserve una pieza y pierda tres con la fila diciendo «conservada», y verificar citas, SHAs y links **no** prueba que el render se haya mudado entero. Además `V1–V10` era una referencia colgada: los criterios son `C1–C16`. Corregido: el nivel A pasa a ser una **enumeración cerrada por pieza semántica** derivada de `87ee282`, con regla de corte declarada para que sea reproducible, id, disposición y **locator** obligatorio por pieza; el nivel B pasa a ser la comparación literal de las dos mudanzas **salvo cuatro transformaciones declaradas** (nivel de encabezado, rebase de links relativos, línea de contexto agregada, título), con todo lo demás carácter por carácter; y la referencia colgada, eliminada.
+3. **D4/C10 no preservaban inequívocamente la lentitud.** El diseño exige conservar costo **y** lentitud, y mi lista de seis limitaciones las metía juntas en «no es barato» sin obligar a que la línea dijera las dos. Corregido: seis ítems pero **siete sustancias** enumeradas —framework, costo, lentitud, autonomía, escala, idioma, sello de goma—, con «no es barato» obligado a decir las dos cosas en su línea, y C10 recorrido **por sustancia** y no por bullet.
+4. **C15 no era falsable.** Reportar el tamaño y declarar «una pantalla» no demuestra nada sin renderer, viewport y zoom; y «solo contesta ¿es esto para mí?» era menos preciso que el contrato. Corregido: condición reproducible con su comando y su umbral —título más párrafo en ≤ 18 líneas plegadas a 80 columnas—, declarada como **proxy conservador** y no como medida de pantalla real, y el enunciado del criterio pasa a «qué es, para qué sirve y por qué importa». C2 lo dio por verificable como estaba.
+5. **C14 no controlaba la frontera de autoría ni podía hablar del remoto.** El defecto era mío y de fondo: mi §Alcance listaba el ledger como bookkeeping **del hijo**, cuando el ledger es del padre; tal como estaba, C14 habría aprobado que esta unidad lo tocara. Y `git diff --stat` no puede demostrar que GitHub no se modificó. Corregido: §Alcance declara que el ledger no es del hijo, y C14 se parte en tres — **C14a** paths del hijo contra una lista cerrada de ocho, **C14b** partición por path fail-closed (todo commit que toca el ledger toca solo ledger y STATUS, único path compartido y por protocolo), y **C14c** GitHub como **invariancia externa declarada** con prueba del lado del estado (`origin/main` en `88e1971`), siguiendo el precedente del ajuste (b) del pipeline 2026-07-29 (3). Sin contadores móviles en ninguno de los tres.
