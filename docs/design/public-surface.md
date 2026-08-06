@@ -1,6 +1,6 @@
 # Superficie pública de axel — posicionamiento, idioma, licencia y evidencia
 
-> Profundización de [../DESIGN.md](../DESIGN.md). **Procedencia**: delta de diseño escrito como unidad `design-delta` del **tercer** pipeline `/build` del 2026-07-29 — ledger [../implementation/pipeline-2026-07-29-3.md](../implementation/pipeline-2026-07-29-3.md) —, autorizado por su gate ese mismo día. Pedido literal del humano: «Dejar el repo público de axel presentable para compartirlo: README en inglés escrito para quien lo descubre, licencia MIT, y los docs de onboarding y feedback que faltan» (el texto completo, con su contexto y sus decisiones previas, vive en el bloque Gate del ledger). **Ajuste de alcance del gate que manda sobre esta unidad**: el pipeline **no toca GitHub ni pushea** — ni `git push`, ni topics, ni homepage; los comandos quedan listos y los corre el humano.
+> Profundización de [../DESIGN.md](../DESIGN.md). **Procedencia**: delta de diseño escrito como unidad `design-delta` del **tercer** pipeline `/build` del 2026-07-29 — ledger [../implementation/pipeline-2026-07-29-3.md](../implementation/pipeline-2026-07-29-3.md) —, autorizado por su gate ese mismo día. Pedido literal del humano: «Dejar el repo público de axel presentable para compartirlo: README en inglés escrito para quien lo descubre, licencia MIT, y los docs de onboarding y feedback que faltan» (el texto completo, con su contexto y sus decisiones previas, vive en el bloque Gate del ledger). **Ajuste de alcance del gate que manda sobre esta unidad**: el pipeline **no toca GitHub ni pushea** — ni `git push`, ni topics, ni homepage; los comandos quedan listos y los corre el humano. **Delta posterior**: §«Estructura del README» fue reescrita el 2026-08-05 por la unidad `design-delta` del pipeline de esa fecha — su procedencia completa vive en la propia sección.
 
 ## El hueco
 
@@ -51,7 +51,7 @@ Test aplicable línea a línea, no un reparto puntual:
 
 - El **README** contesta *«¿esto es para mí?»*. El **manual** (`docs/install.md`) contesta *«¿cómo lo hago andar?»*.
 - **Al README solo entra lo que vale para todos.** Toda frase que empiece con «si…» o «salvo que…» describe un caso, y los casos van al manual. El README puede llevar un **puntero** a un caso; nunca el caso.
-- **En el dominio operativo, el manual es el completo y el README es el extracto.** Nada **operativo** —instalación, uso, casos, problemas conocidos— queda documentado *solo* en el README: con eso la mudanza es sin pérdida por construcción y el feature 13 tiene contra qué chequearse. La regla está **acotada a ese dominio a propósito**: el posicionamiento, el transcript, la evidencia y «What this is not» viven solo en el README y **no** se duplican en el manual — pedirle completitud sobre todo el README obligaría a un `docs/install.md` que repite la vidriera, que es justo lo contrario del corte.
+- **En el dominio operativo, el manual es el completo y el README es el extracto.** Nada **operativo** —instalación, uso, casos, problemas conocidos— queda documentado *solo* en el README: con eso la mudanza es sin pérdida por construcción y el feature 13 tiene contra qué chequearse. La regla está **acotada a ese dominio a propósito**: el posicionamiento, el render de la sesión, la evidencia y las limitaciones declaradas viven en la **vidriera** —el README o el doc de vidriera al que el README apunta (desde el delta 2026-08-05, el render de la sesión tiene doc propio)— y **no** se duplican en el manual — pedirle completitud sobre todo el README obligaría a un `docs/install.md` que repite la vidriera, que es justo lo contrario del corte.
 - **Vara de tamaño, no de líneas**: si el lector tiene que scrollear más de una pantalla para saber si esto es para él, el corte falló.
 - **Orden del embudo**: los requisitos van **antes** del comando de instalación. Un lector que instala y recién después descubre que hacen falta dos suscripciones de dos proveedores es un lector perdido con razón.
 
@@ -129,16 +129,59 @@ La razón sale del propio principio de axel: el chat es efímero y la memoria es
 
 **Regla dura: ninguna línea inventada.** Cada línea rastrea a un commit, a un evento de ledger o a un review log. Lo que no sea recuperable no se reconstruye de memoria: se omite o se declara. Renderizarlo desde el repo no es un sustituto de un transcript — es exactamente lo que una sesión deja atrás en axel.
 
-## Estructura del README
+## Estructura del README — un párrafo y cuatro bloques
 
-Las nueve secciones que propone el pedido se sostienen. Lo que este delta refina:
+> **Procedencia de esta sección**: reescrita el 2026-08-05 como unidad `design-delta` del pipeline `/build` de esa fecha — ledger: [../implementation/pipeline-2026-08-05.md](../implementation/pipeline-2026-08-05.md) —, autorizado por su gate el mismo día («dale, autorizado», sin ajustes de alcance). Pedido literal del humano (los saltos de línea del original se marcan con «/»): «Revisa el README y hacelo FACIL. El usuario debe entender en un parrafo para que sirve, y por qué. No se por que en el README de hoy se habla de commits, y despues habla de rounds y no se que más. POR QUE ESTA DICIENDO ESTO? deberia ser simple, deberia ser: / Para que sirve? Por Que lo usaria? / Como lo instalo? / Como lo uso? / Lo esencial». Reemplaza la estructura de nueve secciones que esta sección fijó en el pipeline 2026-07-29 (3); el resto de este doc sigue vigente, con los dos ajustes que esta reescritura declara (la cláusula de la vidriera en §«Vidriera y manual» y el agregado en §«Lo que este delta no decide»).
 
-1. **Las cifras del título necesitan su unidad ahí mismo.** «80 review rounds» no significa nada sin saber qué es una ronda, y la precisión «hitos, no features» se pierde justo en la línea que más se cita. Una cláusula que la califique, más el link al doc de métricas.
-2. **Requisitos antes de instalar** (§4 antes que §5): se confirma — es el embudo honesto.
-3. **Install lleva un puntero** a los problemas conocidos, no los problemas.
-4. **«What this is not» se queda donde está** (§8): quien llegó hasta ahí quiere primero la mecánica y después los límites.
+El README deja de organizarse por temas y pasa a contestar **las preguntas del lector en el orden en que se las hace**: un **párrafo de apertura** que contesta *¿para qué sirve?* y *¿por qué lo usaría?*, y **cuatro bloques** — **¿por qué lo usaría?** (la evidencia detrás del párrafo) · **¿cómo lo instalo?** · **¿cómo lo uso?** · **lo esencial**. Los títulos exactos en inglés los elige la bajada del feature 15; qué contesta cada bloque y con qué contenido, esta sección.
 
-Las seis objeciones que lista el pedido quedan como **criterio de aceptación de la prosa**: cada una tiene que estar contestada por el README **antes** de que el lector la formule. La de «¿funciona fuera de axel?» ahora tiene respuesta —inquirylab— con su alcance honesto: un repo, del mismo autor.
+### El test del párrafo de apertura
+
+Quien nunca oyó hablar de axel, leyendo **solo ese párrafo**, puede decir qué es, para qué sirve y por qué le importaría — sin seguir ningún link. Tres reglas verificables oración por oración:
+
+- **Cero vocabulario interno del método**: ni round, ni milestone, ni cycle, ni gate, ni RECAP, ni ledger. El vocabulario permitido es el del oficio del lector — agente, review, tests, repo.
+- **Cero cifras y cero SHAs**: nada del párrafo exige contexto del repo para significar algo.
+- **Autosuficiente**: el párrafo no delega su función en el bloque que sigue; el bloque la profundiza.
+
+### Las métricas dejan la apertura
+
+Las cifras del loop aparecen en el README **a lo sumo una vez**, dentro de «¿por qué lo usaría?», con qué cuentan dicho en la misma oración y con [../metrics.md](../metrics.md) como fuente única (regla vigente del delta anterior: ninguna cifra sin su corte y su comando). El **glosario de unidades no vuelve al README**: vive en `docs/metrics.md` §«Three units, never mixed», a un link. La precisión que decide la credibilidad —los aprobados son **hitos, no features**— sobrevive como cláusula de esa única mención, no como párrafo propio.
+
+Esto **revierte el refinamiento 1 del delta 2026-07-29** («las cifras del título necesitan su unidad ahí mismo»). Aquella resolución era correcta en su premisa —una cifra sin unidad no significa nada— y equivocada en su consecuencia: puso cifra, unidad y glosario en la línea más alta del doc, cobrándole al lector el contexto antes de decirle qué es axel; el pedido de este pipeline es la factura de ese costo. La premisa queda: **la unidad acompaña a la cifra donde sea que aparezca**. Lo que cambia es el dónde — una sola vez, más abajo, con el contexto ya pagado.
+
+### Mapa: de dónde sale cada bloque
+
+| Pieza del README saliente | Destino |
+|---|---|
+| título + línea de posicionamiento | el párrafo de apertura absorbe su función; la prosa la decide la bajada bajo el test de arriba |
+| línea de métricas + párrafo-glosario | fuera de la apertura: mención única en «¿por qué lo usaría?»; el glosario queda en `metrics.md` |
+| «The problem» | se comprime dentro de «¿por qué lo usaría?» |
+| «What a session actually looks like» (los dos bloques con procedencia) | **se muda entero** a un doc propio de la vidriera bajo `docs/` (inglés; path exacto: bajada del 15). Sus reglas viajan con él: dos bloques con su procedencia, ninguna línea inventada, cada línea rastreable. «¿Por qué lo usaría?» lo referencia en una línea |
+| el dato externo (inquirylab) | **se queda en el README**, comprimido a una o dos líneas con su alcance honesto —un repo, del mismo autor, una adopción— dentro de «¿por qué lo usaría?»: es la respuesta a la objeción «¿funciona fuera de axel?» y no puede quedar a un link de distancia |
+| «Requirements, honestly» | intacta en sustancia; **abre** «¿cómo lo instalo?» — requisitos antes del comando, regla que no se toca |
+| «Install» | cierra «¿cómo lo instalo?»: el one-liner, el puntero al known issue de `build/` (sigue siendo el único problema con puntero desde el README) y el puntero al manual |
+| «The commands» + el ruteo sin comandos | «¿cómo lo uso?» |
+| diagrama ASCII de «How it works» | deja el README y se muda a `docs/install.md` (junto a la referencia completa de los comandos, que es el completo operativo); «¿cómo lo uso?» describe el ciclo en prosa llana — qué hace el loop y dónde frena a esperarte |
+| los cinco principios de «How it works» | dejan el README como lista: su sustancia queda repartida en «¿por qué lo usaría?» (los diferenciales) y el original vive en `DESIGN.md`. No son contenido operativo: comprimirse no viola el corte |
+| «What this is not» | **se comprime** en «lo esencial»: cada limitación declarada se conserva en sustancia —costo, lentitud, no autónomo, no probado a escala, español por debajo, no framework— porque el contrato editorial no permite despublicar una limitación declarada; la forma la decide la bajada |
+| «Links» | cierra «lo esencial» |
+
+**Sin pérdida operativa, verificable**: nada del dominio operativo queda documentado solo en el README ni se pierde en la mudanza — el manual ya era el completo operativo y esta reescritura no le quita nada; las dos piezas que se mudan (render de la sesión, diagrama) tienen destino nombrado en la tabla. La verificación puntual es del loop de review del feature 15.
+
+### Lo que no cambia
+
+- **Política de idioma**: el README y el doc del render siguen en inglés — el doc nuevo es vidriera por audiencia, igual que el README que lo referencia.
+- **Contrato editorial** sobre toda la prosa nueva: hecho derivable, limitación declarada u opinión marcada.
+- **Corte vidriera/manual**: el manual sigue siendo el completo en el dominio operativo y el README el extracto; al README solo entra lo que vale para todos.
+- **Requisitos antes del comando de instalación.**
+- **Fuente única de cifras** en `docs/metrics.md`.
+
+### Criterio de aceptación de la prosa
+
+1. El test del párrafo de apertura, oración por oración.
+2. Cada pregunta contestada **dentro de su bloque**: el lector no necesita salir del README para saber si esto es para él; los links profundizan, no completan.
+3. Las **seis objeciones** del pedido del pipeline 2026-07-29 (3) siguen vigentes como criterio — cada una contestada antes de que el lector la formule — y ahora tienen bloque asignado: costo y macOS → los requisitos de «¿cómo lo instalo?»; «el reviewer es un sello de goma» → la mención única de métricas más «el reviewer ejecuta»; «es un montón de markdown» y «está todo en español» → «lo esencial»; «¿funciona fuera de axel?» → la línea de inquirylab en «¿por qué lo usaría?».
+4. **Vara de tamaño, reforzada**: una pantalla para saber si esto es para vos sigue siendo la vara — y ahora el párrafo de apertura solo ya tiene que contestarlo; la pantalla es el margen, no la meta.
 
 ## Los tres puntos de fricción: dónde se declaran
 
@@ -157,3 +200,5 @@ Arreglar los tres está fuera de alcance por decisión del humano y —también 
 ## Lo que este delta no decide
 
 El contenido concreto del README, de `docs/install.md` y de `CONTRIBUTING.md` (features 13 y 14); el titular y el año de la licencia; el path exacto del snapshot de métricas y la forma final de su comando; y **nada sobre GitHub** — sin push, sin topics, sin homepage, por el ajuste de alcance del gate. Los arreglos del instalador siguen afuera.
+
+**Delta 2026-08-05** (la reescritura de §«Estructura del README»): tampoco decide la prosa concreta del README nuevo ni el path del doc al que se muda el render de la sesión — ambos son de la bajada del feature 15, con el criterio de aceptación de esa sección como vara. Todo lo demás queda fuera de su ruta autorizada, GitHub incluido (los tres comandos pendientes siguen siendo del humano).

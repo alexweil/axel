@@ -1,8 +1,8 @@
 # STATUS
 
 - **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
-- **Feature en curso**: ninguno — unidad `design` (design-delta) **en curso**, hijo lanzado con `fable` (token `B3DA49AF…`, SHA inicio `70d99d7`)
-- **Ronda de review**: —
+- **Feature en curso**: ninguno — unidad `design` (design-delta) **en curso**, hijo lanzado con `fable` (token `B3DA49AF…`, SHA inicio `70d99d7`); delta consolidado: §«Estructura del README» de [design/public-surface.md](design/public-surface.md) reescrita (un párrafo y cuatro bloques) + decisión en [DESIGN.md](DESIGN.md)
+- **Ronda de review**: 1 · lanzada
 - **Último veredicto**: APPROVED de cierre · ronda 31 · head `02ed38e` (unidad 14, pipeline 2026-07-29 (3))
 - **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-05
