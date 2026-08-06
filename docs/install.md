@@ -212,7 +212,7 @@ language and the right one is chosen — but a pending state always wins over a 
 
 ### How the commands chain
 
-The phases in one picture — where each command hands off, and where the run stops for you:
+The core phase chain — `/design` → `/plan` → `/feature` — and where a run stops for you:
 
 ```
 /design ─► DESIGN.md ─review─► RECAP ─► OK ─► /plan ─► IMPLEMENTATION.md ─review─► RECAP ─► OK

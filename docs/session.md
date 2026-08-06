@@ -1,5 +1,4 @@
 # What a session actually looks like
-
 > A companion to the [README](../README.md), for the reader who wants to see a run before installing anything.
 
 In axel the chat is disposable and the repo is the memory, so **there is no session transcript to

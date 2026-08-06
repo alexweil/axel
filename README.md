@@ -1,92 +1,68 @@
 # axel
 
-**A two-agent development loop: Claude Code writes, Codex reviews, and neither gets to approve its own work.** This repo built itself with it.
+**axel is a way of building a project with two AI agents instead of one.** One
+of them writes — code, documentation, whatever the project is made of — and a
+second, from a different vendor, reviews every change and runs your tests to
+check for itself instead of taking the first one's word. Everything they decide
+is written into your repository as they go, so a fresh session picks up from the
+repo rather than from an empty chat. At the end of the run you authorised, axel
+stops and waits for your approval; the next run starts both agents with fresh
+contexts, so nothing rides forward on a summary nobody checked. No change is
+ever signed off by the agent that wrote it. This repository was built that way,
+by itself.
 
-At commit `b0bdf4d`: **88 logged review rounds · 59 rejections · zero first-round approvals.**
+## Why would I use it?
 
-A *round* is one pass of the review contract — not one feature. The 29 approvals are **milestones**
-(a detailed spec, an implementation step, a plan cycle), so there are more approvals than features;
-counting them as features would be exactly the sloppiness that makes numbers like these worthless.
-88 is what the round log covers since instrumentation began on day two; the full history is 123,
-with the earlier 35 recovered from a separate source. Every figure on this page is derived in
-[docs/metrics.md](docs/metrics.md), which publishes the versioned snapshot, the cut commit and the
-exact command behind each one.
+An agent left alone is both the author and the judge of its own work, and it
+grades generously. It also forgets: close the session and the reasoning behind
+every decision goes with it, so the next one re-litigates settled questions or
+quietly contradicts them.
 
-## The problem
+axel answers both with structure rather than with a better prompt. **A different
+vendor's model reviews every change**, and it reviews by executing: it works on
+a copy of your repo pinned to the commit under review, where it can run your
+tests instead of only reading the diff. The two agents **do not share a context
+window**, so the reviewer never inherits the reasoning that produced the work —
+it receives the argument and the evidence, and checks them against the repo.
 
-An agent left alone is both author and judge, and it grades generously. It also forgets: close the
-session and the reasoning behind every decision goes with it, so the next session re-litigates
-settled questions or silently contradicts them.
+At commit `b0bdf4d` the review log held **88 rounds** — a round is one pass of
+the review — of which **59** sent the work back, and **not one of the 18
+recorded cycles** was approved on its first round; the 29 approvals are
+milestones inside a feature, not features. Every figure, its cut, and the
+command that re-derives it are in [docs/metrics.md](docs/metrics.md).
 
-axel addresses both with structure rather than with a better prompt. **A different vendor's model
-reviews every change** and can run your tests to check for itself. **The repo is the memory** — a
-new session reconstructs everything by reading four files. And **you approve at checkpoints**, not
-at every step.
+What that looks like in practice — a real request, the gate, a rejection that
+caught a genuine bug, and the human OK, all reconstructed from this repo — is in
+[what a session actually looks like](docs/session.md).
 
-## What a session actually looks like
+It has also been installed into an unrelated active repo that had its own
+documentation. Honest scope: one repo, same author, and an adoption rather than
+a full review loop. It answers "does this work somewhere that isn't axel" and
+nothing more.
 
-In axel the chat is disposable and the repo is the memory, so **there is no session transcript to
-capture** — publishing a chat log that looked reconstructed, in a project whose whole pitch is
-auditability, would be the worst thing we could do. What follows is rendered from the repo instead.
-Every line traces to a commit, a ledger entry or a review log. The originals are in Spanish; the
-English is a translation, and the source is named so you can check.
+And the memory is the repo, not the chat. Every commit updates the documents —
+if it was not recorded, it did not happen — so a new session rebuilds by reading
+a handful of files. The reasoning stays recoverable without depending on a chat
+window that closes; you still have to read it.
 
-### One run, end to end — [pipeline 2026-07-29 (2)](docs/implementation/pipeline-2026-07-29-2.md)
+## How do I install it?
 
-**1 · A request, with no command typed.** Recorded verbatim in the run's ledger:
+Requirements first, because finding them out afterwards is worse:
 
-> «Que la skill `/adopt` cierre reportándole al humano el **inventario completo de archivos que tocó**, no solo la narrativa de las decisiones que le parecieron importantes.»
->
-> *"Make the `/adopt` skill close by reporting the complete inventory of files it touched, not just the story of the decisions it found interesting."*
+- **Claude Code and Codex CLI** — two subscriptions, from two different vendors.
+  That is the cost of cross-vendor review and it is deliberate: a model
+  reviewing itself is not a reviewer.
+- **macOS** — `scripts/awake.sh` and the wrapper around each review call use
+  `caffeinate`. Both degrade cleanly where it is absent, and every recorded run
+  of axel has been on macOS — so treat anything else as untested rather than as
+  unsupported.
+- **git, `python3`, `curl`** — the destination must be a git repo with a clean
+  tree.
+- **Reviews are slow.** At `xhigh` effort a round can take more than 10
+  minutes.
 
-**2 · A gate, then one authorisation.** axel proposed a route, asked one question, and waited. The
-human's answer, quoted in the ledger:
-
-> «a) ok con tu recomendacion · b) dejalo sin registrar» — *"a) ok, go with your recommendation · b) leave it unrecorded"*
-
-**3 · The reviewer catches something real.** Round 1, from the feature's
-[review log](docs/implementation/12-adopt-close-report.md):
-
-> «El camino multicommit podía omitir archivos en silencio. Cierto y grave: `git diff <base>..HEAD` es el **efecto neto entre extremos**, no la unión de lo tocado — un archivo modificado y restaurado, o el path intermedio de un `A → B → C`, desaparecía sin dejar rastro, que es justo la falla del criterio (a).»
->
-> *"The multi-commit path could silently omit files. True, and serious: `git diff <base>..HEAD` is the net effect between endpoints, not the union of what was touched — a file modified and then restored, or the middle step of an `A → B → C`, vanished without a trace, which is exactly the failure the criterion existed to prevent."*
-
-That is a logic bug in the deliverable, caught by reading the diff.
-
-**4 · Correction, then agreement.** Fixed in `f85a033`, the round-2 commit. Five more rounds of
-narrowing followed — six in all after that first rejection — and the reviewer approved at `886fe4f`
-in round 7.
-
-**5 · A checkpoint, and a human OK.** STATUS moved to "waiting for OK" in `eabd92f`, the turn ended,
-and nothing else happened until the human answered. The OK is quoted in the ledger's closing section
-and recorded in `39b377e`:
-
-> «OK»
-
-### Does it work outside axel? — one data point
-
-axel was installed into an unrelated active repo with its own documentation — 185 commits as of
-`4908bfb`, the commit that closed the adoption. Commit `846308f` installed 20 files there; because the repo already had docs this ran as an **adoption**,
-and `4908bfb` closed it with `/adopt`, mapping 8 files onto the convention. Commit `98c70c0` is that
-repo applying the `build/` workaround described below.
-
-Honest scope: **one repo, same author, and an adoption rather than a full review loop.** It answers
-"does this work somewhere that isn't axel" and nothing more.
-
-## Requirements, honestly
-
-- **Claude Code and Codex CLI** — two subscriptions, from two different vendors. That is the cost of
-  cross-vendor review and it is deliberate: a model reviewing itself is not a reviewer.
-- **macOS** — `scripts/awake.sh` and the wrapper around each review call use `caffeinate`. Both
-  degrade cleanly where it is absent: `awake.sh` reports it and returns without error, and reviews
-  run uncaffeinated. That is what has been verified, and every recorded run of axel has been on
-  macOS — so treat anything else as untested rather than as unsupported.
-- **git, `python3`, `curl`** — the destination must be a git repo with a clean tree.
-- **Reviews are slow.** At `xhigh` effort a round can take more than 10 minutes.
-
-This is expensive and unhurried on purpose. Better to know now than after installing.
-
-## Install
+This is expensive and unhurried on purpose. Better to know now than after
+installing.
 
 Standing inside the destination repo:
 
@@ -94,18 +70,22 @@ Standing inside the destination repo:
 curl -fsSL https://raw.githubusercontent.com/alexweil/axel/main/scripts/install.sh | bash
 ```
 
-**If your `.gitignore` ignores `build/`** — GitHub's Python and Gradle templates both do, out of
-the box — the install is refused, because the `/build` skill lives in `.claude/skills/build/`. One
-line in your `.gitignore` fixes it, and the trap is that `!.claude/` is *not* that line:
+**If your `.gitignore` ignores `build/`** — GitHub's Python and Gradle templates
+both do, out of the box — the install is refused, because the `/build` skill
+lives in `.claude/skills/build/`. One line in your `.gitignore` fixes it, and
+the trap is that `!.claude/` is *not* that line:
 [known issues](docs/install.md#known-issues).
 
-Everything else — explicit forms, forks, the `~/.axel` cache, exit codes, what to do if you installed
-into the wrong repo, and the full procedure **for agents** told to "install axel following this URL"
-— is in [docs/install.md](docs/install.md).
+Everything else — explicit forms, forks, the `~/.axel` cache, exit codes, what
+to do if you installed into the wrong repo, and the full procedure **for
+agents** told to "install axel following this URL" — is in
+[docs/install.md](docs/install.md).
 
-## The commands
+## How do I use it?
 
-Open Claude Code in the repo and use any of these:
+Open Claude Code in the repo and use any of these. You do not have to learn
+them: a request in plain language is routed by context, and it never starts work
+without hitting a confirmation point first.
 
 | Command | What it does |
 |---|---|
@@ -117,63 +97,58 @@ Open Claude Code in the repo and use any of these:
 | `/status` | Say where things stand. Pure read, changes nothing. |
 | `/recap` | Checkpoint on demand: what happened since the last OK, and what comes next. |
 
-You do not have to learn them: a request in plain language is routed by context, and it never starts
-work without hitting a confirmation point first. Full reference:
-[docs/install.md](docs/install.md#the-commands-in-full).
+Underneath, every one of them runs the same loop. The first agent writes and
+commits; the reviewer takes that range of commits, checks it against the design
+and the plan, and either asks for changes or approves; the first one fixes what
+it accepts and argues back where it disagrees. That repeats until they agree.
 
-## How it works
+It stops for you in two places. If five rounds pass without converging, it stops
+and hands you both positions so you can break the tie. And at the end of the run
+you authorised, it writes up what happened and does not continue until you
+answer. The session is also the control panel: you can open it from wherever you
+are and redirect it mid-run, and what you say outranks whatever it was doing.
 
-```
-/design ─► DESIGN.md ─review─► RECAP ─► OK ─► /plan ─► IMPLEMENTATION.md ─review─► RECAP ─► OK
-                                                              │
-                 ┌────────────────────────────────────────────┘
-                 ▼
-        /feature (fresh session)
-        start gate: summary ─► human confirmation
-        detailed spec ─review─► implement ─commit─► review ─► … ─► APPROVED
-                 │
-                 ▼
-              RECAP ─► human OK ─► next /feature (fresh session)
-```
-
-Inside a feature: change → commit → review → fix or argue back → commit → review, until
-`VERDICT: APPROVED`. Five rounds without convergence stops the loop and hands you both positions to
-break the tie. The reviewer works in a **worktree snapshot pinned to the commit under review**, where
-it can run tests and builds to verify on its own. Contract:
+The complete command reference and the diagram of how the phases chain are in
+[docs/install.md](docs/install.md#the-commands-in-full); the contract the two
+agents hold each other to is in
 [docs/design/review-contract.md](docs/design/review-contract.md).
 
-Five principles hold it together:
+## The essentials
 
-1. **State lives in the repo, not the chat.** Any session rebuilds from `AGENTS.md` → `docs/STATUS.md` → design and plan.
-2. **The Claude Code session is the process and the control panel** — you can open it remotely and redirect at any point.
-3. **Generator and reviewer are separate, each with its own context**, renewed between features.
-4. **The human OK is the context boundary.** RECAP → OK → fresh sessions.
-5. **Docs are updated in every commit.** If it was not recorded, it did not happen.
+Materially, axel is markdown and two shell scripts. It adds no dependencies to
+your project and there is nothing to import; deleting it is as easy as
+installing it.
 
-## What this is not
+### What it is not
 
-- **Not a framework.** It is a pile of markdown and two shell scripts. It adds no packages to your
-  project and there is nothing to import — what it needs are the command-line tools listed above. No
-  lock-in, readable in an afternoon, and that is the point rather than an apology: deleting it is as
-  easy as installing it.
-- **Not cheap.** Two paid subscriptions, and review rounds measured in tens of minutes.
+- **Not a framework.** No packages, no lock-in, readable in an afternoon — and
+  that is the point rather than an apology.
+- **Not cheap.** Two paid subscriptions, and review rounds measured in tens of
+  minutes.
 - **Not autonomous.** It stops and waits for you at every checkpoint, by design.
-- **Not proven at scale.** One repo built itself with this, and one external install exists. That is
-  the entire evidence base, and it is above.
-- **Not English underneath.** The storefront is English; the method documents and commit messages are
-  Spanish, and so is the prose the installer writes into your repo. The machinery is
-  language-agnostic — that text just has not been translated yet. Declared, not hidden:
-  [docs/install.md](docs/install.md#language).
-- **Not a rubber stamp, and the numbers are the argument.** Zero of 23 cycles were approved on their
-  first round. The reviewer runs the tests; it does not only read the diff.
+- **Not proven at scale.** One repo built itself with this, and one external
+  install exists. That is the entire evidence base, and it is above.
+- **Not English underneath.** The storefront is English; the method documents,
+  the commit messages and the prose the installer writes into your repo are
+  Spanish. The machinery is language-agnostic — that text just has not been
+  translated yet: [declared, not hidden](docs/install.md#language).
+- **Not a rubber stamp.** The reviewer runs the tests rather than only reading
+  the diff, and the figures above are the argument. What it cannot promise is
+  catching everything.
 
-## Links
+### Links
 
 - [AGENTS.md](AGENTS.md) — the process and the rules, loaded by both agents
 - [docs/STATUS.md](docs/STATUS.md) — where this repo stands right now
-- [docs/DESIGN.md](docs/DESIGN.md) — the design · [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) — the plan
-- [docs/design/review-contract.md](docs/design/review-contract.md) — the generator↔reviewer contract
+- [docs/DESIGN.md](docs/DESIGN.md) — the design ·
+  [docs/IMPLEMENTATION.md](docs/IMPLEMENTATION.md) — the plan
+- [docs/design/review-contract.md](docs/design/review-contract.md) — the
+  generator↔reviewer contract
+- [docs/session.md](docs/session.md) — what a session actually looks like,
+  rendered from this repo
 - [docs/install.md](docs/install.md) — the install manual
-- [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the command behind each
-- [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round is looking for
+- [docs/metrics.md](docs/metrics.md) — the numbers on this page, with the
+  command behind each
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to give feedback, and what this round
+  is looking for
 - [LICENSE](LICENSE) — MIT

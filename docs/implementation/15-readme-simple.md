@@ -280,7 +280,7 @@ Codex separó bloqueantes de preferencias, como le pedí: **dos bloqueantes, una
 
 **Dos precisiones no bloqueantes, aplicadas igual** (cuestan una línea cada una y las dos son errores de mi doc, no preferencias de estilo): C7 decía «las tres condiciones» y enumera cuatro, `(i)`–`(iv)`; y el comando de C15 devuelve **14/18**, no 13, porque `sed` incluye la línea del primer `##` — el contenido previo a ese encabezado ocupa 13. Se publica el número que **el comando** devuelve, que es lo que el criterio dice verificar.
 
-**Cierre del ciclo de la bajada**: cinco rondas, **21 pedidos** de Codex (5 + 6 + 4 + 3 + 3, contando las dos precisiones de esta ronda), **los 21 aceptados sin argumentar ninguno**, y una sola desviación declarada —la cola de la formulación de la r4—, que él mismo ratificó. Ninguna decisión de fondo de la bajada se movió por la review: las tres que puse a discusión en la r1 (D3, la frontera de mención única, D7) quedaron dadas por buenas en esa misma ronda. Lo que cambió, ronda tras ronda, fue **la capacidad de los criterios de atrapar un defecto**: C7 pasó por cuatro versiones, y las cuatro cayeron por la misma clase de falla —una etiqueta o un rango que satisfacía la forma del criterio sin demostrar nada—. Vale registrarlo porque es el patrón, no la anécdota: lo que se verificaba con «inspección declarada» sobrevivía a la review; lo que se verificaba con una regla mecánica mal cerrada, no.
+**Cierre del ciclo de la bajada**: cinco rondas, **20 pedidos** de Codex (5 + 6 + 4 + 3 + 2), **los 20 aceptados sin argumentar ninguno**, y una sola desviación declarada —la cola de la formulación de la r4—, que él mismo ratificó. Ninguna decisión de fondo de la bajada se movió por la review: las tres que puse a discusión en la r1 (D3, la frontera de mención única, D7) quedaron dadas por buenas en esa misma ronda. Lo que cambió, ronda tras ronda, fue **la capacidad de los criterios de atrapar un defecto**: C7 pasó por cuatro versiones, y las cuatro cayeron por la misma clase de falla —una etiqueta o un rango que satisfacía la forma del criterio sin demostrar nada—. Vale registrarlo porque es el patrón, no la anécdota: lo que se verificaba con «inspección declarada» sobrevivía a la review; lo que se verificaba con una regla mecánica mal cerrada, no.
 
 ## Ejecución — paso 1: las dos mudanzas y los dos placeholders
 
@@ -295,3 +295,78 @@ Antes del README, porque sus destinos tienen que existir para que sus links se p
 **`docs/install.md` — el diagrama.** Nueva subsección `### How the commands chain` al final de §«The commands in full», antes de §«For agents». El bloque de código es **idéntico** al del baseline (verificado comparando el fence completo, líneas 126–137). Lo acompañan dos líneas: una de entrada y una que nombra qué hacen `/build` y `/feature all` con esa cadena, que es la pregunta inmediata de quien mira el diagrama y ve solo el camino de a un feature.
 
 **Los dos placeholders de path (D7)**, cerrados con el path real y **solo** en las dos filas de inventario: la de componentes de `docs/DESIGN.md` y la de §«Política de idioma» de `docs/design/public-surface.md`. Las frases narrativas que delegaron la decisión a esta bajada quedaron **intactas**, como declara D7; las dos ocurrencias que siguen diciendo «lo fija la bajada del feature 15» son la del plan y la de este doc, y las dos son citas del estado anterior, no inventarios con hueco.
+
+## Ejecución — paso 2: el README reescrito
+
+`README.md` pasa de **179 a 154 líneas**, con el párrafo de apertura y los cuatro bloques de D1. El archivo quedó **plegado a 80 columnas** (antes ~103): ver C15 abajo, donde eso deja de ser cosmética.
+
+### Nivel A — enumeración cerrada del baseline `87ee282`, líneas 1–179
+
+Unidad: bloque mecánico, con la línea en blanco adjunta al bloque que la precede. Agrupaciones: solo contiguas con igual disposición y destino, y con locator que las cubre a todas. Disposiciones: `conservada` (comparación literal salvo plegado y ubicación) · `comprimida` · `reescrita` · `mudada a X` · `dada de baja`.
+
+| id | líneas | qué es | disposición | locator y mapeo |
+|---|---|---|---|---|
+| B01 | 1–2 | `# axel` | conservada | `README.md` L1 |
+| B02 | 3–4 | línea de posicionamiento («A two-agent development loop… neither gets to approve its own work. This repo built itself with it.») | reescrita | absorbida por el párrafo de apertura. Sus tres afirmaciones: *dos agentes, uno escribe y otro revisa* → L3–6; *nadie aprueba su propio trabajo* → L10–11; *este repo se construyó con esto* → L11–12 |
+| B03 | 5–6 | línea de métricas del título | reescrita | mención única, `README.md` L28–32. Sus cuatro cifras: 88 rondas registradas, 59 rechazos, cero aprobados en r1, corte `b0bdf4d` — las cuatro presentes, ahora con su unidad |
+| B04 | 7–14 | párrafo-glosario (qué es una ronda, hitos vs. features, 88 vs. 123, las 35 recuperadas, derivación) | comprimida + mudada a `docs/metrics.md` | *ronda = una pasada de la review* → L28–29; *los aprobados son hitos, no features* → L30–31; *cada cifra se deriva en `metrics.md` con snapshot, corte y comando* → L31–32. El **glosario de unidades** y el par 88/123 con las 35 recuperadas viven en `docs/metrics.md` §«Three units, never mixed» y §«The 35 rounds before instrumentation» — mudanza autorizada por el diseño (§«Las métricas dejan la apertura») |
+| B05 | 15–16 | `## The problem` | comprimida | el encabezado desaparece; su contenido abre «¿por qué lo usaría?» — autorizado por la tabla de destinos («se comprime dentro de ¿por qué lo usaría?») |
+| B06 | 17–20 | párrafo del problema (autor y juez; olvida) | conservada | L16–19 |
+| B07 | 21–25 | párrafo de la respuesta (estructura, otro proveedor, ejecuta tests, repo es memoria, aprobás en checkpoints) | reescrita | *estructura y no un prompt mejor* → L21; *otro proveedor revisa y corre tus tests* → L21–24; *el repo es la memoria, una sesión nueva reconstruye* → L43–46; *vos aprobás en los checkpoints* → párrafo de apertura, L8–10 |
+| B08 | 26–27 | `## What a session actually looks like` | mudada a `docs/session.md` | `docs/session.md` L1 |
+| B09 | 28–33 | párrafo de procedencia del render | mudada a `docs/session.md` | `docs/session.md` L4–9 |
+| B10 | 34–65 | la corrida entera: encabezado con link al ledger y los cinco hitos con sus citas | mudada a `docs/session.md` (agrupación: contiguos, misma disposición, mismo destino) | `docs/session.md` L10–41 — rango destino que cubre los cinco hitos; verificado bloque a bloque por la reversión de C8 |
+| B11 | 66–75 | «Does it work outside axel?» — encabezado y dos párrafos | mudada a `docs/session.md` | `docs/session.md` L42–50. **Además** conserva un eco comprimido en el README, L38–41, con el alcance honesto que el diseño exige textualmente (un repo, del mismo autor, una adopción) — es un agregado, no una segunda copia del bloque: las cifras derivadas (185, 20, 8) quedan solo en el doc mudado |
+| B12 | 76–77 | `## Requirements, honestly` | comprimida | el encabezado desaparece; los requisitos abren «¿cómo lo instalo?» con su línea de contexto, L50 — la regla «requisitos antes del comando» se conserva |
+| B13 | 78–79 | bullet Claude Code + Codex CLI | conservada | L52–54 |
+| B14 | 80–83 | bullet macOS | comprimida | L55–58. El detalle de **cómo** degrada (`awake.sh` imprime y retorna sin error; `review.sh` llama a Codex sin envolver) no se pierde: vive completo en `docs/install.md` §Requirements, «Outside macOS…» — que es el completo operativo. Nivel C |
+| B15 | 84 | bullet git/python3/curl | conservada | L59–60 |
+| B16 | 85 | bullet reviews lentas | conservada | L61–62 |
+| B17 | 86–88 | «This is expensive and unhurried on purpose…» | conservada | L64–65 |
+| B18 | 89–92 | `## Install` + «Standing inside the destination repo:» | comprimida (encabezado) + conservada (línea) | el encabezado se absorbe en «¿cómo lo instalo?»; la línea, L67 |
+| B19 | 93–96 | bloque de código del one-liner | conservada | L69–71 |
+| B20 | 97–101 | known issue de `build/` con la trampa de `!.claude/` y su puntero | conservada | L73–77 |
+| B21 | 102–105 | «Everything else… is in `docs/install.md`», con el camino **para agentes** | conservada | L79–82 — D8: el puntero del feature 02 conserva destino |
+| B22 | 106–109 | `## The commands` + «Open Claude Code in the repo and use any of these:» | comprimida (encabezado) + conservada (línea) | el encabezado se absorbe en «¿cómo lo uso?»; la línea, L86 |
+| B23 | 110–119 | la tabla de siete comandos (encabezado, separador y siete filas) | conservada (agrupación: contiguos, misma disposición, mismo destino) | L90–98 — rango destino que cubre las nueve filas, verificado fila por fila: idénticas |
+| B24 | 120–123 | «You do not have to learn them…» + link a la referencia completa | conservada | la frase, L86–88 (reubicada **antes** de la tabla); el link, L111–112 |
+| B25 | 124–125 | `## How it works` | dada de baja | el encabezado no sobrevive: la tabla de destinos manda el diagrama a `docs/install.md` y reparte los principios, así que no queda sección que titular. Autorizado por §«Mapa: de dónde sale cada bloque» |
+| B26 | 126–138 | el diagrama ASCII | mudada a `docs/install.md` | `docs/install.md` §«How the commands chain» — fence idéntico al baseline, verificado |
+| B27 | 139–144 | «Inside a feature: …» (el ciclo, las cinco rondas, el worktree snapshot, el link al contrato) | reescrita | *el ciclo hasta el acuerdo* → L100–103; *cinco rondas sin converger y las dos posturas* → L105–106; *worktree snapshot clavado al commit, corre tests* → L21–24; *link al contrato* → L111–114 |
+| B28 | 145–152 | «Five principles hold it together:» + los cinco | comprimida | P1 estado en el repo → L43–46; P2 sesión como tablero, abrir y redirigir → L108–109; P3 contextos separados y renovados → L24–26; P4 el OK humano es la frontera de contexto → párrafo de apertura, L8–10; P5 docs al día en cada commit → L43–44. El original vive en `docs/DESIGN.md`, como fija el diseño |
+| B29 | 153–154 | `## What this is not` | conservada (renombrada) | `### What it is not`, L122 |
+| B30 | 155–158 | bullet «Not a framework» | comprimida | L124–125 + la línea de qué es materialmente, L118–120 (que absorbe «pile of markdown and two shell scripts», «no packages», «nothing to import» y «deleting it is as easy as installing it») |
+| B31 | 159 | bullet «Not cheap» | conservada | L126–127 |
+| B32 | 160 | bullet «Not autonomous» | conservada | L128 |
+| B33 | 161–162 | bullet «Not proven at scale» | conservada | L129–130 |
+| B34 | 163–166 | bullet «Not English underneath» | comprimida | L131–134 — las tres piezas se conservan: vidriera en inglés, método y prosa instalada en español, maquinaria agnóstica; el link a §Language, también |
+| B35 | 167–169 | bullet «Not a rubber stamp, and the numbers are the argument» | reescrita | L135–137. **Cambio declarado**: el baseline publicaba acá «Zero of 23 cycles» — una segunda aparición de cifras del loop, que la regla de mención única prohíbe. La afirmación se conserva (el reviewer corre los tests, no solo lee el diff; las cifras son el argumento) y **remite** a la mención única, que publica los 18 ciclos registrados; el compuesto de 23 vive en `docs/metrics.md`. Se le suma la limitación que faltaba: no promete atrapar todo |
+| B36 | 170–171 | `## Links` | conservada (renombrada) | `### Links`, L139 |
+| B37 | 172–179 | los ocho ítems de links (agrupación: contiguos, misma disposición, mismo destino) | conservada | L141–154 — rango destino que cubre los ocho, verificados uno por uno; **más** la entrada nueva `docs/session.md` (L147–148), que es la novena de la lista cerrada de D4 |
+
+**Cobertura**: los 37 rangos encadenan sin huecos ni solapamiento —1→2, 3→4, …, 172→179— y el último termina en 179. Cero entradas sin locator; cero bajas sin autorización citada (la única es B25).
+
+### Evidencia de los veinte criterios
+
+| # | Resultado |
+|---|---|
+| C1 | **Cumple.** `# axel`, párrafo sin título, y exactamente cuatro `##` en orden: «Why would I use it?» · «How do I install it?» · «How do I use it?» · «The essentials» |
+| C2 | **Cumple**, verificado mecánicamente sobre el bloque de apertura: 0 matches de `round\|milestone\|cycle\|gate\|RECAP\|ledger`, **0 dígitos**, 0 SHAs. Autosuficiencia, declarada oración por oración en §«La prosa» |
+| C3 | **Cumple.** Barrido de la familia de cifras del loop sobre el archivo entero: los únicos matches están en L28–32, la mención única. Fuera de ella, ningún número del loop — «two subscriptions», «seven commands» y «one repo, same author» son de la frontera declarada en D3 |
+| C4 | **Cumple.** Contra `docs/metrics.md` §«The figures» al corte `b0bdf4d`: 88 logged rounds ✓ · 59 rejections ✓ · 29 approvals (milestones) ✓ · 18 complete cycles ✓ · «verdict of each cycle's round 1 → 18 of 18 rejected» ✓ |
+| C5a | **Cumple.** El párrafo del README, normalizado el plegado, es **idéntico** al guion de §«La prosa» — comparación mecánica, cero diferencias |
+| C5b | **Cumple.** Las cuatro listas, afirmación por afirmación: bloque 1, sus 8 → L16–19, L21–26, L28–32, L34–36, L38–41, L43–46; bloque 2, sus 8 → L50, L52–62, L64–65, L67–71, L73–77, L79–82; bloque 3, sus 6 → L86–88, L90–98, L100–103, L105–107, L108–109, L111–114; bloque 4, sus 3 → L118–120, L122–137, L139–154. **Recorrido inverso**: ningún fragmento del README afirma algo fuera de su lista |
+| C5c | **Cumple.** «¿Por qué?» se contesta con el problema, el mecanismo, las cifras y el dato externo, sin salir del bloque; «¿cómo lo instalo?» con requisitos, comando y el único problema que bloquea; «¿cómo lo uso?» con los comandos, el ciclo y dónde frena; «lo esencial» con qué es, qué no es y adónde ir |
+| C6 | **Cumple**, las seis en su bloque asignado: costo → L52–54 y L126–127; macOS → L55–58; sello de goma → L28–32 más «reviews by executing» L21–24 y L135–137; montón de markdown → L118–120 y L124–125; todo en español → L131–134; ¿funciona fuera de axel? → L38–41 |
+| C7 | **Cumple.** Tabla de arriba: 37 rangos que cubren 1–179 sin huecos, unidades mecánicas, tres agrupaciones (B10, B23, B37) todas contiguas con igual disposición y destino y con rango destino que las cubre entera, y las nueve entradas comprimidas o reescritas con su mapeo interno |
+| C8 | **Cumple**, por reversión: revertidas las cuatro transformaciones sobre `docs/session.md`, el resultado es **idéntico** al rango 26–74 del baseline — `difflib` devuelve cero diferencias, y T3 se remueve como **una** sola línea. El diagrama, fence completo idéntico a 126–138 |
+| C9 | **Cumple.** Las afirmaciones operativas del README nuevo tienen su desarrollo en el manual: requisitos → §Requirements; one-liner → §Install; `build/` → §«Known issues» 1; formas explícitas, forks, caché, exit codes, repo equivocado → sus secciones; camino para agentes → §«For agents». El único caso donde el README comprime un detalle operativo (B14) lo conserva el manual completo |
+| C10 | **Cumple**, por sustancia y no por bullet: framework → L124–125 + L118–120 · costo → L126 («two paid subscriptions») · **lentitud** → L126–127 («review rounds measured in tens of minutes»), en la misma línea que el costo, como exige D4 · autonomía → L128 · escala → L129–130 · idioma → L131–134 · sello de goma → L135–137 |
+| C11 | **Cumple.** Chequeo mecánico sobre `README.md`, `docs/session.md` y `docs/install.md`: **cero destinos relativos rotos y cero anclas rotas**, derivando el slug de cada encabezado real |
+| C12 | **Cumple.** Toda la prosa nueva clasifica: *hechos derivables* (el mecanismo, las cifras con su corte, los requisitos, el known issue, el dato externo, qué es materialmente); *limitaciones declaradas* (las siete sustancias de C10, más «what it cannot promise is catching everything» y el alcance honesto del dato externo); *opiniones marcadas* — dos, y las dos se presentan como postura y no como hecho: «that is the point rather than an apology» (L125) y «This is expensive and unhurried on purpose» (L64) |
+| C13 | **Cumple.** `README.md` y `docs/session.md` en inglés; este doc, el plan, STATUS y el ledger en español |
+| C14a | **Cumple.** Unión de paths de los commits que no tocan el ledger, contra la lista cerrada de ocho: `README.md`, `docs/session.md`, `docs/install.md`, `docs/DESIGN.md`, `docs/design/public-surface.md`, `docs/implementation/15-readme-simple.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`. Cero cambios en método, skills, instalador, scripts, tests o `docs/metrics.md` |
+| C14b | **Cumple.** El conjunto observado de commits que tocan el ledger es exactamente `{88f23af}`, la lista cerrada, y ese commit toca solo el ledger y `docs/STATUS.md` |
+| C14c | **Cumple.** `git rev-parse origin/main` = `88e1971`, el valor con que arrancó el pipeline. Ningún comando de escritura al remoto en toda la unidad |
+| C15 | **Cumple: 14 ≤ 18.** Con una nota que importa — la primera medición dio **19**, y el diagnóstico fue que el criterio mide el **plegado del archivo** y no el largo del contenido: el bloque son 745 caracteres (9 líneas si se pliega como texto corrido), pero el archivo venía cortado a ~103 columnas y `fold -w 80` partía cada línea en 80+23. **No toqué el criterio después de verlo fallar**: alineé el archivo al ancho que el comando mide, plegando todo el README a 80 columnas. El comando quedó como estaba |
+| C16 | **Cumple.** `git diff --check` limpio; `tests/lint.sh` en verde |
