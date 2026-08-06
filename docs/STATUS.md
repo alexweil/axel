@@ -1,10 +1,10 @@
 # STATUS
 
-- **Fase**: pipeline `/build` 2026-08-05 — gate presentado, sin autorizar · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
-- **Feature en curso**: ninguno — la ruta propuesta agrega el feature 15 (README simple), pendiente de autorización
+- **Fase**: pipeline `/build` 2026-08-05 **en curso** — autorizado el 2026-08-05 («dale, autorizado», sin ajustes) · ruta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README) · ledger: [implementation/pipeline-2026-08-05.md](implementation/pipeline-2026-08-05.md)
+- **Feature en curso**: ninguno — unidad `design` (design-delta) por arrancar
 - **Ronda de review**: —
 - **Último veredicto**: APPROVED de cierre · ronda 31 · head `02ed38e` (unidad 14, pipeline 2026-07-29 (3))
-- **Esperando**: **esperando autorización de pipeline** — ruta propuesta: design-delta (README de cinco preguntas) → plan-delta (feature 15) → feature 15 (reescritura del README). El pedido literal y los resúmenes por unidad están en el ledger
+- **Esperando**: nada del humano — el pipeline corre autorizado; próximo checkpoint: RECAP consolidado al cierre de las tres unidades
 - **Actualizado**: 2026-08-05
 
 > **Pendiente inmediato del humano** (ajuste (b) del gate del pipeline 2026-07-29 (3)): correr los tres comandos de GitHub —push, topics, homepage— escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub».
