@@ -13,10 +13,10 @@ by itself.
 
 ## Why would I use it?
 
-An agent left alone is both the author and the judge of its own work, and it
-grades generously. It also forgets: close the session and the reasoning behind
-every decision goes with it, so the next one re-litigates settled questions or
-quietly contradicts them.
+axel starts from a premise: an agent left alone is both the author and the judge
+of its own work, and it grades generously. It also forgets: close the session
+and the reasoning behind every decision goes with it, so the next one
+re-litigates settled questions or quietly contradicts them.
 
 axel answers both with structure rather than with a better prompt. **A different
 vendor's model reviews every change**, and it reviews by executing: it works on
@@ -28,8 +28,8 @@ it receives the argument and the evidence, and checks them against the repo.
 At commit `b0bdf4d` the review log held **88 rounds** — a round is one pass of
 the review — of which **59** sent the work back, and **not one of the 18
 recorded cycles** was approved on its first round; the 29 approvals are
-milestones inside a feature, not features. Every figure, its cut, and the
-command that re-derives it are in [docs/metrics.md](docs/metrics.md).
+milestones, not features. Every figure, its cut, and the command that re-derives
+it are in [docs/metrics.md](docs/metrics.md).
 
 What that looks like in practice — a real request, the gate, a rejection that
 caught a genuine bug, and the human OK, all reconstructed from this repo — is in
@@ -58,8 +58,7 @@ Requirements first, because finding them out afterwards is worse:
   unsupported.
 - **git, `python3`, `curl`** — the destination must be a git repo with a clean
   tree.
-- **Reviews are slow.** At `xhigh` effort a round can take more than 10
-  minutes.
+- **Reviews are slow.** At `xhigh` effort a round can take more than 10 minutes.
 
 This is expensive and unhurried on purpose. Better to know now than after
 installing.
@@ -97,10 +96,12 @@ without hitting a confirmation point first.
 | `/status` | Say where things stand. Pure read, changes nothing. |
 | `/recap` | Checkpoint on demand: what happened since the last OK, and what comes next. |
 
-Underneath, every one of them runs the same loop. The first agent writes and
-commits; the reviewer takes that range of commits, checks it against the design
-and the plan, and either asks for changes or approves; the first one fixes what
-it accepts and argues back where it disagrees. That repeats until they agree.
+The four that produce work — `/design`, `/plan`, `/feature` and `/build` — run
+the same loop underneath; `/adopt` closes an install, and `/status` and `/recap`
+only report. In that loop the first agent writes and commits; the reviewer takes
+that range of commits, checks it against the design and the plan, and either
+asks for changes or approves; the first one fixes what it accepts and argues
+back where it disagrees. That repeats until they agree.
 
 It stops for you in two places. If five rounds pass without converging, it stops
 and hands you both positions so you can break the tie. And at the end of the run

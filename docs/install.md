@@ -230,6 +230,40 @@ The core phase chain — `/design` → `/plan` → `/feature` — and where a ru
 `/build` collapses that chain behind a single gate when a request needs more than one phase, and
 `/feature all` runs several planned features back to back. Both still end at one human OK.
 
+### What a run does, and where it stops
+
+Four of the commands produce work — `/design`, `/plan`, `/feature` and `/build` — and all four run
+the same loop underneath. `/adopt` closes an install; `/status` and `/recap` only report.
+
+**The loop.** The generator makes a change and commits it. `scripts/review.sh` hands the reviewer
+that range of commits together with a written request saying what to check and what evidence was
+already gathered; the reviewer reads the diff, may run tests and builds in its worktree snapshot, and
+answers with numbered points and a verdict line. On `CHANGES_REQUESTED` the generator fixes what it
+accepts and **argues back** where it disagrees — the discussion is resolved inside the loop, in the
+same reviewer session, and the round ends in a commit either way. That repeats until
+`VERDICT: APPROVED`.
+
+**The two places it stops for you.**
+
+- **No convergence.** Five consecutive rounds without an approval and the loop refuses to start
+  another one: `review.sh` exits `2` with `DEADLOCK`, and the generator has to bring you both
+  positions so you break the tie. After you decide, `scripts/review.sh reset-deadlock` rearms it.
+  This is a hard stop, not a suggestion — it exists so that two agents cannot spend your money
+  disagreeing.
+- **The end of an authorised run.** A single feature ends at its own RECAP; a batch or a pipeline
+  ends at one consolidated RECAP covering every unit it was authorised for. In both cases the turn
+  ends and nothing continues until you answer. Units approved inside an authorised run wait in
+  "APPROVED — pending run OK" rather than closing themselves.
+
+**Steering it.** The Claude Code session is the process and the control panel. You can open it from
+anywhere, and a message from you mid-run takes priority over whatever the loop was doing: it is
+answered before the next step, and if it changes the scope the run cuts to an early RECAP instead of
+carrying on with a plan you no longer want.
+
+The full contract between the two agents — round tokens, how a dead session re-enters without
+relaunching a review that may still be in flight, and what each verdict obliges — is in
+[docs/design/review-contract.md](design/review-contract.md).
+
 ## For agents (Claude Code)
 
 If you were told "install axel following this URL", this is the complete procedure.
