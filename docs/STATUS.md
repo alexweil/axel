@@ -4,10 +4,10 @@
 - **Feature en curso**: ninguno — backlog vacío: los dieciséis features del plan (00–15) están cerrados
 - **Ronda de review**: —
 - **Último veredicto**: APPROVED de cierre · ronda 10 · head `12bd6ff` (unidad 15, pipeline 2026-08-05)
-- **Esperando**: nada — el paso siguiente lo elige el humano. **Pendiente inmediato del humano**: los tres comandos de GitHub (nota de abajo) — el push ahora publica el README nuevo. Después: `/plan` para extender el backlog, o `/build` para un pedido que cruce fases
+- **Esperando**: nada — el paso siguiente lo elige el humano: `/plan` para extender el backlog, o `/build` para un pedido que cruce fases
 - **Actualizado**: 2026-08-06
 
-> **Pendiente inmediato del humano** (ajuste (b) del gate del pipeline 2026-07-29 (3)): correr los tres comandos de GitHub —push, topics, homepage— escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub».
+> **Resuelto el 2026-08-06**: los tres comandos de GitHub (ajuste (b) del gate del pipeline 2026-07-29 (3), escritos en [implementation/14-onboarding-feedback.md](implementation/14-onboarding-feedback.md) §«Los tres comandos de GitHub») se corrieron por pedido explícito del humano («corre los comandos»): push de `main` (`88e1971..14ec6ba` — primera publicación del README nuevo), los ocho topics y la homepage apuntando a `docs/install.md`. Verificado con `gh repo view`.
 
 > **Dos pendientes anotados, sin registrar en el backlog**: (1) la **deuda normativa declarada** — `AGENTS.md` §Convenciones dice «docs, commits y comunicación en español» y la política de idioma de [design/public-surface.md](design/public-surface.md) la volvió parcialmente falsa; su cierre exige una unidad autorizada aparte (más el espejo en `templates/AGENTS.md`), nunca un commit mecánico; (2) el **fix de la colisión `build/`** del instalador (decisión humana del pipeline 2026-07-29 (2): sin registrar).
 
