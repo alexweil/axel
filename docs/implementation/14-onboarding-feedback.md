@@ -996,7 +996,7 @@ Los otros dos: faltaba **correr los negativos de `A`, `N8–N11` y `P1–P5`** �
 
 Cierra el ciclo de bajada. **`b0fa345` era HEAD al aprobarse y el árbol estaba limpio**, así que el veredicto cubre todo el ciclo: **cero commits posteriores, cero no-revisados**.
 
-**Balance, derivado del propio Review log y no de memoria**: **21 rondas con veredicto registrado** —r1–r9 y r11–r22; la r10 salió `PROC_FAIL` en sus dos intentos por cuota agotada del reviewer y no produjo veredicto—, **84 pedidos, todos aceptados sin argumentar ninguno**. Cinco intervenciones humanas: tres desempates de deadlock, la decisión de mover la construcción de los verificadores al ciclo de implementación (2026-07-30) y la de retirar `B` y `C16` del alcance (2026-07-31).
+**Balance, derivado del propio Review log y no de memoria**: **22 rondas con veredicto registrado** —r1–r9 y r11–r23, la propia r23 incluida; la r10 salió `PROC_FAIL` en sus dos intentos por cuota agotada del reviewer y no produjo veredicto— (corregido el 2026-08-05, r3 de la unidad `design` del pipeline de esa fecha: publicaba 21, sin contar la propia r23), **84 pedidos, todos aceptados sin argumentar ninguno**. Cinco intervenciones humanas: tres desempates de deadlock, la decisión de mover la construcción de los verificadores al ciclo de implementación (2026-07-30) y la de retirar `B` y `C16` del alcance (2026-07-31).
 
 **El corte entre sustancia y sincronía, que es lo que explica el largo**: el reviewer declaró la sustancia lista en la **r21** y lo mantuvo en la r22 y la r23. Las rondas r11–r20 no discutieron el entregable —los YAML canónicos quedaron sólidos desde la r11 y no se movieron— sino **la maquinaria de verificarlo**; las r21–r22, solo sincronía de estado.
 
