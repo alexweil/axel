@@ -14,7 +14,7 @@ El criterio no es una lista de archivos sino un test: **el idioma lo decide la a
 
 | Plano | Audiencia | Idioma | Artefactos |
 |---|---|---|---|
-| **Vidriera** | quien descubre axel desde afuera | **inglés** | `README.md`, `CONTRIBUTING.md`, `.github/`, `docs/install.md`, y el **informe** de métricas |
+| **Vidriera** | quien descubre axel desde afuera | **inglés** | `README.md`, `CONTRIBUTING.md`, `.github/`, `docs/install.md`, el **informe** de métricas y — desde el delta 2026-08-05 — el doc del render de la sesión (path: bajada del feature 15) |
 | **Método** | los dos agentes y el humano que operan *este* repo | **español** | `AGENTS.md`, `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`, `docs/STATUS.md`, los subdirectorios de `docs/`, los mensajes de commit |
 | **Prosa instalada en el destino** | el proyecto ajeno donde corre el instalador | **español hoy** — limitación declarada | las skills, el contrato de review, los mensajes de los scripts, y las cuatro plantillas documentales (`AGENTS.md`, `DESIGN.md`, `IMPLEMENTATION.md`, `STATUS.md`) |
 
@@ -145,7 +145,7 @@ Quien nunca oyó hablar de axel, leyendo **solo ese párrafo**, puede decir qué
 
 ### Las métricas dejan la apertura
 
-Las cifras del loop aparecen en el README **a lo sumo una vez**, dentro de «¿por qué lo usaría?», con qué cuentan dicho en la misma oración y con [../metrics.md](../metrics.md) como fuente única (regla vigente del delta anterior: ninguna cifra sin su corte y su comando). El **glosario de unidades no vuelve al README**: vive en `docs/metrics.md` §«Three units, never mixed», a un link. La precisión que decide la credibilidad —los aprobados son **hitos, no features**— sobrevive como cláusula de esa única mención, no como párrafo propio.
+Las cifras del loop aparecen en el README **exactamente una vez** —no es opcional ni repetible: la objeción del sello de goma (criterio de aceptación, abajo) se contesta con esa mención—, dentro de «¿por qué lo usaría?», con qué cuentan dicho en la misma oración y con [../metrics.md](../metrics.md) como fuente única (regla vigente del delta anterior: ninguna cifra sin su corte y su comando). El **glosario de unidades no vuelve al README**: vive en `docs/metrics.md` §«Three units, never mixed», a un link. La precisión que decide la credibilidad —los aprobados son **hitos, no features**— sobrevive como cláusula de esa única mención, no como párrafo propio.
 
 Esto **revierte el refinamiento 1 del delta 2026-07-29** («las cifras del título necesitan su unidad ahí mismo»). Aquella resolución era correcta en su premisa —una cifra sin unidad no significa nada— y equivocada en su consecuencia: puso cifra, unidad y glosario en la línea más alta del doc, cobrándole al lector el contexto antes de decirle qué es axel; el pedido de este pipeline es la factura de ese costo. La premisa queda: **la unidad acompaña a la cifra donde sea que aparezca**. Lo que cambia es el dónde — una sola vez, más abajo, con el contexto ya pagado.
 

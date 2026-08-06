@@ -903,7 +903,7 @@ Las rondas r11–r15 lo mostraron con una regularidad que ya es dato: **el conte
 
 Cierra el ciclo de implementación y la unidad. **`02ed38e` era HEAD al aprobarse y el árbol estaba limpio**, así que el veredicto cubre todo el ciclo: **cero commits posteriores, cero no-revisados**.
 
-**Entregado** — `CONTRIBUTING.md` (93 líneas, 4 813 bytes), las tres plantillas de `.github/ISSUE_TEMPLATE/` (53 + 36 + 5 líneas, byte a byte desde los bloques canónicos), `docs/metrics.md` (184 líneas, 11 839 bytes), el snapshot `docs/metrics/rounds-log-b0bdf4d.tsv` (88 filas) con `cut.awk` y `normalize.awk`, y las tres sustituciones del `README.md` verificadas por reconstrucción byte a byte contra `2985447:README.md`.
+**Entregado** — `CONTRIBUTING.md` (93 líneas, 4 813 bytes), los tres YAML de `.github/ISSUE_TEMPLATE/` — dos formularios más `config.yml` — (53 + 36 + 5 líneas, byte a byte desde los bloques canónicos), `docs/metrics.md` (184 líneas, 11 839 bytes), el snapshot `docs/metrics/rounds-log-b0bdf4d.tsv` (88 filas) con `cut.awk` y `normalize.awk`, y las tres sustituciones del `README.md` verificadas por reconstrucción byte a byte contra `2985447:README.md`.
 
 **La vara del gate, comprobada por el reviewer y no afirmada por el generador** (r26): un colega entiende en dos minutos qué es axel y qué lo distingue, puede instalarlo sin volver a preguntar, y sabe qué feedback se busca y por qué no se aceptan PRs.
 
